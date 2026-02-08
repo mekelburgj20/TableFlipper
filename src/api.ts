@@ -1,0 +1,170 @@
+import { chromium, Browser, Page, Locator } from 'playwright';
+import axios from 'axios';
+import * as cheerio from 'cheerio';
+import { loginToIScored, findGames } from './iscored.js'; // Import login and findGames
+
+/**
+ * Fetches the winner and their score for a specific game by scraping the public iScored page.
+ * This function launches its own browser instance to perform the scraping.
+ * @param gameName The name of the game to find on the public page (e.g., "Attack from mars DG").
+ * @returns A promise that resolves to an object containing the winner's name and score, or 'N/A' if not found.
+ */
+export async function getWinnerAndScoreFromPublicPage(gameId: string, gameName: string): Promise<{ winner: string; score: string } | { winner: 'N/A'; score: 'N/A' }> {
+    console.log(`🔎 Scraping public page for winner of '${gameName}' (ID: ${gameId})...`);
+
+    let browser: Browser | null = null;
+    let page: Page | null = null;
+
+    try {
+        // Log in to iScored to ensure we are in the correct game room context
+        ({ browser, page } = await loginToIScored());
+
+        // Now navigate to the public URL, which should now show game data due to the session
+        const publicUrl = process.env.ISCORED_PUBLIC_URL;
+        if (!publicUrl) {
+            console.error('❌ ISCORED_PUBLIC_URL is not defined in environment variables.');
+            return { winner: 'N/A', score: 'N/A' };
+        }
+        await page.goto(publicUrl);
+
+        // Accept cookies if the dialog appears (already handled by login, but good to keep as a safeguard)
+        try {
+            await page.click('button:has-text("I agree")', { timeout: 3000 });
+        } catch (error) {
+            console.log('Cookie consent dialog not found or already dismissed. Continuing...');
+        }
+
+        const mainFrame = page.frameLocator('#main');
+        
+        // Directly locate the target game card using its ID
+        const targetGameCard = mainFrame.locator(`div.game#a${gameId}`);
+        
+        if (await targetGameCard.isVisible()) {
+            console.log(`Debug: Found target game card for '${gameName}' (ID: ${gameId}).`);
+
+            // Check if the game is locked on the public page (i.e., no scores visible)
+            // This class is present on the scorebox if the game is locked on the admin side.
+            if (await targetGameCard.locator('.scorebox.locked').isVisible()) {
+                console.log(`⚠️ Game '${gameName}' (ID: ${gameId}) is locked on the public page (admin side). Cannot determine winner.`);
+                return { winner: 'N/A', score: 'N/A' };
+            }
+
+            // Selectors should target the scorebox which contains the winner and score.
+            // We need to find the top score in the primary scorebox.
+            const winnerNameElement = targetGameCard.locator(`.scorebox .name`).first(); // Use .first() in case of multiple
+            const winnerScoreElement = targetGameCard.locator(`.scorebox .score:not([id])`).first(); // Use .first()
+            
+            if (await winnerNameElement.isVisible() && await winnerScoreElement.isVisible()) {
+                const winnerName = await winnerNameElement.innerText();
+                const winnerScore = await winnerScoreElement.innerText();
+                console.log(`✅ Found Winner: ${winnerName} with a score of ${winnerScore} for game '${gameName}'`);
+                return { winner: winnerName, score: winnerScore };
+            } else {
+                console.log(`⚠️ Could not find visible winner name or score elements within the game card for '${gameName}' (ID: ${gameId}).`);
+                return { winner: 'N/A', score: 'N/A' }; 
+            }
+        } else {
+            console.log(`⚠️ Could not find visible game card for '${gameName}' (ID: ${gameId}) on public page. Please ensure ISCORED_PUBLIC_URL is configured to your specific gameroom URL, not the generic iScored homepage.`);
+            return { winner: 'N/A', score: 'N/A' };
+        }
+
+    } catch (error) {
+        console.error(`Error scraping public page for winner of '${gameName}' (ID: ${gameId}):`, error);
+        return { winner: 'N/A', score: 'N/A' };
+    } finally {
+        if (browser) {
+            await browser.close();
+        }
+    }
+}
+export interface Standing {
+    rank: string;
+    name: string;
+    score: string;
+}
+
+export async function getStandingsFromPublicPage(gameId: string): Promise<Standing[]> {
+    console.log(`🔎 Scraping public page for standings of game ID '${gameId}'...`);
+    const publicUrl = process.env.ISCORED_PUBLIC_URL;
+    if (!publicUrl) {
+        throw new Error('ISCORED_PUBLIC_URL is not defined in environment variables.');
+    }
+
+    let browser: Browser | null = null;
+    try {
+        browser = await chromium.launch({ headless: true });
+        const page = await browser.newPage();
+        await page.goto(publicUrl);
+
+        try {
+            await page.click('button:has-text("I agree")', { timeout: 3000 });
+        } catch { /* ignored */ }
+
+        const mainFrame = page.frameLocator('#main');
+        
+        // Find all visible, unlocked scoreboxes
+        const allScoreboxes = await mainFrame.locator('div.scorebox.unlocked').all();
+        
+        const standings: Standing[] = [];
+        let rank = 1;
+
+        for (const scorebox of allScoreboxes) {
+            const classAttribute = await scorebox.getAttribute('class');
+            // Extract the game ID from the class string, e.g., "scorebox a90658Box unlocked" -> "90658"
+            const match = classAttribute?.match(/a(\d+)Box/);
+            const scoreboxGameId = match ? match[1] : null;
+
+            if (scoreboxGameId === gameId) {
+                const name = await scorebox.locator('.name').textContent() ?? 'N/A';
+                // Find the score that does NOT have an ID, which indicates it's the top score
+                const score = await scorebox.locator('.score:not([id])').textContent() ?? 'N/A';
+                
+                standings.push({
+                    rank: (rank++).toString(),
+                    name: name.trim(),
+                    score: score.trim(),
+                });
+            }
+        }
+
+        await browser.close();
+        console.log(`✅ Found ${standings.length} standings for game ID ${gameId}.`);
+        return standings;
+
+    } catch (error) {
+        console.error(`Error scraping public page for standings of game ID '${gameId}':`, error);
+        throw new Error('Could not fetch standings.');
+    }
+}
+
+
+export async function findActiveGame(gameType: string): Promise<{id: string, name: string} | null> {
+    console.log(`🔎 Finding active game for type '${gameType}' via admin login...`);
+    let browser: Browser | null = null;
+    let page: Page | null = null;
+    try {
+        ({ browser, page } = await loginToIScored());
+
+        const { activeGames } = await findGames(page, gameType);
+
+        if (activeGames.length > 0) {
+            const activeGame = {
+                id: activeGames[0].id,
+                name: activeGames[0].name
+            };
+            console.log(`✅ Found active game for type '${gameType}': ${activeGame.name} (ID: ${activeGame.id})`);
+            return activeGame;
+        } else {
+            console.log(`⚠️ Could not find an active game for type '${gameType}'.`);
+            return null;
+        }
+
+    } catch (error) {
+        console.error(`❌ Error finding active game for type '${gameType}':`, error);
+        return null;
+    } finally {
+        if (browser) {
+            await browser.close();
+        }
+    }
+}

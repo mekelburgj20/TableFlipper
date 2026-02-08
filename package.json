@@ -1,0 +1,40 @@
+{
+  "name": "tableflipper",
+  "version": "1.0.0",
+  "description": "Automated Daily Grind Manager for iScored and Discord.",
+  "main": "dist/index.js",
+  "type": "module",
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "predev": "tsc",
+    "dev": "node dist/index.js",
+    "predeploy-commands": "tsc --project tsconfig.json --outDir dist",
+    "deploy-commands": "node dist/deploy-commands.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "iscored",
+    "discord",
+    "pinball",
+    "automation",
+    "playwright"
+  ],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "axios": "^1.13.4",
+    "cheerio": "^1.2.0",
+    "discord.js": "^14.14.1",
+    "dotenv": "^16.3.1",
+    "node-cron": "^3.0.3",
+    "playwright": "^1.40.1",
+    "public-google-sheets-parser": "^1.5.4"
+  },
+  "devDependencies": {
+    "@types/node": "^20.10.4",
+    "@types/node-cron": "^3.0.11",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.3.3"
+  }
+}
