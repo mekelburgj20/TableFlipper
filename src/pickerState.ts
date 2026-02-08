@@ -1,7 +1,13 @@
-import fs from 'fs/promises';
+import * as fs from 'fs'; // Use synchronous fs for debugging write issues
+import { promises as fsPromises } from 'fs'; // For promise-based operations
+
 import path from 'path';
 
-const PICKER_STATE_FILE = path.join(process.cwd(), 'pickerState.json');
+// Use the temporary directory for state files to bypass potential permission/locking issues
+const TEMP_DIR = 'C:\\Users\\mekel\\.gemini\\tmp\\73d07c8ace8fc2588f6b4b6b6188aa866a6357b1acbf7e6c12cd14a5197c149cb';
+const PICKER_STATE_FILE = path.join(TEMP_DIR, 'pickerState.json');
+const PICKER_STATE_FILE_DEBUG = path.join(TEMP_DIR, 'pickerState_debug.json'); // New debug file path
+console.log('Picker state file path:', PICKER_STATE_FILE); // Added logging for file path
 
 interface PickerInfo {
     pickerDiscordId: string | null;
@@ -16,30 +22,49 @@ interface PickerState {
 let pickerState: PickerState = {};
 
 async function initializePickerState() {
+    // This part can remain promise-based as it seems to work for read
     try {
-        await fs.access(PICKER_STATE_FILE);
-    } catch {
-        await fs.writeFile(PICKER_STATE_FILE, JSON.stringify({}, null, 2));
+        // Ensure the temporary directory exists
+        await fsPromises.mkdir(TEMP_DIR, { recursive: true });
+        await fsPromises.access(PICKER_STATE_FILE_DEBUG); // Use promises version for access
+        console.log(`Info: ${PICKER_STATE_FILE_DEBUG} already exists.`);
+    } catch (error: any) {
+        if (error.code === 'ENOENT') {
+            console.log(`Info: ${PICKER_STATE_FILE_DEBUG} does not exist. Creating empty file.`);
+            await fsPromises.writeFile(PICKER_STATE_FILE_DEBUG, JSON.stringify({}, null, 2)); // Use promises version for write
+            console.log(`Info: ${PICKER_STATE_FILE_DEBUG} created.`);
+        } else {
+            console.error(`❌ Error accessing ${PICKER_STATE_FILE_DEBUG}:`, error);
+        }
     }
 }
 
 export async function loadPickerState(): Promise<void> {
     try {
-        await initializePickerState();
-        const data = await fs.readFile(PICKER_STATE_FILE, 'utf-8');
+        await initializePickerState(); // Ensure file structure exists or is created
+        const data = await fsPromises.readFile(PICKER_STATE_FILE_DEBUG, 'utf-8'); // Use promises version for read
+        console.log('Raw data read from pickerState_debug.json:', data); // Added for debugging
         pickerState = JSON.parse(data);
         console.log('✅ Picker state loaded successfully.');
     } catch (error) {
         console.error('❌ Failed to load picker state:', error);
-        pickerState = {}; // Initialize with an empty state on failure
+        pickerState = {}; // Reset to empty on error to prevent corrupted state
     }
 }
 
 async function savePickerState(): Promise<void> {
+    console.log('--- Entering savePickerState ---'); // Added for debugging
+    console.log('Object to be written:', pickerState); // Log the object itself
+    const dataToWrite = JSON.stringify(pickerState, null, 2);
     try {
-        await fs.writeFile(PICKER_STATE_FILE, JSON.stringify(pickerState, null, 2));
+        console.log('Attempting to write picker state to data to DEBUG file (synchronously):', PICKER_STATE_FILE_DEBUG);
+        fs.writeFileSync(PICKER_STATE_FILE_DEBUG, dataToWrite, 'utf-8'); // Write to DEBUG file
+        console.log('✅ Picker state saved (synchronously to DEBUG file).');
     } catch (error) {
-        console.error('❌ Failed to save picker state:', error);
+        console.error('❌ Failed to save picker state (synchronous error to DEBUG file):', error);
+        throw error; // Re-throw to ensure it's caught by setPicker or unhandledRejection
+    } finally {
+        console.log('--- Exiting savePickerState ---');
     }
 }
 
@@ -61,7 +86,7 @@ export async function setPicker(gameType: string, pickerId: string, nominatorId?
 export function getPicker(gameType: string): PickerInfo | null {
     const key = gameType.toUpperCase();
     const info = pickerState[key] ?? null;
-    console.log(`🔍 Getting picker for ${key}. Found: ${info ? JSON.stringify(info) : 'None'}`);
+    console.log(`🔍 Getting picker for ${key}. Found: ${info ? JSON.stringify(info) : 'None'}`); // Added logging for getPicker
     return info;
 }
 

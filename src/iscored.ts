@@ -227,18 +227,29 @@ export async function navigateToLineupPage(page: Page) {
     // Add a wait for the page to be fully loaded after navigation
     await page.waitForLoadState('domcontentloaded'); 
     await mainFrame.locator('ul#orderGameUL').waitFor({ state: 'visible' }); // Explicitly wait for visible
+    await page.waitForTimeout(2000); // Add a 2-second delay for rendering
     console.log('✅ On Lineup page.');
 }
     
+export async function navigateToSettingsGamesTab(page: Page) {
+    console.log('Navigating to Settings -> Games tab...');
+    const mainFrame = page.frameLocator('#main');
+    await mainFrame.locator('#userDropdown').getByRole('link').click(); // Clicks user dropdown
+    await mainFrame.getByRole('link', { name: ' Settings' }).click(); // Clicks settings
+    await mainFrame.locator('a[href="#games"]').click(); // Clicks "games" tab
+    await page.waitForLoadState('domcontentloaded'); 
+    await mainFrame.locator('button:has-text("Add New Game")').waitFor({ state: 'visible' }); // Wait for an element specific to the games tab
+    console.log('✅ On Settings -> Games tab.');
+}
+
 export async function createGame(page: Page, gameName: string) {
     console.log(`✨ Creating new game: ${gameName}`);
     
     try {
-        const mainFrame = page.frameLocator('iframe').first();
+        await navigateToSettingsGamesTab(page); // Ensure we are on the correct page/tab
 
-        // 1. Navigate to the Games tab in settings.
-        await mainFrame.locator('a[href="#games"]').click();
-        
+        const mainFrame = page.frameLocator('#main'); // Target the main iframe consistently
+
         // 2. Click "Add New Game".
         await mainFrame.locator('button:has-text("Add New Game")').click();
         
@@ -252,8 +263,11 @@ export async function createGame(page: Page, gameName: string) {
         // For now, the game will be created without an associated style.
         console.log(`✅ Created blank game '${gameName}'.`);
 
-        // Wait for the page to settle after game creation
-        await page.waitForLoadState('domcontentloaded');
+        // We are already on a settings page, so just click the "Lineup" tab.
+        console.log('Switching to Lineup tab...');
+        await mainFrame.locator('a[href="#order"]').click();
+        await mainFrame.locator('ul#orderGameUL').waitFor({ state: 'visible' });
+        await page.waitForTimeout(2000); // Add a 2-second delay for rendering
         
         // After creation, verify the game exists and then lock it.
         console.log(`Attempting to find and lock the newly created game '${gameName}'.`);
@@ -286,6 +300,9 @@ export async function submitScoreToIscored(iScoredUsername: string, discordUserI
     try {
         const { browser: newBrowser, page } = await loginToIScored();
         browser = newBrowser;
+
+        // Navigate to the Lineup page to find the active game
+        await navigateToLineupPage(page);
 
         // 1. Find the active game from the settings page.
         const { activeGames } = await findGames(page, gameType);

@@ -15,7 +15,7 @@ All features outlined in the `ai_prompt_02062026.md` have been implemented. The 
 
 #### Winner & Picking Flow
 *   **Winner Picking:** Winners of a tournament are automatically designated as the picker for a future table, ensuring a continuous queue of games.
-*   **Dynasty Rule:** A history of winners is maintained for each game type. If a repeat winner is detected, the "Dynasty Rule" is invoked, and they are prevented from picking again.
+*   **Dynasty Rule:** A history of winners is maintained for each game type. If a repeat winner is detected, the "Dynasty Rule" is invoked, and they are prevented from picking again. Repeat winners must `/nominate-picker` another user.
 *   **Nomination System:** A `/nominate-picker` command has been implemented, allowing a repeat winner (and only them) to nominate another user to pick the next table.
 *   **Picker Timeout:** A scheduled, hourly job checks if any designated picker has failed to choose a table within the 12-hour time limit. If a timeout is detected, the bot automatically selects a random table from a predefined list and creates the game.
 
@@ -41,7 +41,14 @@ All features outlined in the `ai_prompt_02062026.md` have been implemented. The 
 *   **MOD_ROLE_ID Debugging:** Added `console.log` statements to `src/discordBot.ts` to debug the `MOD_ROLE_ID` not being configured error. This confirmed the environment variable was not being loaded from the `.env` file. (The user has been instructed on how to fix their `.env` file.)
 *   **`getWinnerAndScoreFromPublicPage` Fix (Initial):** Modified `getWinnerAndScoreFromPublicPage` to accept `gameId` and correctly scrape winner and score information directly from the public page using ID correlation, fixing a previous issue with unreliable game name matching.
 *   **`lockGame` and `unlockGame` Reliability Fix:** Refactored `lockGame` and `unlockGame` in `src/iscored.ts` to remove redundant navigation calls and use explicit waits (`page.waitForTimeout(1000)` combined with `isChecked()` verification) to confirm checkbox state changes after interaction, preventing "element detached" errors and ensuring state persistence.
-*   **`getWinnerAndScoreFromPublicPage` Refinement (Final):** Further refined `getWinnerAndScoreFromPublicPage` in `src/api.ts` to reliably locate the game card by ID (`div.game#a${gameId}`) and extract winner/score, and ensured an authenticated iScored context for scraping by calling `loginToIScored()` within the function, resolving the "N/A" winner/score announcement issue.
+*   **`getWinnerAndScoreFromPublicPage` Refinement (Final):** Further refined `getWinnerAndScoreAndIdFromPublicPage` in `src/api.ts` to reliably locate the game card by ID (`div.game#a${gameId}`) and extract winner/score, and ensured an authenticated iScored context for scraping by calling `loginToIScored()` within the function, resolving the "N/A" winner/score announcement issue.
+*   **Dynasty Rule Temporary Override:** Implemented a `DISABLE_DYNASTY_RULE_TEMPORARILY` flag in `src/maintenance.ts` to allow bypassing the Dynasty Rule for testing purposes, enabling repeat winners to pick tables.
+*   **User Mapping Loading Fix:** Corrected `src/index.ts` to ensure `loadUserMapping()` is always called at startup (both normal and `--trigger-maintenance` paths), preventing `winnerDiscordId` from being null and allowing `setPicker` to function. Also refactored `index.ts` into an `async main()` function for cleaner startup orchestration.
+*   **Picker State Persistence Fix:** Resolved a critical bug in `src/pickerState.ts` where the `savePickerState` function was writing to `pickerState_debug.json` but `loadPickerState` was reading from `pickerState.json`. Both functions now correctly interact with `pickerState_debug.json`, ensuring state persistence. The "environmental problem" hypothesis was incorrect; it was a code issue.
+*   **Game Creation Timeout Fixes (`src/iscored.ts`):**
+    *   **Incorrect Iframe Target:** Corrected `createGame` to consistently target the `#main` iframe instead of `iframe.first()`.
+    *   **Robust Navigation to Games Tab:** Implemented `navigateToSettingsGamesTab` and updated `createGame` to use a more robust text-based selector (`button:has-text("Add New Game")`) for waiting, preventing timeouts.
+    *   **Correct Navigation to Lineup Tab:** Modified `createGame` to explicitly navigate to the "Lineup" tab (`a[href="#order"]`) after creating a game, before attempting to find and lock it. This resolved the "ul#orderGameUL hidden" error. The initial redundant navigation clicks in `navigateToLineupPage` when called from `createGame` were the root cause.
+    *   **Rendering Delay for Lineup Tab:** Added a `page.waitForTimeout(2000)` in `navigateToLineupPage` after the `ul#orderGameUL` element becomes visible, providing necessary time for the UI to fully render before subsequent actions.
 
 ## Final Status
-The project is considered complete and all objectives have been met. The code has been structured to be extensible for future enhancements and should now be fully functional.

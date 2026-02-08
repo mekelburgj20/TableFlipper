@@ -13,6 +13,14 @@ export function startDiscordBot() {
     console.log('🤖 Starting Discord bot...');
     console.log(`Debug: MOD_ROLE_ID from env: ${process.env.MOD_ROLE_ID}`);
 
+    // Global unhandled promise rejection handler for debugging
+    process.on('unhandledRejection', (reason, promise) => {
+        console.error('--- Unhandled Rejection (Global) ---');
+        console.error('Reason:', reason);
+        console.error('Promise:', promise);
+        console.error('------------------------------------');
+    });
+
     const token = process.env.DISCORD_BOT_TOKEN;
     if (!token || token === 'your_discord_bot_token') {
         console.error('❌ DISCORD_BOT_TOKEN not found in environment variables. Bot will not start.');

@@ -128,7 +128,3 @@ All primary interaction with the bot is through its Discord slash commands. Refe
 *   `.env`: Stores confidential environment variables (ignored by git).
 *   `package.json`: Defines project dependencies and scripts.
 *   `tsconfig.json`: TypeScript compiler configuration.
-
-## 6. Known Issues
-
-*   (None currently identified for the implemented features)

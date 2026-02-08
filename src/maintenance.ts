@@ -1,3 +1,9 @@
+const ALL_GAME_TYPES = ['DG', 'WG-VPXS', 'WG-VR', 'MG'];
+
+// Set to 'true' to temporarily disable the Dynasty Rule and always set the picker.
+// Set to 'false' to re-enable the Dynasty Rule (repeat winners cannot pick).
+const DISABLE_DYNASTY_RULE_TEMPORARILY = true;
+
 import { Browser, Page } from 'playwright';
 import { loginToIScored, findGames, lockGame, unlockGame, findGameByName, navigateToLineupPage } from './iscored.js';
 import { getWinnerAndScoreFromPublicPage } from './api.js';
@@ -7,7 +13,6 @@ import { getDiscordIdByIscoredName } from './userMapping.js';
 import { setPicker } from './pickerState.js';
 import { getPauseState, checkPauseExpiration } from './pauseState.js';
 
-const ALL_GAME_TYPES = ['DG', 'WG-VPXS', 'WG-VR', 'MG'];
 
 export async function triggerAllMaintenanceRoutines() {
     console.log('Manual trigger: Running maintenance for all game types...');
@@ -76,10 +81,19 @@ export async function runMaintenanceForGameType(gameType: string) {
         const winnerDiscordId = getDiscordIdByIscoredName(winner) ?? null;
 
         if (winnerDiscordId) {
-            if (isRepeatWinner) {
-                console.log(`👑 ${winner} is a repeat winner. They must nominate another player.`);
-            } else {
+            if (DISABLE_DYNASTY_RULE_TEMPORARILY) {
+                console.log('--- TESTING: Dynasty Rule is TEMPORARILY DISABLED. Always setting picker. ---');
                 await setPicker(gameType, winnerDiscordId);
+                if (isRepeatWinner) {
+                    console.log(`👑 ${winner} is a repeat winner (but picker was set due to temporary disable).`);
+                }
+            } else {
+                if (!isRepeatWinner) {
+                    console.log(`Setting picker for ${winner}.`);
+                    await setPicker(gameType, winnerDiscordId);
+                } else {
+                    console.log(`👑 ${winner} is a repeat winner. Dynasty rule is active. Not setting picker.`);
+                }
             }
         }
 
@@ -112,4 +126,3 @@ export async function runMaintenanceForGameType(gameType: string) {
         }
     }
 }
-
