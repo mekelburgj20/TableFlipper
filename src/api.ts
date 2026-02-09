@@ -3,6 +3,67 @@ import axios from 'axios';
 import * as cheerio from 'cheerio';
 import { loginToIScored, findGames } from './iscored.js'; // Import login and findGames
 
+export async function getWinnerAndScoreFromApi(gameName: string): Promise<{ winner: string; score: string }> {
+    const gameroomName = process.env.GAMEROOM_NAME;
+    if (!gameroomName) {
+        throw new Error('GAMEROOM_NAME environment variable is not set.');
+    }
+    const encodedGameName = encodeURIComponent(gameName);
+    const url = `https://www.iscored.info/api/${gameroomName}/${encodedGameName}`;
+
+    console.log(`🔎 Calling iScored API for winner of '${gameName}'...`);
+    
+    try {
+        const response = await axios.get(url);
+        const data = response.data;
+
+        if (data && data.scores && data.scores.length > 0) {
+            const winnerData = data.scores.find((s: any) => s.rank === '1');
+            if (winnerData) {
+                console.log(`✅ Found Winner via API: ${winnerData.name} with score ${winnerData.score}`);
+                return { winner: winnerData.name, score: winnerData.score };
+            }
+        }
+        
+        console.log(`⚠️ No rank 1 winner found for '${gameName}' via API.`);
+        return { winner: 'N/A', score: 'N/A' };
+
+    } catch (error) {
+        console.error(`❌ Error calling iScored API for game '${gameName}':`, error);
+        return { winner: 'N/A', score: 'N/A' };
+    }
+}
+
+export async function getStandingsFromApi(gameName: string): Promise<Standing[]> {
+    const gameroomName = process.env.GAMEROOM_NAME;
+    if (!gameroomName) {
+        throw new Error('GAMEROOM_NAME environment variable is not set.');
+    }
+    const encodedGameName = encodeURIComponent(gameName);
+    const url = `https://www.iscored.info/api/${gameroomName}/${encodedGameName}?max=10`; // Get top 10
+
+    console.log(`🔎 Calling iScored API for standings of '${gameName}'...`);
+    
+    try {
+        const response = await axios.get(url);
+        const data = response.data;
+
+        if (data && data.scores && Array.isArray(data.scores)) {
+            const standings: Standing[] = data.scores.map((s: any) => ({
+                rank: s.rank,
+                name: s.name,
+                score: s.score,
+            }));
+            console.log(`✅ Found ${standings.length} standings for '${gameName}' via API.`);
+            return standings;
+        }
+        return [];
+    } catch (error) {
+        console.error(`❌ Error calling iScored API for standings of game '${gameName}':`, error);
+        return [];
+    }
+}
+
 /**
  * Fetches the winner and their score for a specific game by scraping the public iScored page.
  * This function launches its own browser instance to perform the scraping.

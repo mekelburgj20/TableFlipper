@@ -2,10 +2,10 @@ import { Client, GatewayIntentBits, Events, EmbedBuilder } from 'discord.js';
 import { Browser } from 'playwright';
 import { loginToIScored, createGame, submitScoreToIscored } from './iscored.js';
 import { getIscoredNameByDiscordId, getDiscordIdByIscoredName } from './userMapping.js';
-import { getPicker, clearPicker, setPicker } from './pickerState.js';
+import { getPicker, clearPicker, setPicker, gamePicked } from './pickerState.js';
 import { getLastWinner, getHistory } from './history.js';
 import { getTablesFromSheet } from './googleSheet.js';
-import { getStandingsFromPublicPage, findActiveGame } from './api.js';
+import { getStandingsFromApi, findActiveGame } from './api.js';
 import { setPause, getPauseState } from './pauseState.js';
 import { triggerAllMaintenanceRoutines } from './maintenance.js';
 
@@ -70,8 +70,10 @@ export function startDiscordBot() {
             let browser: Browser | null = null;
             try {
                 console.log(`🚀 Handling /picktable for ${gameType} with table: ${tableName}`);
+                console.log('DEBUG: Starting loginToIScored...');
                 const { browser: newBrowser, page } = await loginToIScored();
                 browser = newBrowser;
+                console.log('DEBUG: Finished loginToIScored. Starting createGame...');
                 
                 const pauseState = getPauseState();
                 const unlockBufferHours = pauseState.isPaused ? 72 : 48;
@@ -80,10 +82,13 @@ export function startDiscordBot() {
                     : `✅ Thank you, ${interaction.user.toString()}! The table **${newGameName}** has been selected and created. It will be the table for the tournament in 2 days.`;
 
                 await createGame(page, newGameName); 
+                console.log('DEBUG: Finished createGame. Starting gamePicked...');
 
-                // 3. Clear the picker state and confirm
-                await clearPicker(gameType);
+                // 3. Clear the picker designation and store the new game name
+                await gamePicked(gameType, newGameName); // Replaced clearPicker
+                console.log('DEBUG: Finished gamePicked. Sending editReply...');
                 await interaction.editReply(confirmationMessage);
+                console.log('DEBUG: Finished editReply.');
 
             } catch (error) {
                 console.error(error);
@@ -257,7 +262,7 @@ export function startDiscordBot() {
                     return;
                 }
 
-                const standings = await getStandingsFromPublicPage(activeGame.id);
+                const standings = await getStandingsFromApi(activeGame.name);
                 if (standings.length === 0) {
                     await interaction.editReply(`No scores have been submitted yet for ${activeGame.name}.`);
                     return;

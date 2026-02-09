@@ -1,5 +1,5 @@
 import { chromium, Browser, Page, Locator } from 'playwright';
-import { scheduleGameUnlock } from './scheduler.js';
+import { scheduleGameShow } from './scheduler.js'; // Updated import
 import { addUserMapping } from './userMapping.js';
 import fs from 'fs';
 import { promises as fsPromises } from 'fs';
@@ -7,23 +7,48 @@ import * as path from 'path';
 import axios from 'axios';
 
 const ISCORED_LOGIN_URL = 'https://iscored.info/';
+const ISCORED_SETTINGS_URL = 'https://iscored.info/settings';
+const ISCORED_LINEUP_URL = 'https://iscored.info/settings#order'; // Direct URL for the Lineup tab
+const ISCORED_GAMES_URL = 'https://iscored.info/settings#games'; // Direct URL for the Games tab
 
 export interface Game {
     id: string;
     name: string;
-    isLocked: boolean;
+    isHidden: boolean; // Changed from isLocked to isHidden
 }
 
 export async function loginToIScored(): Promise<{ browser: Browser, page: Page }> {
     console.log('🚀 Launching browser and logging into iScored...');
-    const browser = await chromium.launch({ headless: true });
-    const page = await browser.newPage();
+    const browser = await chromium.launch({ headless: false });
+    
+    const context = await browser.newContext({
+        userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/109.0.0.0 Safari/537.36',
+        viewport: { width: 1920, height: 1080 }
+    });
+    const page = await context.newPage();
+
+    // Polyfill the Wake Lock API to prevent script errors on the page
+    await page.addInitScript(() => {
+        Object.defineProperty(navigator, 'wakeLock', {
+            get: () => ({
+                request: () => Promise.resolve(),
+            }),
+            configurable: true, // Allow redefining the property
+        });
+    });
+
+    // Listen for all console events and log them to the terminal
+    page.on('console', msg => {
+        const type = msg.type();
+        const text = msg.text();
+        if (text.includes('DevTools listening on')) return;
+        console.log(`[Browser Console - ${type.toUpperCase()}]: ${text}`);
+    });
 
     try {
         await page.goto(ISCORED_LOGIN_URL);
 
         try {
-            // Use a more specific locator for the cookie consent button if needed, but this is a good first attempt
             await page.click('button:has-text("I agree")', { timeout: 3000 });
         } catch (error) {
             console.log('Cookie consent dialog not found or already dismissed. Continuing...');
@@ -35,6 +60,9 @@ export async function loginToIScored(): Promise<{ browser: Browser, page: Page }
         await mainFrame.getByRole('textbox', { name: 'Password', exact: true }).fill(process.env.ISCORED_PASSWORD!);
         await mainFrame.getByRole('button', { name: 'Log In' }).click();
 
+        // Wait for the main page to load after login by waiting for the user dropdown
+        await mainFrame.locator('#userDropdown').waitFor({ state: 'visible', timeout: 10000 });
+        
         console.log('✅ Successfully logged in to iScored.');
         return { browser, page };
 
@@ -79,13 +107,13 @@ export async function findGames(page: Page, gameType: string): Promise<{ activeG
                 const id = idAttr; // The ID is directly on the <li> element, e.g., id="90658"
                 console.log(`      -> Game ID attribute: "${idAttr}", extracted ID: "${id}"`);
 
-                const lockCheckbox = gameRow.locator('input.lockCheckbox');
-                const isLocked = await lockCheckbox.isChecked();
-                console.log(`      -> isLocked: ${isLocked}`);
+                const hideCheckbox = gameRow.locator('input[id^="hide"]'); // Target the specific hide checkbox
+                const isHidden = await hideCheckbox.isChecked();
+                console.log(`      -> isHidden: ${isHidden}`);
                 
-                const game: Game = { id, name, isLocked };
+                const game: Game = { id, name, isHidden }; // Changed isLocked to isHidden
 
-                if (!isLocked) {
+                if (!isHidden) {
                     activeGames.push(game);
                 } else {
                     nextGames.push(game);
@@ -94,17 +122,17 @@ export async function findGames(page: Page, gameType: string): Promise<{ activeG
         }
 
         if (activeGames.length > 0) {
-            console.log(`✅ Found ${activeGames.length} active ${gameType} game(s):`);
+            console.log(`✅ Found ${activeGames.length} active (shown) ${gameType} game(s):`);
             activeGames.forEach(g => console.log(`   - ${g.name} (ID: ${g.id})`));
         } else {
-            console.log(`⚠️ Could not find any active (unlocked) ${gameType} games.`);
+            console.log(`⚠️ Could not find any active (shown) ${gameType} games.`);
         }
 
         if (nextGames.length > 0) {
-            console.log(`✅ Found ${nextGames.length} next (locked) ${gameType} game(s):`);
+            console.log(`✅ Found ${nextGames.length} next (hidden) ${gameType} game(s):`);
             nextGames.forEach(g => console.log(`   - ${g.name} (ID: ${g.id})`));
         } else {
-            console.log(`⚠️ Could not find any next (locked) ${gameType} game(s).`);
+            console.log(`⚠️ Could not find any next (hidden) ${gameType} game(s).`);
         }
 
         return { activeGames, nextGames };
@@ -131,12 +159,12 @@ export async function findGameByName(page: Page, gameName: string): Promise<Game
             if (name.trim().toUpperCase() === gameName.trim().toUpperCase()) {
                 const idAttr = await row.getAttribute('id');
                 if (!idAttr) continue;
-                const id = idAttr.replace('game', ''); // e.g., id="game90658" -> "90658"
+                const id = idAttr; // The ID is directly on the <li> element, e.g., id="90658"
                 
-                const lockCheckbox = row.locator('input.lockCheckbox');
-                const isLocked = await lockCheckbox.isChecked();
+                const hideCheckbox = row.locator(`input[id="hide${id}"]`); // Find the hide checkbox by ID
+                const isHidden = await hideCheckbox.isChecked();
                 
-                return { id, name, isLocked };
+                return { id, name, isHidden }; // Changed isLocked to isHidden
             }
         }
         return null; // Game not found
@@ -194,6 +222,43 @@ export async function lockGame(page: Page, game: Game) {
     console.log(`✅ Game locked: ${game.name} (ID: ${game.id})`);
 }
 
+export async function hideGame(page: Page, game: Game): Promise<void> {
+    console.log(`📦 Hiding game: ${game.name} (ID: ${game.id})`);
+    try {
+        await navigateToLineupPage(page); // Ensure we are on the Lineup page
+        const mainFrame = page.frameLocator('#main');
+
+        // Find the game row for the specific game
+        const gameRow = await findGameRow(page, game.name); // findGameRow returns the Locator for the <li>
+        if (!gameRow) {
+            throw new Error(`Game row for '${game.name}' not found on Lineup page to hide.`);
+        }
+
+        const hideCheckbox = gameRow.locator(`#hide${game.id}`); // Target the specific hide checkbox
+        await hideCheckbox.waitFor({ state: 'visible', timeout: 5000 }); // Wait specifically for the checkbox
+
+        if (!(await hideCheckbox.isChecked())) {
+            await hideCheckbox.check({ force: true });
+            await page.waitForTimeout(1000); // Give AJAX time for state to update server-side
+            console.log(`Intermediate: Hide checkbox for ${game.name} (ID: ${game.id}) checked.`);
+        } else {
+            console.log(`Info: Game ${game.name} (ID: ${game.id}) was already hidden.`);
+        }
+
+        if (!(await hideCheckbox.isChecked())) {
+            throw new Error(`Failed to verify hide for game ${game.name} (ID: ${game.id}). Checkbox is not checked.`);
+        }
+
+        console.log(`✅ Game '${game.name}' (ID: ${game.id}) hidden successfully.`);
+
+    } catch (error) {
+        console.error(`❌ Failed to hide game '${game.name}' (ID: ${game.id}).`, error);
+        await page.screenshot({ path: 'hide_game_error.png', fullPage: true });
+        console.log(`📷 Screenshot saved to hide_game_error.png.`);
+        throw error;
+    }
+}
+
 export async function unlockGame(page: Page, game: Game) {
     console.log(`🔓 Unlocking game ID: ${game.id}`);
     
@@ -218,73 +283,134 @@ export async function unlockGame(page: Page, game: Game) {
     console.log(`✅ Game unlocked: ${game.name} (ID: ${game.id})`);
 }
 
+export async function showGame(page: Page, game: Game): Promise<void> {
+    console.log(`🎉 Showing game: ${game.name} (ID: ${game.id})`);
+    try {
+        await navigateToLineupPage(page); // Ensure we are on the Lineup page
+        const mainFrame = page.frameLocator('#main');
+
+        // Find the game row for the specific game
+        const gameRow = await findGameRow(page, game.name); // findGameRow returns the Locator for the <li>
+        if (!gameRow) {
+            throw new Error(`Game row for '${game.name}' not found on Lineup page to show.`);
+        }
+
+        const hideCheckbox = gameRow.locator(`#hide${game.id}`); // Target the specific hide checkbox
+        await hideCheckbox.waitFor({ state: 'visible', timeout: 5000 }); // Wait specifically for the checkbox
+
+        // We want to UNCHECK this box to unhide/show the game
+        if (await hideCheckbox.isChecked()) {
+            await hideCheckbox.uncheck({ force: true });
+            await page.waitForTimeout(1000); // Give AJAX time for state to update server-side
+            console.log(`Intermediate: Hide checkbox for ${game.name} (ID: ${game.id}) unchecked.`);
+        } else {
+            console.log(`Info: Game ${game.name} (ID: ${game.id}) was already shown.`);
+        }
+
+        // Verify the change was persisted
+        if (await hideCheckbox.isChecked()) {
+            throw new Error(`Failed to verify show for game ${game.name} (ID: ${game.id}). Checkbox is still checked.`);
+        }
+        
+        console.log(`✅ Game '${game.name}' (ID: ${game.id}) shown successfully.`);
+
+    } catch (error) {
+        console.error(`❌ Failed to show game '${game.name}' (ID: ${game.id}).`, error);
+        await page.screenshot({ path: 'show_game_error.png', fullPage: true });
+        console.log(`📷 Screenshot saved to show_game_error.png.`);
+        throw error;
+    }
+}
+
+export async function navigateToSettingsPage(page: Page) {
+    console.log('Navigating to Settings page via UI...');
+    const mainFrame = page.frameLocator('#main');
+
+    // 1. Click the dropdown toggle
+    await mainFrame.locator('a.dropdown-toggle[onclick="toggleNav()"]').click();
+
+    // 2. Click the "Settings" link in the dropdown
+    await mainFrame.locator('a[href="/settings.php"]').click();
+
+    // 3. Wait for a known element on the settings page to be visible
+    await mainFrame.locator('a[href="#order"]').waitFor({ state: 'visible', timeout: 10000 });
+    console.log('✅ On Settings page.');
+}
+
 export async function navigateToLineupPage(page: Page) {
     console.log('Navigating to Lineup page...');
+    
+    // Navigate to the settings page first, which contains the tabs
+    await navigateToSettingsPage(page);
+
     const mainFrame = page.frameLocator('#main');
-    await mainFrame.locator('#userDropdown').getByRole('link').click();
-    await mainFrame.getByRole('link', { name: ' Settings' }).click();
+    
+    // Click the "Lineup" tab link
     await mainFrame.locator('a[href="#order"]').click();
-    // Add a wait for the page to be fully loaded after navigation
-    await page.waitForLoadState('domcontentloaded'); 
-    await mainFrame.locator('ul#orderGameUL').waitFor({ state: 'visible' }); // Explicitly wait for visible
-    await page.waitForTimeout(2000); // Add a 2-second delay for rendering
+    
+    console.log('   -> Waiting for game list to populate after click...');
+    try {
+        await page.waitForFunction(() => {
+            const iframe = document.querySelector('#main');
+            if (!iframe) return false;
+            const iframeDoc = (iframe as HTMLIFrameElement).contentDocument;
+            if (!iframeDoc) return false;
+            const list = iframeDoc.querySelector('ul#orderGameUL');
+            if (!list) return false;
+            const style = window.getComputedStyle(list);
+            if (style.display === 'none' || style.visibility === 'hidden') {
+                return false;
+            }
+            return list.children.length > 0;
+        }, { timeout: 15000 });
+    } catch (e) {
+        console.error('❌ Timeout waiting for lineup page to populate. Taking a screenshot.');
+        await page.screenshot({ path: 'lineup_page_timeout_error.png', fullPage: true });
+        throw e;
+    }
+    
     console.log('✅ On Lineup page.');
 }
-    
-export async function navigateToSettingsGamesTab(page: Page) {
-    console.log('Navigating to Settings -> Games tab...');
-    const mainFrame = page.frameLocator('#main');
-    await mainFrame.locator('#userDropdown').getByRole('link').click(); // Clicks user dropdown
-    await mainFrame.getByRole('link', { name: ' Settings' }).click(); // Clicks settings
-    await mainFrame.locator('a[href="#games"]').click(); // Clicks "games" tab
-    await page.waitForLoadState('domcontentloaded'); 
-    await mainFrame.locator('button:has-text("Add New Game")').waitFor({ state: 'visible' }); // Wait for an element specific to the games tab
-    console.log('✅ On Settings -> Games tab.');
-}
+
+
 
 export async function createGame(page: Page, gameName: string) {
     console.log(`✨ Creating new game: ${gameName}`);
     
     try {
-        await navigateToSettingsGamesTab(page); // Ensure we are on the correct page/tab
+        // Navigate to the settings page first
+        await navigateToSettingsPage(page);
+        const mainFrame = page.frameLocator('#main');
 
-        const mainFrame = page.frameLocator('#main'); // Target the main iframe consistently
+        // Click on the "Games" tab
+        await mainFrame.locator('a[href="#games"]').click();
+        await mainFrame.locator('button:has-text("Add New Game")').waitFor({ state: 'visible' });
 
         // 2. Click "Add New Game".
         await mainFrame.locator('button:has-text("Add New Game")').click();
         
-        // 3. Fill in the game name into the search input (to name the blank game) and click "Create Blank Game"
-        // The modal says: "Type the name of your game in the Search box below. [...] create a blank game with no styling."
-        // So filling the search box should name the blank game.
+        // 3. Fill in the game name into the search input and click "Create Blank Game"
         await mainFrame.locator('input[type="search"][aria-controls="stylesTable"]').fill(gameName);
         await mainFrame.locator('button:has-text("Create Blank Game")').click();
         
-        // TODO: Research if there's an option to set a default placeholder image or if this needs to be a manual step.
-        // For now, the game will be created without an associated style.
         console.log(`✅ Created blank game '${gameName}'.`);
 
-        // We are already on a settings page, so just click the "Lineup" tab.
-        console.log('Switching to Lineup tab...');
-        await mainFrame.locator('a[href="#order"]').click();
-        await mainFrame.locator('ul#orderGameUL').waitFor({ state: 'visible' });
-        await page.waitForTimeout(2000); // Add a 2-second delay for rendering
-        
-        // After creation, verify the game exists and then lock it.
-        console.log(`Attempting to find and lock the newly created game '${gameName}'.`);
+        // Now, navigate to the Lineup page to get the game ID and then hide it.
+        await navigateToLineupPage(page);
+        const newlyCreatedGame = await findGameByName(page, gameName);
 
-        const newGame = await findGameByName(page, gameName);
-        if (newGame) {
-            await lockGame(page, newGame);
-            console.log(`✅ Game '${gameName}' created and locked successfully.`);
-
-            // Schedule the unlock for 24 hours from now.
-            const now = new Date();
-            const unlockDateTime = new Date(now.getTime() + 24 * 60 * 60 * 1000); // 24 hours from now
-
-            await scheduleGameUnlock(gameName, unlockDateTime);
-        } else {
-            console.error(`❌ Could not find the newly created game '${gameName}' to lock or schedule unlock.`);
+        if (!newlyCreatedGame) {
+            throw new Error(`Could not find newly created game '${gameName}' on the Lineup page.`);
         }
+
+        // Hide the newly created game.
+        await hideGame(page, newlyCreatedGame);
+        console.log(`✅ Game '${gameName}' created and hidden successfully.`);
+
+        // Schedule the show for 24 hours from now.
+        const now = new Date();
+        const showDateTime = new Date(now.getTime() + 24 * 60 * 60 * 1000); // 24 hours from now
+        await scheduleGameShow(newlyCreatedGame.name, showDateTime);
 
     } catch (error) {
         console.error(`❌ Failed to create game '${gameName}'.`, error);
@@ -330,7 +456,7 @@ export async function submitScoreToIscored(iScoredUsername: string, discordUserI
 
         // 5. Handle photo upload
         console.log(`📷 Downloading photo from ${photoUrl}`);
-        const tempDir = 'C:\\Users\\mekel\\.gemini\\tmp\\73d07c8ace8fc258f6b4b6b6188aa866a6357b1acbf7e6c12cd14a5197c149cb'; // Ensure this path is correct
+        const tempDir = 'C:\\Users\\mekel\\.gemini\\tmp\\73d07c8ace8fc2588f6b4b6b6188aa866a6357b1acbf7e6c12cd14a15197c149cb'; // Ensure this path is correct
         const photoResponse = await axios({
             url: photoUrl,
             method: 'GET',
@@ -363,8 +489,8 @@ export async function submitScoreToIscored(iScoredUsername: string, discordUserI
         
         // 7. Wait for submission to complete and handle potential confirmation dialog.
         try {
-            // Check for the confirmation dialog that appeared in the codegen
-            await mainFrame.getByRole('button', { name: 'Yes Please.' }).click({ timeout: 3000 });
+            const confirmButton = mainFrame.getByRole('button', { name: 'Yes Please.' });
+            await confirmButton.click({ timeout: 3000 });
             console.log('   -> Clicked "Yes Please." confirmation.');
         } catch (e) {
             console.log('   -> "Yes Please." confirmation dialog not found, continuing...');

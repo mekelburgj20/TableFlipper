@@ -114,6 +114,32 @@
       "winner": "MekelburgJ",
       "score": "2,539,770,000",
       "date": "2026-02-08T19:38:44.267Z"
+    },
+    {
+      "gameName": "Iron Maiden - LotB DG",
+      "winner": "MekelburgJ",
+      "score": "789,789,789,789",
+      "date": "2026-02-08T21:40:10.121Z"
+    },
+    {
+      "gameName": "ATTACK from MARS DG",
+      "winner": "MekelburgJ",
+      "score": "2539770000",
+      "date": "2026-02-09T07:12:37.822Z"
+    },
+    {
+      "gameName": "ATTACK from MARS DG",
+      "winner": "MekelburgJ",
+      "score": "2539770000",
+      "date": "2026-02-09T07:18:10.803Z"
+    }
+  ],
+  "WG-VR": [
+    {
+      "gameName": "Metallica WG-VR",
+      "winner": "Cal",
+      "score": "75088680",
+      "date": "2026-02-09T07:18:29.300Z"
     }
   ]
 }

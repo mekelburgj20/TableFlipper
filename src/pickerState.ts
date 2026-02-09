@@ -13,6 +13,7 @@ interface PickerInfo {
     pickerDiscordId: string | null;
     nominatedBy?: string | null;
     designatedAt: string | null;
+    nextScheduledGameName?: string; // Add this line
 }
 
 interface PickerState {
@@ -72,15 +73,16 @@ export function getFullPickerState(): PickerState {
     return pickerState;
 }
 
-export async function setPicker(gameType: string, pickerId: string, nominatorId?: string): Promise<void> {
+export async function setPicker(gameType: string, pickerId: string | null, nominatorId?: string | null, nextScheduledGameName?: string): Promise<void> {
     const key = gameType.toUpperCase();
     pickerState[key] = {
         pickerDiscordId: pickerId,
         nominatedBy: nominatorId,
         designatedAt: new Date().toISOString(),
+        nextScheduledGameName: nextScheduledGameName, // Store the scheduled game name
     };
     await savePickerState();
-    console.log(`👑 New picker for ${key} set to: ${pickerId}. Nominated by: ${nominatorId ?? 'N/A'}`);
+    console.log(`👑 New picker for ${key} set to: ${pickerId}. Nominated by: ${nominatorId ?? 'N/A'}. Next scheduled game: ${nextScheduledGameName ?? 'None'}`);
 }
 
 export function getPicker(gameType: string): PickerInfo | null {
@@ -93,9 +95,25 @@ export function getPicker(gameType: string): PickerInfo | null {
 export async function clearPicker(gameType: string): Promise<void> {
     const key = gameType.toUpperCase();
     if (pickerState[key]) {
-        delete pickerState[key];
+        // Clear picker-specific info, but keep nextScheduledGameName and designatedAt
+        pickerState[key].pickerDiscordId = null;
+        pickerState[key].nominatedBy = undefined; // Clear nominator as well
+        // designatedAt remains as it marks when the picker was last designated (even if now cleared)
         await savePickerState();
-        console.log(`✅ Picker for ${key} has been cleared.`);
+        console.log(`✅ Picker designation for ${key} has been cleared.`);
+    }
+}
+
+export async function gamePicked(gameType: string, newGameName: string): Promise<void> {
+    const key = gameType.toUpperCase();
+    if (pickerState[key]) {
+        pickerState[key].pickerDiscordId = null;
+        pickerState[key].nominatedBy = undefined;
+        pickerState[key].nextScheduledGameName = newGameName; // Store the game name that was just picked
+        await savePickerState();
+        console.log(`✅ Game picked for ${key}: ${newGameName}. Picker designation cleared.`);
+    } else {
+        console.error(`❌ No picker info found for ${key} when calling gamePicked.`);
     }
 }
 
