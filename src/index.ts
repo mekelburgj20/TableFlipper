@@ -2,11 +2,20 @@ import 'dotenv/config';
 import { runMaintenanceForGameType, triggerAllMaintenanceRoutines } from './maintenance.js';
 import { startDiscordBot } from './discordBot.js';
 import { loadUserMapping } from './userMapping.js';
+import { initializeDatabase } from './database.js';
 import cron from 'node-cron';
 import { checkPickerTimeouts } from './timeout.js';
 
 async function main() {
     console.log('🤖 TableFlipper Bot starting...');
+
+    // Initialize the database first
+    try {
+        await initializeDatabase();
+    } catch (error) {
+        console.error('❌ Failed to initialize database:', error);
+        process.exit(1); // Exit if database cannot be initialized
+    }
     
     // Load user mappings at startup, this is critical for both modes.
     try {

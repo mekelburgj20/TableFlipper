@@ -2,12 +2,12 @@ import { Client, GatewayIntentBits, Events, EmbedBuilder } from 'discord.js';
 import { Browser } from 'playwright';
 import { loginToIScored, createGame, submitScoreToIscored } from './iscored.js';
 import { getIscoredNameByDiscordId, getDiscordIdByIscoredName } from './userMapping.js';
-import { getPicker, clearPicker, setPicker, gamePicked } from './pickerState.js';
-import { getLastWinner, getHistory } from './history.js';
+import { getPicker, setPicker, updateQueuedGame, getNextQueuedGame } from './database.js';
+import { getLastWinner, getHistory, getTableStats } from './history.js';
 import { getTablesFromSheet } from './googleSheet.js';
 import { getStandingsFromApi, findActiveGame } from './api.js';
 import { setPause, getPauseState } from './pauseState.js';
-import { triggerAllMaintenanceRoutines } from './maintenance.js';
+import { triggerAllMaintenanceRoutines, runMaintenanceForGameType } from './maintenance.js';
 
 export function startDiscordBot() {
     console.log('🤖 Starting Discord bot...');
@@ -56,12 +56,12 @@ export function startDiscordBot() {
 
             await interaction.deferReply();
 
-            // 1. Check if the user is the designated picker
-            const pickerInfo = getPicker(gameType);
-            if (!pickerInfo || pickerInfo.pickerDiscordId !== interaction.user.id) {
+            // 1. Find the next queued game for this type and check if the user is the picker
+            const nextGame = await getNextQueuedGame(gameType);
+
+            if (!nextGame || !nextGame.picker_discord_id || nextGame.picker_discord_id !== interaction.user.id) {
                 console.log(`❌ /picktable authorization failed for user ${interaction.user.id}.`);
-                console.log(`   - Current pickerInfo: ${JSON.stringify(pickerInfo)}`);
-                console.log(`   - Interaction user ID: ${interaction.user.id}`);
+                console.log(`   - Next game picker slot: ${nextGame?.picker_discord_id}`);
                 await interaction.editReply(`You are not authorized to pick a table for the ${gameType} tournament right now.`);
                 return;
             }
@@ -70,25 +70,17 @@ export function startDiscordBot() {
             let browser: Browser | null = null;
             try {
                 console.log(`🚀 Handling /picktable for ${gameType} with table: ${tableName}`);
-                console.log('DEBUG: Starting loginToIScored...');
                 const { browser: newBrowser, page } = await loginToIScored();
                 browser = newBrowser;
-                console.log('DEBUG: Finished loginToIScored. Starting createGame...');
                 
-                const pauseState = getPauseState();
-                const unlockBufferHours = pauseState.isPaused ? 72 : 48;
-                const confirmationMessage = pauseState.isPaused 
-                    ? `✅ Thank you, ${interaction.user.toString()}! Your pick, **${newGameName}**, has been created. It will be played after the current special event game.`
-                    : `✅ Thank you, ${interaction.user.toString()}! The table **${newGameName}** has been selected and created. It will be the table for the tournament in 2 days.`;
+                // This function now creates the game and returns the iScored ID
+                const iscoredGameId = await createGame(page, newGameName); 
+                
+                // 3. Update the game entry in our database
+                await updateQueuedGame(nextGame.id, newGameName, iscoredGameId);
 
-                await createGame(page, newGameName); 
-                console.log('DEBUG: Finished createGame. Starting gamePicked...');
-
-                // 3. Clear the picker designation and store the new game name
-                await gamePicked(gameType, newGameName); // Replaced clearPicker
-                console.log('DEBUG: Finished gamePicked. Sending editReply...');
+                const confirmationMessage = `✅ Thank you, ${interaction.user.toString()}! The table **${newGameName}** has been selected and created. It will be the table for the tournament in 2 days.`;
                 await interaction.editReply(confirmationMessage);
-                console.log('DEBUG: Finished editReply.');
 
             } catch (error) {
                 console.error(error);
@@ -104,32 +96,11 @@ export function startDiscordBot() {
             const tableName = interaction.options.getString('table-name', true);
             await interaction.deferReply();
 
-            const fullHistory = getHistory() as { [gameType: string]: any[] };
-            const relevantResults: any[] = [];
+            const { playCount, highScore, highScoreWinner } = await getTableStats(tableName);
 
-            for (const gameType in fullHistory) {
-                fullHistory[gameType].forEach(result => {
-                    if (result.gameName.toLowerCase().includes(tableName.toLowerCase())) {
-                        relevantResults.push(result);
-                    }
-                });
-            }
-
-            if (relevantResults.length === 0) {
+            if (playCount === 0) {
                 await interaction.editReply(`No play history found for tables matching "${tableName}".`);
                 return;
-            }
-
-            const playCount = relevantResults.length;
-            let highScore = 0;
-            let highScoreWinner = '';
-
-            for (const result of relevantResults) {
-                const score = parseInt(result.score.replace(/,/g, ''), 10);
-                if (score > highScore) {
-                    highScore = score;
-                    highScoreWinner = result.winner;
-                }
             }
 
             const embed = new EmbedBuilder()
@@ -150,22 +121,16 @@ export function startDiscordBot() {
 
             await interaction.deferReply();
 
-            const results = getHistory(gameType) as any[]; // any[] because getHistory can return History object
+            const results = await getHistory(gameType);
             
             let filteredResults = results;
             const now = new Date();
-            let filterDate: Date;
 
-            if (period === '7d') {
-                filterDate = new Date(now.setDate(now.getDate() - 7));
-                filteredResults = results.filter(r => new Date(r.date) > filterDate);
-            } else if (period === '30d') {
-                filterDate = new Date(now.setDate(now.getDate() - 30));
-                filteredResults = results.filter(r => new Date(r.date) > filterDate);
-            } else if (period === '90d') {
-                filterDate = new Date(now.setDate(now.getDate() - 90));
-                filteredResults = results.filter(r => new Date(r.date) > filterDate);
-            } // 'all' period does not require filtering
+            if (period !== 'all') {
+                const days = period === '7d' ? 7 : period === '30d' ? 30 : 90;
+                const filterDate = new Date(now.getTime() - (days * 24 * 60 * 60 * 1000));
+                filteredResults = results.filter(r => new Date(r.created_at) > filterDate);
+            }
 
             if (filteredResults.length === 0) {
                 await interaction.editReply(`No wins recorded for ${gameType} in the selected period.`);
@@ -174,7 +139,7 @@ export function startDiscordBot() {
 
             const winCounts: { [winner: string]: number } = {};
             for (const result of filteredResults) {
-                winCounts[result.winner] = (winCounts[result.winner] || 0) + 1;
+                winCounts[result.iscored_username] = (winCounts[result.iscored_username] || 0) + 1;
             }
 
             const sortedWinners = Object.entries(winCounts).sort((a, b) => b[1] - a[1]);
@@ -195,30 +160,67 @@ export function startDiscordBot() {
             await interaction.editReply({ embeds: [embed] });
         }
         
-        else if (commandName === 'trigger-maintenance') {
+        else if (commandName === 'trigger-maintenance-dg') {
             await interaction.deferReply({ ephemeral: true });
-
-            // 1. Check for Mod Role
             const modRoleId = process.env.MOD_ROLE_ID;
-            console.log(`Debug: MOD_ROLE_ID from env (in trigger-maintenance handler): ${modRoleId}`);
             if (!modRoleId) {
                 await interaction.editReply('The MOD_ROLE_ID is not configured. Please contact an admin.');
                 return;
             }
-            
-            const memberRoles = interaction.member?.roles as any; // any is not ideal, but discord.js v14 types are complex
+            const memberRoles = interaction.member?.roles as any;
             if (!memberRoles || !memberRoles.cache.has(modRoleId)) {
                 await interaction.editReply('You do not have permission to use this command.');
                 return;
             }
-
-            // 2. Trigger maintenance
             try {
-                await triggerAllMaintenanceRoutines();
-                await interaction.editReply('✅ All maintenance routines have been manually triggered and completed.');
+                await runMaintenanceForGameType('DG');
+                await interaction.editReply('✅ Daily Grind (DG) maintenance routine has been manually triggered and completed.');
             } catch (error) {
-                console.error('❌ Error manually triggering maintenance routines:', error);
-                await interaction.editReply('❌ An error occurred while trying to manually trigger maintenance routines.');
+                console.error('❌ Error manually triggering DG maintenance:', error);
+                await interaction.editReply('❌ An error occurred while trying to manually trigger the DG maintenance routine.');
+            }
+        }
+        
+        else if (commandName === 'trigger-maintenance-weekly') {
+            await interaction.deferReply({ ephemeral: true });
+            const modRoleId = process.env.MOD_ROLE_ID;
+            if (!modRoleId) {
+                await interaction.editReply('The MOD_ROLE_ID is not configured. Please contact an admin.');
+                return;
+            }
+            const memberRoles = interaction.member?.roles as any;
+            if (!memberRoles || !memberRoles.cache.has(modRoleId)) {
+                await interaction.editReply('You do not have permission to use this command.');
+                return;
+            }
+            try {
+                await runMaintenanceForGameType('WG-VPXS');
+                await runMaintenanceForGameType('WG-VR');
+                await interaction.editReply('✅ Weekly Grind (WG-VPXS, WG-VR) maintenance routines have been manually triggered and completed.');
+            } catch (error) {
+                console.error('❌ Error manually triggering Weekly maintenance:', error);
+                await interaction.editReply('❌ An error occurred while trying to manually trigger the Weekly maintenance routines.');
+            }
+        }
+
+        else if (commandName === 'trigger-maintenance-monthly') {
+            await interaction.deferReply({ ephemeral: true });
+            const modRoleId = process.env.MOD_ROLE_ID;
+            if (!modRoleId) {
+                await interaction.editReply('The MOD_ROLE_ID is not configured. Please contact an admin.');
+                return;
+            }
+            const memberRoles = interaction.member?.roles as any;
+            if (!memberRoles || !memberRoles.cache.has(modRoleId)) {
+                await interaction.editReply('You do not have permission to use this command.');
+                return;
+            }
+            try {
+                await runMaintenanceForGameType('MG');
+                await interaction.editReply('✅ Monthly Grind (MG) maintenance routine has been manually triggered and completed.');
+            } catch (error) {
+                console.error('❌ Error manually triggering Monthly maintenance:', error);
+                await interaction.editReply('❌ An error occurred while trying to manually trigger the Monthly maintenance routine.');
             }
         }
         
@@ -334,7 +336,7 @@ export function startDiscordBot() {
             await interaction.deferReply({ ephemeral: true });
 
             // 1. Validate the nominator
-            const lastWinner = getLastWinner(gameType);
+            const lastWinner = await getLastWinner(gameType);
             const nominatorIscoredName = getIscoredNameByDiscordId(nominatorUser.id);
 
             if (!lastWinner || !nominatorIscoredName || lastWinner.toLowerCase() !== nominatorIscoredName.toLowerCase()) {
@@ -343,8 +345,8 @@ export function startDiscordBot() {
             }
 
             // 2. Check if a picker has already been nominated
-            const currentPicker = getPicker(gameType);
-            if (currentPicker && currentPicker.pickerDiscordId) {
+            const currentPicker = await getPicker(gameType);
+            if (currentPicker && currentPicker.picker_discord_id) {
                 await interaction.editReply(`A picker has already been designated for the ${gameType} tournament.`);
                 return;
             }

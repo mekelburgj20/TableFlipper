@@ -11,6 +11,8 @@
     "dev": "node dist/index.js",
     "predeploy-commands": "tsc --project tsconfig.json --outDir dist",
     "deploy-commands": "node dist/deploy-commands.js",
+    "premigrate-history": "tsc",
+    "migrate-history": "node dist/migrate-history.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [
@@ -23,13 +25,18 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "@types/sqlite3": "^3.1.11",
+    "@types/uuid": "^10.0.0",
     "axios": "^1.13.4",
     "cheerio": "^1.2.0",
     "discord.js": "^14.14.1",
     "dotenv": "^16.3.1",
     "node-cron": "^3.0.3",
     "playwright": "^1.40.1",
-    "public-google-sheets-parser": "^1.5.4"
+    "public-google-sheets-parser": "^1.5.4",
+    "sqlite": "^5.1.1",
+    "sqlite3": "^5.1.7",
+    "uuid": "^13.0.0"
   },
   "devDependencies": {
     "@types/node": "^20.10.4",

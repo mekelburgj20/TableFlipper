@@ -73,8 +73,16 @@ const commands = [
         ]
     },
     {
-        name: 'trigger-maintenance',
-        description: 'Manually triggers all maintenance routines for all game types.',
+        name: 'trigger-maintenance-dg',
+        description: 'Manually triggers the maintenance routine for the Daily Grind (DG).',
+    },
+    {
+        name: 'trigger-maintenance-weekly',
+        description: 'Manually triggers the maintenance routine for all Weekly Grinds (WG-VPXS, WG-VR).',
+    },
+    {
+        name: 'trigger-maintenance-monthly',
+        description: 'Manually triggers the maintenance routine for the Monthly Grind (MG).',
     },
     {
         name: 'pause-dg-pick',

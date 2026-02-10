@@ -1,22 +1,17 @@
-const ALL_GAME_TYPES = ['DG', 'WG-VPXS', 'WG-VR', 'MG'];
-
-// Set to 'true' to temporarily disable the Dynasty Rule and always set the picker.
-// Set to 'false' to re-enable the Dynasty Rule (repeat winners cannot pick).
-const DISABLE_DYNASTY_RULE_TEMPORARILY = true;
-
 import { Browser, Page } from 'playwright';
-import { loginToIScored, findGames, lockGame, showGame, findGameByName, navigateToLineupPage, Game } from './iscored.js';
+import { loginToIScored, lockGame, showGame, Game as IscoredGame } from './iscored.js';
 import { getWinnerAndScoreFromApi } from './api.js';
 import { checkWinnerHistory, updateWinnerHistory } from './history.js';
 import { sendDiscordNotification } from './discord.js';
 import { getDiscordIdByIscoredName } from './userMapping.js';
-import { setPicker, getFullPickerState } from './pickerState.js'; // Added getFullPickerState
-import { getPauseState, checkPauseExpiration } from './pauseState.js';
+import { getActiveGame, getNextQueuedGame, updateGameStatus, setPicker, createGameEntry, GameRow } from './database.js';
+import { checkPauseExpiration } from './pauseState.js';
 
+const ALL_GAME_TYPES = ['DG', 'WG-VPXS', 'WG-VR', 'MG'];
 
 export async function triggerAllMaintenanceRoutines() {
     console.log('Manual trigger: Running maintenance for all game types...');
-    await checkPauseExpiration(); // Ensure expired pauses are cleared before running maintenance
+    await checkPauseExpiration();
 
     for (const gameType of ALL_GAME_TYPES) {
         try {
@@ -29,114 +24,83 @@ export async function triggerAllMaintenanceRoutines() {
 }
 
 export async function runMaintenanceForGameType(gameType: string) {
-    console.log(`Running maintenance routine for ${gameType}...`);
+    console.log(`Running database-driven maintenance routine for ${gameType}...`);
     let browser: Browser | null = null;
-    let page: Page | null = null;
 
     try {
-        const fullPickerState = getFullPickerState(); // Get full picker state at beginning
-        const currentPickerInfo = fullPickerState[gameType];
+        // --- Phase 1: Get Game States from DB ---
+        const activeGame = await getActiveGame(gameType);
+        const nextGame = await getNextQueuedGame(gameType);
 
-        // --- Phase 1: Login & Find Games ---
-        ({ browser, page } = await loginToIScored());
-        
-        await navigateToLineupPage(page); // Initial navigation
-        const { activeGames, nextGames } = await findGames(page, gameType);
+        ({ browser } = await loginToIScored());
+        const page = await browser.newPage();
 
-        let activeGame = activeGames.length > 0 ? activeGames[0] : null;
-        let gameToShow: Game | null = null; // Renamed to reflect show action
-
-        // Determine which game to show: prioritize nextScheduledGameName from pickerState
-        if (currentPickerInfo?.nextScheduledGameName) {
-            console.log(`DEBUG: Found nextScheduledGameName in pickerState: ${currentPickerInfo.nextScheduledGameName}`);
-            gameToShow = await findGameByName(page, currentPickerInfo.nextScheduledGameName);
-            if (!gameToShow) {
-                console.error(`❌ Scheduled game '${currentPickerInfo.nextScheduledGameName}' not found on iScored. Will attempt to find a game to show from nextGames.`);
-            }
-        }
-        
-        // Fallback: if no active game, and no specific scheduled game, try to pick the first hidden game
-        // However, this logic needs careful consideration. If there's no active game to score winner from,
-        // and no specific scheduled game, then something is likely wrong with the state.
-        if (!activeGame) {
-            if (!gameToShow && nextGames.length > 0) {
-                 // Only use nextGames as a fallback if no specific scheduled game was found
-                console.log(`⚠️ No active game found, and no specific scheduled game. Attempting to show the first 'next game': ${nextGames[0].name}`);
-                gameToShow = nextGames[0];
-            } else if (!gameToShow) {
-                 throw new Error(`Could not find an active '${gameType}' game and no scheduled game to show. Halting maintenance.`);
-            }
-        }
-        
-        // This part remains mostly the same, but now uses activeGame (if found)
-        let winner: string = 'N/A';
-        let score: string = 'N/A';
-
+        // --- Phase 2: Process Active Game (if one exists) ---
         if (activeGame) {
-            // Use the API to get the winner and score
-            const { winner: foundWinner, score: foundScore } = await getWinnerAndScoreFromApi(activeGame.name);
-            winner = foundWinner;
-            score = foundScore;
-
-            // lockGame now handles its own navigation to ensure it's on the correct page for its action and verification
-            await lockGame(page, activeGame); 
-            console.log(`🔒 Locked game: ${activeGame.name}`);
-
-            // --- Phase 3: Announce Winner & Check History ---
-            const isRepeatWinner = await checkWinnerHistory(gameType, winner);
-            await updateWinnerHistory(gameType, { gameName: activeGame.name, winner, score });
+            console.log(`Found active game in DB: ${activeGame.name} (ID: ${activeGame.iscored_game_id})`);
             
+            // 1. Get winner from iScored API
+            const { winner, score } = await getWinnerAndScoreFromApi(activeGame.name);
+
+            // 2. Lock game on iScored
+            const iscoredGame: IscoredGame = { id: activeGame.iscored_game_id, name: activeGame.name, isHidden: false };
+            await lockGame(page, iscoredGame);
+            console.log(`🔒 Locked game on iScored: ${activeGame.name}`);
+
+            // 3. Update game status in DB
+            await updateGameStatus(activeGame.id, 'COMPLETED');
+            console.log(`✅ Marked game as COMPLETED in DB: ${activeGame.name}`);
+
+            // 4. Update winner history and check for dynasty
             const winnerDiscordId = getDiscordIdByIscoredName(winner) ?? null;
+            await updateWinnerHistory(gameType, { gameName: activeGame.name, winner, score, winnerId: winnerDiscordId });
+            const isRepeatWinner = await checkWinnerHistory(gameType, winner);
 
-            if (winnerDiscordId) {
-                if (DISABLE_DYNASTY_RULE_TEMPORARILY) {
-                    console.log('--- TESTING: Dynasty Rule is TEMPORARILY DISABLED. Always setting picker. ---');
-                    await setPicker(gameType, winnerDiscordId);
-                    if (isRepeatWinner) {
-                        console.log(`👑 ${winner} is a repeat winner (but picker was set due to temporary disable).`);
-                    }
-                } else {
-                    if (!isRepeatWinner) {
-                        console.log(`Setting picker for ${winner}.`);
-                        await setPicker(gameType, winnerDiscordId);
-                    } else {
-                        console.log(`👑 ${winner} is a repeat winner. Dynasty rule is active. Not setting picker.`);
-                    }
-                }
+            // 5. Handle picker assignment and create next game shell
+            let nextGameForPicker: GameRow | null = null;
+            // Create a shell for the next game
+            nextGameForPicker = await createGameEntry({
+                type: gameType,
+            });
+
+            if (winnerDiscordId && !isRepeatWinner) {
+                console.log(`Setting picker for ${winner}.`);
+                // Now set the picker on the newly created shell game
+                await setPicker(gameType, winnerDiscordId);
+            } else if (winnerDiscordId && isRepeatWinner) {
+                console.log(`👑 ${winner} is a repeat winner. Dynasty rule is active. Not setting picker.`);
+                // Even if it's a repeat winner, we leave the picker field null on the new shell,
+                // so it can be nominated.
             }
-
+            
+            // 6. Send Discord notification
             await sendDiscordNotification({
                 winner,
                 winnerId: winnerDiscordId,
                 score,
                 activeGame: activeGame.name,
-                nextGame: currentPickerInfo?.nextScheduledGameName ?? 'None', // Use scheduled game name
+                nextGame: nextGame?.name ?? 'None',
                 isRepeatWinner,
             });
-            const winnerDisplayName = winner === 'N/A' ? 'N/A' : winner;
-            console.log(`This cycle's winner for ${gameType} is ${winnerDisplayName} with a score of ${score}. Announcement sent.`);
+            console.log(`This cycle's winner for ${gameType} is ${winner} with a score of ${score}. Announcement sent.`);
+
         } else {
             console.log(`⚠️ No active game found for ${gameType}. Skipping winner determination and locking.`);
-            // Send a simplified notification if no active game to announce winner
-            await sendDiscordNotification({
-                winner: 'N/A',
-                winnerId: null,
-                score: 'N/A',
-                activeGame: 'None',
-                nextGame: currentPickerInfo?.nextScheduledGameName ?? 'None',
-                isRepeatWinner: false, // Cannot be a repeat winner if no winner was found
-            });
         }
 
-        // --- Phase 4: Show Next Game ---
-        if (gameToShow) {
-            await showGame(page, gameToShow);
-            console.log(`🎉 Shown game: ${gameToShow.name}`);
-            // After showing the scheduled game, clear its name from pickerState
-            if (currentPickerInfo?.nextScheduledGameName) {
-                await setPicker(gameType, currentPickerInfo.pickerDiscordId, currentPickerInfo.nominatedBy, undefined); // Clear nextScheduledGameName
-                console.log(`✅ Cleared nextScheduledGameName from pickerState for ${gameType}.`);
-            }
+        // --- Phase 3: Activate Next Queued Game ---
+        if (nextGame) {
+            console.log(`Found next queued game in DB: ${nextGame.name}`);
+            const iscoredGame: IscoredGame = { id: nextGame.iscored_game_id, name: nextGame.name, isHidden: true };
+            
+            // 1. Show game on iScored
+            await showGame(page, iscoredGame);
+            console.log(`🎉 Shown game on iScored: ${nextGame.name}`);
+
+            // 2. Update game status in DB
+            await updateGameStatus(nextGame.id, 'ACTIVE');
+            console.log(`✅ Marked game as ACTIVE in DB: ${nextGame.name}`);
+
         } else {
             console.log(`⚠️ No game to show for ${gameType}.`);
         }

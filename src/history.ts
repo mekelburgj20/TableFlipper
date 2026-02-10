@@ -1,70 +1,116 @@
-import * as fs from 'fs/promises';
+import sqlite3 from 'sqlite3';
+import { open } from 'sqlite';
+import * as path from 'path';
+import { promises as fs } from 'fs';
 
-const HISTORY_FILE = 'history.json';
+// Define the path for the database file
+const DB_DIR = path.join(process.cwd(), 'data');
+const DB_PATH = path.join(DB_DIR, 'tableflipper.db');
+
+/**
+ * Opens a connection to the SQLite database.
+ * @returns A promise that resolves to the database instance.
+ */
+async function openDb() {
+    // This function assumes the directory and db file are created by initializeDatabase
+    return open({
+        filename: DB_PATH,
+        driver: sqlite3.Database
+    });
+}
 
 export interface GameResult {
-    date: string;
-    gameName: string;
-    winner: string;
+    id: number;
+    game_iscored_id: string;
+    discord_user_id: string | null;
+    iscored_username: string;
     score: string;
+    game_name: string;
+    game_type: string;
+    created_at: string;
 }
 
-interface History {
-    [gameType: string]: GameResult[];
-}
-
-let history: History = {};
-
-async function initializeHistory() {
+/**
+ * Gets the historical results for a given game type.
+ * @param gameType The game type (e.g., 'DG') to get history for.
+ * @returns A promise that resolves to an array of game results.
+ */
+export async function getHistory(gameType: string): Promise<GameResult[]> {
+    const db = await openDb();
     try {
-        await fs.access(HISTORY_FILE);
-    } catch {
-        await fs.writeFile(HISTORY_FILE, JSON.stringify({}, null, 2));
+        const results = await db.all<GameResult[]>(
+            'SELECT * FROM winners WHERE game_type = ? ORDER BY created_at ASC',
+            gameType.toUpperCase()
+        );
+        return results;
+    } finally {
+        await db.close();
     }
 }
 
-export async function loadHistory(): Promise<void> {
+/**
+ * Gets statistics for a given table name.
+ * @param tableName The name of the table to search for.
+ * @returns A promise that resolves to an object with stats.
+ */
+export async function getTableStats(tableName: string): Promise<{ playCount: number; highScore: number; highScoreWinner: string; }> {
+    const db = await openDb();
     try {
-        await initializeHistory();
-        const data = await fs.readFile(HISTORY_FILE, 'utf-8');
-        history = JSON.parse(data);
-    } catch (error) {
-        console.error('Error loading history file:', error);
-        history = {};
+        // Use LIKE to find games that contain the table name
+        const results = await db.all<GameResult[]>(
+            'SELECT iscored_username, score FROM winners WHERE game_name LIKE ?',
+            `%${tableName}%`
+        );
+        
+        const playCount = results.length;
+        let highScore = 0;
+        let highScoreWinner = 'N/A';
+
+        for (const result of results) {
+            const score = parseInt(result.score.replace(/,/g, ''), 10);
+            if (score > highScore) {
+                highScore = score;
+                highScoreWinner = result.iscored_username;
+            }
+        }
+        return { playCount, highScore, highScoreWinner };
+
+    } finally {
+        await db.close();
     }
 }
 
-async function saveHistory(): Promise<void> {
+/**
+ * Gets the iScored username of the last winner for a specific game type.
+ * @param gameType The game type (e.g., 'DG').
+ * @returns A promise that resolves to the winner's username or null if none.
+ */
+export async function getLastWinner(gameType: string): Promise<string | null> {
+    const db = await openDb();
     try {
-        await fs.writeFile(HISTORY_FILE, JSON.stringify(history, null, 2));
-    } catch (error) {
-        console.error('Error saving history file:', error);
+        const result = await db.get(
+            'SELECT iscored_username FROM winners WHERE game_type = ? ORDER BY created_at DESC LIMIT 1',
+            gameType.toUpperCase()
+        );
+        return result?.iscored_username ?? null;
+    } finally {
+        await db.close();
     }
 }
 
-export function getHistory(gameType?: string): History | GameResult[] {
-    if (gameType) {
-        return history[gameType.toUpperCase()] || [];
-    }
-    return history;
-}
-
-export function getLastWinner(gameType: string): string | null {
-    const key = gameType.toUpperCase();
-    const results = history[key];
-    if (results && results.length > 0) {
-        return results[results.length - 1].winner;
-    }
-    return null;
-}
-
+/**
+ * Checks if the current winner is the same as the most recent winner for a game type.
+ * @param gameType The game type (e.g., 'DG').
+ * @param currentWinner The iScored username of the current winner.
+ * @returns A promise that resolves to true if they are a repeat winner, false otherwise.
+ */
 export async function checkWinnerHistory(gameType: string, currentWinner: string): Promise<boolean> {
     console.log(`Checking winner history for ${gameType}...`);
     if (!currentWinner || currentWinner === 'N/A') {
         return false;
     }
 
-    const lastWinner = getLastWinner(gameType);
+    const lastWinner = await getLastWinner(gameType);
     console.log(`Last winner for ${gameType} was: ${lastWinner}. Current winner is: ${currentWinner}.`);
 
     if (lastWinner && lastWinner.toLowerCase() === currentWinner.toLowerCase()) {
@@ -74,23 +120,28 @@ export async function checkWinnerHistory(gameType: string, currentWinner: string
     return false;
 }
 
-export async function updateWinnerHistory(gameType: string, result: Omit<GameResult, 'date'>) {
+/**
+ * Inserts a new winner record into the database.
+ * @param gameType The game type (e.g., 'DG').
+ * @param result An object containing the winner's details.
+ */
+export async function updateWinnerHistory(gameType: string, result: { gameName: string; winner: string; score: string; winnerId: string | null; }) {
     if (result.winner && result.winner !== 'N/A') {
-        const key = gameType.toUpperCase();
-        if (!history[key]) {
-            history[key] = [];
+        console.log(`Updating winner history in database for ${gameType.toUpperCase()} with new result.`);
+        const db = await openDb();
+        try {
+            await db.run(
+                `INSERT INTO winners (game_iscored_id, discord_user_id, iscored_username, score, game_name, game_type)
+                 VALUES (?, ?, ?, ?, ?, ?)`,
+                'N/A', // We don't have this yet, will be added when games table is used
+                result.winnerId,
+                result.winner,
+                result.score,
+                result.gameName,
+                gameType.toUpperCase()
+            );
+        } finally {
+            await db.close();
         }
-        
-        const newResult: GameResult = {
-            ...result,
-            date: new Date().toISOString(),
-        };
-
-        history[key].push(newResult);
-        console.log(`Updating history.json for ${key} with new result.`);
-        await saveHistory();
     }
 }
-
-// Initial load
-loadHistory();

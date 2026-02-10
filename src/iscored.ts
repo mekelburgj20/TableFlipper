@@ -4,6 +4,7 @@ import { addUserMapping } from './userMapping.js';
 import fs from 'fs';
 import { promises as fsPromises } from 'fs';
 import * as path from 'path';
+import os from 'os'; // Import os module
 import axios from 'axios';
 
 const ISCORED_LOGIN_URL = 'https://iscored.info/';
@@ -81,8 +82,7 @@ export async function findGames(page: Page, gameType: string): Promise<{ activeG
     try {
         const mainFrame = page.frameLocator('#main');
 
-        // Removed redundant navigation steps. Assume caller has already navigated.
-        await mainFrame.locator('ul#orderGameUL').waitFor();
+        // Removed redundant navigation steps. Assume caller has already navigated and waited.
         
         console.log('   -> On Lineup page. Locating li.list-group-item elements.');
         const gameElements = await mainFrame.locator('li.list-group-item').all();
@@ -96,8 +96,8 @@ export async function findGames(page: Page, gameType: string): Promise<{ activeG
             const name = (await nameElement.innerText()).trim();
             console.log(`   -> Processing game: "${name}"`);
 
-            if (name.toUpperCase().includes(gameType.toUpperCase())) {
-                console.log(`      -> Game name includes '${gameType}'.`);
+            if (name.toUpperCase().includes(' ' + gameType.toUpperCase())) {
+                console.log(`      -> Game name includes ' ${gameType}'.`);
                 const idAttr = await gameRow.getAttribute('id');
                 if (!idAttr) {
                     console.log(`      -> No id attribute found for ${gameType} game, skipping.`);
@@ -148,8 +148,7 @@ export async function findGameByName(page: Page, gameName: string): Promise<Game
     try {
         const mainFrame = page.frameLocator('#main');
         
-        // Removed redundant navigation steps. Assume caller has already navigated.
-        await mainFrame.locator('ul#orderGameUL').waitFor();
+        // Removed redundant navigation steps. Assume caller has already navigated and waited.
         
         const gameRows = await mainFrame.locator('li.list-group-item').all();
 
@@ -225,7 +224,7 @@ export async function lockGame(page: Page, game: Game) {
 export async function hideGame(page: Page, game: Game): Promise<void> {
     console.log(`📦 Hiding game: ${game.name} (ID: ${game.id})`);
     try {
-        await navigateToLineupPage(page); // Ensure we are on the Lineup page
+        // Assume we are already on the Lineup page.
         const mainFrame = page.frameLocator('#main');
 
         // Find the game row for the specific game
@@ -286,7 +285,7 @@ export async function unlockGame(page: Page, game: Game) {
 export async function showGame(page: Page, game: Game): Promise<void> {
     console.log(`🎉 Showing game: ${game.name} (ID: ${game.id})`);
     try {
-        await navigateToLineupPage(page); // Ensure we are on the Lineup page
+        // Assume we are already on the Lineup page.
         const mainFrame = page.frameLocator('#main');
 
         // Find the game row for the specific game
@@ -294,6 +293,10 @@ export async function showGame(page: Page, game: Game): Promise<void> {
         if (!gameRow) {
             throw new Error(`Game row for '${game.name}' not found on Lineup page to show.`);
         }
+
+        // First, unlock the game
+        await unlockGame(page, game);
+        console.log(`✅ Game '${game.name}' (ID: ${game.id}) unlocked before being shown.`);
 
         const hideCheckbox = gameRow.locator(`#hide${game.id}`); // Target the specific hide checkbox
         await hideCheckbox.waitFor({ state: 'visible', timeout: 5000 }); // Wait specifically for the checkbox
@@ -374,16 +377,15 @@ export async function navigateToLineupPage(page: Page) {
 
 
 
-export async function createGame(page: Page, gameName: string) {
+export async function createGame(page: Page, gameName: string): Promise<string> {
     console.log(`✨ Creating new game: ${gameName}`);
     
     try {
-        // Navigate to the settings page first
-        await navigateToSettingsPage(page);
         const mainFrame = page.frameLocator('#main');
 
-        // Click on the "Games" tab
-        await mainFrame.locator('a[href="#games"]').click();
+        // Ensure we are on the settings page, then go to Games tab
+        await navigateToSettingsPage(page); // Navigates to settings page
+        await mainFrame.locator('a[href="#games"]').click(); // Clicks games tab
         await mainFrame.locator('button:has-text("Add New Game")').waitFor({ state: 'visible' });
 
         // 2. Click "Add New Game".
@@ -395,8 +397,23 @@ export async function createGame(page: Page, gameName: string) {
         
         console.log(`✅ Created blank game '${gameName}'.`);
 
-        // Now, navigate to the Lineup page to get the game ID and then hide it.
-        await navigateToLineupPage(page);
+        // Now, switch to the Lineup tab to get the game ID and then hide/lock it.
+        await mainFrame.locator('a[href="#order"]').click(); // Click on Lineup tab
+        // Re-wait for the lineup content to ensure it's loaded after tab switch
+        await page.waitForFunction(() => {
+            const iframe = document.querySelector('#main');
+            if (!iframe) return false;
+            const iframeDoc = (iframe as HTMLIFrameElement).contentDocument;
+            if (!iframeDoc) return false;
+            const list = iframeDoc.querySelector('ul#orderGameUL');
+            if (!list) return false;
+            const style = window.getComputedStyle(list);
+            if (style.display === 'none' || style.visibility === 'hidden') {
+                return false;
+            }
+            return list.children.length > 0;
+        }, { timeout: 15000 });
+
         const newlyCreatedGame = await findGameByName(page, gameName);
 
         if (!newlyCreatedGame) {
@@ -407,10 +424,16 @@ export async function createGame(page: Page, gameName: string) {
         await hideGame(page, newlyCreatedGame);
         console.log(`✅ Game '${gameName}' created and hidden successfully.`);
 
+        // Lock the newly created game as well to prevent premature scores
+        await lockGame(page, newlyCreatedGame);
+        console.log(`✅ Game '${gameName}' also locked to prevent premature scores.`);
+
         // Schedule the show for 24 hours from now.
         const now = new Date();
         const showDateTime = new Date(now.getTime() + 24 * 60 * 60 * 1000); // 24 hours from now
         await scheduleGameShow(newlyCreatedGame.name, showDateTime);
+
+        return newlyCreatedGame.id;
 
     } catch (error) {
         console.error(`❌ Failed to create game '${gameName}'.`, error);
@@ -456,7 +479,8 @@ export async function submitScoreToIscored(iScoredUsername: string, discordUserI
 
         // 5. Handle photo upload
         console.log(`📷 Downloading photo from ${photoUrl}`);
-        const tempDir = 'C:\\Users\\mekel\\.gemini\\tmp\\73d07c8ace8fc2588f6b4b6b6188aa866a6357b1acbf7e6c12cd14a15197c149cb'; // Ensure this path is correct
+        const tempDir = path.join(os.tmpdir(), 'tableflipper_tmp'); // Use system's temp directory
+        await fsPromises.mkdir(tempDir, { recursive: true }); // Ensure directory exists
         const photoResponse = await axios({
             url: photoUrl,
             method: 'GET',
