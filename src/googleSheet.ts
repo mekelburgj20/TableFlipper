@@ -1,6 +1,5 @@
 import PublicGoogleSheetsParser from 'public-google-sheets-parser';
-
-const sheetId = process.env.GOOGLE_SHEET_ID;
+import { upsertTable, TableRow } from './database.js';
 
 /**
  * Fetches a list of tables from the configured Google Sheet.
@@ -10,10 +9,21 @@ const sheetId = process.env.GOOGLE_SHEET_ID;
  */
 interface SheetItem {
     'Table Name': string;
-    // Add other expected properties if necessary
+    'dg'?: string;
+    'wg-vr'?: string;
+    'wg-vpxs'?: string;
+    'atgames'?: string;
+    'aliases'?: string;
+}
+
+function parseBoolean(value: string | undefined): number {
+    if (!value) return 0;
+    const lower = value.toString().toLowerCase().trim();
+    return (lower === 'true' || lower === 'yes' || lower === '1' || lower === 'x') ? 1 : 0;
 }
 
 export async function getTablesFromSheet(gid: string): Promise<string[]> {
+    const sheetId = process.env.GOOGLE_SHEET_ID;
     if (!sheetId) {
         throw new Error('GOOGLE_SHEET_ID is not defined in the environment variables.');
     }
@@ -38,5 +48,50 @@ export async function getTablesFromSheet(gid: string): Promise<string[]> {
     } catch (error) {
         console.error('❌ Error parsing Google Sheet:', error);
         throw new Error('Could not fetch the table list from Google Sheets.');
+    }
+}
+
+/**
+ * Fetches tables from Google Sheet and syncs them to the database.
+ */
+export async function syncTablesFromSheet(gid: string): Promise<void> {
+    const sheetId = process.env.GOOGLE_SHEET_ID;
+    if (!sheetId) {
+        throw new Error('GOOGLE_SHEET_ID is not defined in the environment variables.');
+    }
+
+    // @ts-ignore
+    const parser = new PublicGoogleSheetsParser(sheetId);
+
+    try {
+        console.log(`🔄 Syncing tables from Google Sheet ID: ${sheetId}, GID: ${gid}...`);
+        const items = await parser.parse(sheetId, gid) as SheetItem[];
+
+        if (!items || items.length === 0) {
+            console.log('⚠️ No items found in the Google Sheet to sync.');
+            return;
+        }
+
+        let count = 0;
+        for (const item of items) {
+            const tableName = item['Table Name'];
+            if (!tableName) continue;
+
+            const tableRow: TableRow = {
+                name: tableName,
+                aliases: item['aliases'] || null,
+                is_atgames: parseBoolean(item['atgames']),
+                is_wg_vr: parseBoolean(item['wg-vr']),
+                is_wg_vpxs: parseBoolean(item['wg-vpxs'])
+            };
+            
+            await upsertTable(tableRow);
+            count++;
+        }
+        console.log(`✅ Successfully synced ${count} tables to the database.`);
+
+    } catch (error) {
+        console.error('❌ Error syncing tables from Google Sheet:', error);
+        throw error;
     }
 }

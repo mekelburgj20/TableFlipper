@@ -27,6 +27,7 @@ const commands = [
                 type: 3, // STRING
                 description: 'The name of the pinball table to play next.',
                 required: true,
+                autocomplete: true,
             },
         ],
     },

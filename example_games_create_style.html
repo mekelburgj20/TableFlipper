@@ -1,0 +1,980 @@
+<body id="mainBody" class="" style="background-image: url(&quot;/images/banners/banner1784?t=1770704890829&quot;); background-repeat: no-repeat;">
+    <div style="position: absolute; right: 0px; margin-top: 15px;">
+     <!-- Navigation -->
+<div class="navbar navbar-fixed-top navbar-inverse" role="navigation" style="position: relative; right: 10px; width: 100px; font-family: 'Helvetica Neue',Helvetica,Arial,sans-serif; text-shadow: none; color: black; background-color: transparent; border-width: 0px;">
+	<div class="container navContainer" id="navContainer" style="position: absolute; width: 27px; right: 70px;">
+		<div class="navbar-right" id="top-navbar">
+    				
+
+			<ul class="nav navbar-nav" style="border: 2px solid grey; border-radius: 10px; background-color: #222; margin-top: 10px; margin-right: -60px">
+									<li class="dropdown" id="userDropdown" data-toggle="popover" data-placement="left" data-original-title="Start Here!" data-html="true" data-content="Tap this arrow and choose 'Settings' &lt;br&gt;from the menu to begin configuring &lt;br&gt;your game room.">
+						<a class="dropdown-toggle" href="#" onclick="toggleNav()">
+						<b class="caret" style="border-width: 12px"></b></a>
+						<ul class="dropdown-menu" id="mainDropdown"> <!-- open tag for User dropdown menu -->
+							<li class="dropdown-header" style="font-weight: bold; font-size: 120%;"><i class="fa fa-fw fa-user"></i> Mekelburgj
+							</li><li class="divider"></li>
+							<li><a href="/room.php"><i class="fa fa-fw fa-home"></i> Game Room</a></li>
+							<li><a href="/settings.php"><i class="fa fa-fw fa-wrench"></i> Settings</a></li>
+							<li><a href="https://teespring.com/stores/iscored-merch" target="_tab"><i class="fas fa-fw fa-tshirt"></i> iScored Merch</a></li>
+							<li><a href="/community.php"><i class="fa fa-fw fa-globe"></i> Community</a></li>
+							
+														    
+							    <li><a href="/news.php"><i class="fa fa-fw fa-newspaper"></i> News</a></li>
+							    
+														<!--  Only show these buttons if they're in the gameroom. -->
+																											
+							<li class="divider"></li>
+							<li><a href="/welcome.php"><i class="fa fa-fw fa-handshake"></i> Welcome Screen</a></li>
+							<li><a href="/faq.php"><i class="fa fa-fw fa-question-circle"></i> FAQ</a></li>
+							
+							
+														<li class="divider"></li>
+							<li><a href="/users/iscoredLogout.php"><i class="fa fa-fw fa-sign-out-alt"></i> Logout</a></li>
+						</ul> <!-- close tag for User dropdown menu -->
+					</li>					
+
+							</ul> <!-- End of UL for navigation link list -->
+		 </div><!-- End of Div for right side navigation list -->
+	</div> <!-- End of Div for navigation bar -->
+</div> <!-- End of Div for navigation bar styling -->
+    </div>
+	<div id="gameroomLogoDiv" class="gameroomLogoDiv">
+		<img src="/icons/spacer.gif" id="gameroomLogo" class="gameroomLogo" onerror="this.onerror=null;this.src='/icons/spacer.gif';">
+	</div>
+	
+    <div class="Top OriginalTop" id="Top" style="font-family: &quot;NEW ROCKER&quot;, cursive; font-weight: 900; color: darkred; font-size: 35px; text-shadow: white 0px 0px 4px, white 0px 0px 4px, white 0px 0px 4px, white 0px 0px 4px, white 0px 0px 4px, white 0px 0px 4px, yellow 0px 0px 45px, yellow 0px 0px 45px, yellow 0px 0px 45px, yellow 0px 0px 45px, yellow 0px 0px 45px, yellow 0px 0px 45px, yellow 0px 0px 45px, yellow 0px 0px 45px;">
+    	<span id="topMessageContainer" onclick="javascript:window.location='room.php'">mekelburgj's Arcade &nbsp;</span>	
+    </div>
+    <div class="Container" id="Container" style="overflow: hidden">
+    	<div class="settingsDiv" id="settingsDiv" style="overflow: hidden; max-width: 1250px; margin-left: auto; margin-right: auto">
+
+			<div class="panel with-nav-tabs panel-default" style="height: 100%; overflow: hidden">
+                <div class="panel-heading" style="padding-top 10px; padding-bottom: 0px; padding-left: 15px; padding-right: 15px;">
+                        <ul class="nav nav-tabs settingsTabs">
+                            <li class="active"><a href="#games" data-toggle="tab">Games</a></li>
+                            <li><a href="#order" data-toggle="tab">Lineup</a></li>
+                            <li><a href="#header" data-toggle="tab">Layout</a></li>
+                            <!--  <li><a href="#cycler" data-toggle="tab">Cycler</a></li> -->
+                            <li><a href="#competition" data-toggle="tab" onclick="getEvents()">Competition</a></li>
+                            <li><a href="#options" data-toggle="tab">Options</a></li>
+   							<li><a href="#social" data-toggle="tab">Social</a></li>
+                            <li><a href="#admin" data-toggle="tab" id="adminTab" onclick="getUnapprovedScores()">Admin</a></li>
+                                                        <li><a href="#user" data-toggle="tab">Account</a></li>
+                        </ul>
+                </div>
+                <div class="panel-body">
+                    <div class="tab-content">
+                        <div class="tab-pane fade in active" id="games" style="padding-right: 265px; padding-bottom: 200px;">
+						    <h2>Your Games</h2>
+						    <select id="selectGame" class="form-control" style="width: 250px; display: inline " onchange="editGame()"><option value="0">Choose a Game...</option><option value="90744">24</option><option value="91155">Twilight Zone DG</option><option value="91158">Table Test Weekly WG-VPXS</option><option value="91067">Metallica WG-VR</option><option value="91148">Cactus Canyon MG</option><option value="91066">World Cup Soccer WG-VPXS</option><option value="91149">Deadpool (Pro) DG</option><option value="91159">Table Test Weekly VR WG-VR</option><option value="91160">Table Test Month MG</option><option value="91116">Dark Chaos DG</option><option value="91157">Table Test DG</option><option value="91054">Bram Stoker's Dracula</option><option value="90806">The Walking Dead (Limited Edition) (Stern 2014)</option><option value="90590">Medieval Madness DG</option><option value="91156">Table Test DG</option><option value="91145">Batman '66 WG-VPXS</option><option value="91146">Pinbot WG-VR</option><option value="91147">Monster Bash MG</option><option value="91163">Test Game</option></select>
+						      &nbsp; &nbsp;
+						    
+						    <span id="addNewGameButtonSpan" data-toggle="popover" data-placement="left" data-original-title="Start Here!" data-html="true" data-content="Tap this button to &lt;br&gt;add a game to &lt;br&gt;your game room.">
+						      <button type="button" class="btn btn-success" onclick="launchCreateGameModal()" style="width: 140px; margin-top: -2px" id="addNewGameButton">
+		                 		Add New Game
+		             		  </button>
+		             		</span>
+		             		
+		             		<div id="gameCustomizations" style="">
+		             			<hr>
+		             		    <button id="archiveSelectedGameButton" type="button" class="btn btn-info btn-sm" data-toggle="modal" data-target="#archiveGameModal" style="width: 140px; margin-left: 20px" onclick="$('#gameToArchive').html($('#GameName').val())">
+    		                 		Archive Game
+    		             		</button>               					
+    		             		<button id="deleteScoresSelectedGameButton" type="button" class="btn btn-danger btn-sm" data-toggle="modal" data-target="#deleteScoresModal" style="width: 140px; margin-left: 20px" onclick="$('#scoresToDelete').html($('#GameName').val())">
+    		                 		Delete Scores
+    		             		</button>
+                                <button id="deleteSelectedGameButton" type="button" class="btn btn-danger btn-sm" data-toggle="modal" data-target="#deleteGameModal" style="width: 140px; margin-left: 20px" onclick="$('#gameToDelete').html($('#GameName').val())">
+    		                 		Delete Game
+    		             		</button>
+    		             		<hr>
+		             		 
+                                <h3>Game Name</h3>
+                                <input type="text" id="GameName" onchange="customFieldChanged('GameName')" class="keyboard form-control" style="width: 250px; display: inline;" data-original-title="" title="">
+                                <button type="button" class="btn btn-success btn-sm" onclick="findStyle()" style="display: inline; margin-top: -3px">Find a Style</button>
+                                <button type="button" class="btn btn-info btn-sm" onclick="goAdvancedGame()" style="display: inline; margin-top: -3px">Toggle Advanced Options</button>
+
+		             			<p id="customGameP" style="">
+		             			<br>
+		             			<label for="ScoreType" style="margin-top: 10px;">Score Type:</label><br> 
+		             			<select id="ScoreType" class="form-control" style="width: 250px; display: inline " onchange="customFieldChanged('ScoreType')">
+						          <option value="integer" selected="">High Score (default)</option>
+						          <option value="time">Time (mm:ss.ss)</option>
+						          <option value="winslosses">Wins-Losses</option>
+						    	</select>
+						    	<input type="checkbox" id="SortAscending" onchange="customFieldChanged('SortAscending')" style="margin-left: 10px; margin-top: 15px;" value="ascending"> Sort scores lowest to highest
+					  	        <br><br><br>
+					  	        
+					  	        <button id="fontsButton" type="button" class="btn btn-info btn" onclick="showFontsHelp()" style="font-family: ubuntu;">
+    								Show Available Fonts and CSS Help
+    							</button>
+		             			<br><br>
+		             		
+		             			<label for="CSSTitle" style="margin-top: 10px;">CSS for Game Title:</label>&nbsp; &nbsp; <span id="CSSTitleAlert"></span><br>
+							    <textarea id="CSSTitle" rows="3" style="width: 80%;" onchange="customFieldChanged('CSSTitle')"></textarea>
+								<br><br>
+			             		<label for="CSSInitials" style="margin-top: 10px;">CSS for Player Names:</label>&nbsp; &nbsp; <span id="CSSInitialsAlert"></span><br>
+							    <textarea id="CSSInitials" rows="3" style="width: 80%;" onchange="customFieldChanged('CSSInitials')"></textarea>
+							    <br><br>
+							    <label for="CSSScores" style="margin-top: 10px;">CSS for Player Score:</label>&nbsp; &nbsp; <span id="CSSScoresAlert"></span><br>
+							    <textarea id="CSSScores" rows="3" style="width: 80%;" onchange="customFieldChanged('CSSScores')"></textarea>
+							    <br><br>
+							    <label for="CSSBox" style="margin-top: 10px;">CSS for the Score Box:</label>&nbsp; &nbsp; <span id="CSSBoxAlert"></span><br>
+							    <textarea id="CSSBox" rows="3" style="width: 80%;" onchange="customFieldChanged('CSSBox')"></textarea>
+							    <br>
+    			             	</p>
+    		             		<h3 style="clear: both; padding-top: 20px;">Background Color</h3>
+    							
+    							<div id="cp3" class="input-group colorpicker-element" style="width: 250px; float: left;">
+    								<input id="gameBackgroundColor" type="text" class="form-control input-lg" value="#000000" style="width: 300px; background-color: rgb(240, 240, 240);">
+    								<span class="input-group-addon"><i style="background-color: transparent;"></i></span>
+    							</div>
+    							<div style="float: left; margin-left: 20px; margin-top: 8px">
+    							  <button type="button" class="btn btn-info" onclick="makeGameBGTransparent()" style="width: 140px; margin-top: -2px" id="makeGameBGTransparentButton">Make Transparent</button>
+    							</div>
+    							
+    							<h3 style="clear: both; padding-top: 20px;">Game Logo Image</h3>
+    							<div style="font-style: italic; clear: both;">Recommended size: 250x184 pixels.  Images wider than 250px will be rescaled automatically.</div> 
+    							<div style="float: left; clear: both; width: 300px;">
+    								<input type="file" class="filestyle" id="gameImgInp" data-icon="false" data-size="" data-buttonname="btn-info" data-placeholder="No file selected" tabindex="-1" style="position: absolute; clip: rect(0px, 0px, 0px, 0px);"><div class="bootstrap-filestyle input-group"><input type="text" class="form-control input-" placeholder="No file selected" disabled=""> <span class="group-span-filestyle input-group-btn" tabindex="0"><label for="gameImgInp" class="btn btn-info btn-"><span class="buttonText">Choose file</span></label></span></div>					  	
+    		             		</div>
+    		             		<button type="button" class="btn btn-danger" onclick="removeGameHeaderImage()" style="float: left; width: 200px; margin-left: 30px;">Remove Header Image</button>
+    
+    		             		<div style="clear: both;">
+    			             		<input type="checkbox" id="GameLogoSettings" onchange="customFieldChanged('GameLogoSettings')" style="margin-left: 10px; margin-top: 15px;" value="noResize"> Do not auto-resize this image
+    		             		</div>
+    							
+    							<h3 style="clear: both; padding-top: 20px;">Background Image</h3>
+    							<div style="font-style: italic; clear: both;">Recommended width is your current game width (default is 310px). &nbsp; Height varies by monitor. &nbsp; Images wider than 430px will be automatically rescaled.</div>
+    							<div style="float: left; clear: both; width: 300px;">
+    								<input type="file" class="filestyle" id="backgroundImgInp" data-icon="false" data-size="" data-buttonname="btn-info" data-placeholder="No file selected" tabindex="-1" style="position: absolute; clip: rect(0px, 0px, 0px, 0px);"><div class="bootstrap-filestyle input-group"><input type="text" class="form-control input-" placeholder="No file selected" disabled=""> <span class="group-span-filestyle input-group-btn" tabindex="0"><label for="backgroundImgInp" class="btn btn-info btn-"><span class="buttonText">Choose file</span></label></span></div>					  	
+    		             		</div>
+    		             		<button type="button" class="btn btn-danger" onclick="removeBackgroundImage()" style="float: left; width: 200px; margin-left: 30px;">Remove Background Image</button>
+    							 
+    		             		<div style="clear: both;">
+    		             			<input type="checkbox" id="GameBgSettings" onchange="customFieldChanged('GameBgSettings')" style="margin-left: 10px; margin-top: 15px;" value="stretch"> Stretch the background to fit available space instead of repeating
+    		             		</div>
+    		             		
+    		             		<h3 style="clear: both; padding-top: 20px;">Game Info</h3>
+    		             		<!--  Total Scores: <span id="currentGameScoreCount"></span><br> -->
+    		             		<b>Game ID:</b> <span id="currentGameId"></span><br><br>
+    		             		<b>Link to This Game:</b><br><span id="currentGameDisplayUrl"></span><br><br>
+    		             		<b>Link to This Game's Score Entry Screen:</b><br><span id="currentGamePublicEntryUrl"></span><br><br>
+    		             		<b>QR Code for This Game:</b><br>
+    		             		Select a QR Code Style:
+    		             		<select id="qrTemplateDropdown" class="form-control" style="width: 250px; display: inline " onchange="createQRfromGameId(currentGameID);">
+						        	<option value="iScoredDefault">Apron Template</option>
+						        	<option value="noLogo">QR Code Only</option>
+						        	<option value="logoLeft">Game Logo on Left</option>
+						        	<option value="logoTop">Game Logo on Top</option>
+						    	</select>
+						    	<br>
+    		             		<div id="gameQrCode" style="margin-top: 5px"><canvas id="qrCanvas" class="qrCanvas" width="630" height="350"></canvas></div>
+    		             		<button type="button" class="btn btn-info btn-sm" onclick="downloadQr()" style="display: inline; margin-top: 10px">Download QR Code</button>
+    		             		<br><br>
+		             		</div>
+		             		<hr>
+    		         		<button type="button" class="btn btn-info btn-sm" onclick="downloadMultipleQrs()" style="display: inline; margin-top: 5px" id="multipleQrsButton">Download QR Codes for All Games</button>
+    		         		<br>
+    		         		<span id="qrStatus" style="font-style: italic"></span>
+
+							<div class="testGameContainer" id="testGameContainer" style="background-repeat: no-repeat; background-image: url(&quot;/images/banners/banner1784?t=1770705119037&quot;);">
+							  <div class="game testGame previewGame" id="testGame" style="background-color: transparent; min-width: 265px; width: 184px; max-width: 184px; background-image: url(&quot;/images/backgrounds/gameBg91163?t=1770705119037&quot;); background-size: auto;">
+    					        <button id="shareThisStyleButton" type="button" class="btn btn-success btn-arrow-right" data-toggle="modal" data-target="#shareStyleModal" style="position: absolute; font-family: ubuntu; left: -110px; top: 13px; font-size: 12px; width: 126px;" onclick="$('#sharedStyleName').val($('#GameName').val());$('#sharedStyleDescription').val(' ');">
+    			                	Share This Style
+    			             	</button>	
+    		
+    				           	<div id="testGameName" class="gameTitle" style="height: 184px; min-height: 184px; max-height: 184px; display: flex;"><img src="/images/games/game91163?t=1770705119037" class="gameHeaderImage"></div>
+    							
+    							<div class="scorebox testScorebox" style=" ;">
+    								<div class="name testText">PEZ</div>
+    								<div class="score testScore">123,456,789,000</div>
+    							</div>
+    							
+    							<div class="scorebox testScorebox" style=" ;">
+    								<div class="name testText">KAY</div>
+    								<div class="score testScore">123,456,780</div>
+    							</div>
+    							
+    							<div class="scorebox testScorebox" style=" ;">
+    								<div class="name testText">MAL</div>
+    								<div class="score testScore">123,450</div>
+    							</div>
+    							
+    							<div class="scorebox testScorebox" style=" ;">
+    								<div class="name testText">NOV</div>
+    								<div class="score testScore">120</div>
+    							</div>
+							</div>
+						  </div>
+						</div>
+                    <div class="tab-pane fade" id="header">
+						<fieldset style="font-size: 22px; font-weight: 600; width: 99%">
+						<h2 style="margin-bottom: 24px">Layout Customization</h2>
+					    Banner Message:  <input type="text" id="topMessage" style="width: 250px; display: inline;" class="keyboard form-control" data-original-title="" title=""> &nbsp; 
+					      <select id="selectStyle" onchange="headerStyleSelect()" style="width: 180px; display: inline;" class="form-control">
+					        <option value="0">Apply a Style...</option>
+					      <option value="5">(none)</option><option value="13">AC/DC</option><option value="80">America's Most Haunted</option><option value="9">Attack From Mars</option><option value="1">Black Hole</option><option value="4">Ghostbusters</option><option value="103">Indianapolis 500</option><option value="30">Iron Man</option><option value="6">Medieval Madness</option><option value="11">Metallica</option><option value="81">Rob Zombie's Spookshow International</option><option value="2">Star Trek: The Next Generation</option><option value="16">Tales of the Arabian Nights</option><option value="23">TRON: Legacy</option><option value="8">Twilight Zone</option><option value="34">Whirlwind</option><option value="3">Wizard of Oz</option></select>
+					     <button type="button" class="btn btn-info btn-sm" onclick="goAdvanced()" style="margin-left: 10px; padding-left: 15px; display: inline;">Toggle Advanced Options</button>
+					      <br>
+					      <p id="customHeaderP" style="display: none;">
+					      <label for="CustomHeaderCSS" style="margin-top: 10px;">Custom Banner Style</label>
+					      <textarea id="CustomHeaderCSS" rows="3" style="width: 100%; font-size: 16px; font-weight: normal" onchange="styleHeader()"></textarea>
+					      </p> 
+					    <input type="checkbox" id="bannerDisabledCheckbox" onchange="toggleSetting('bannerDisabled')" style="margin-left: 40px; margin-top: 15px;"><span style="font-size: 16px; font-weight: normal">
+					    Hide the banner completely (only applies to the Gameroom screen).</span><br>
+						<br>
+						Gameroom Background Image:<br>
+						<div style="width: 300px; margin-left: 34px; float: left;">
+							<input type="file" class="filestyle" id="bannerImgInp" data-icon="false" data-buttontext="Choose Image" data-size="" data-buttonname="btn-info" data-placeholder="No file selected" tabindex="-1" style="position: absolute; clip: rect(0px, 0px, 0px, 0px);"><div class="bootstrap-filestyle input-group"><input type="text" class="form-control input-" placeholder="No file selected" disabled=""> <span class="group-span-filestyle input-group-btn" tabindex="0"><label for="bannerImgInp" class="btn btn-info btn-"><span class="buttonText">Choose Image</span></label></span></div>					  	
+						</div>
+				  		<button type="button" class="btn btn-danger" onclick="removeBanner()" style="width: 200px; margin-left: 20px; margin-top: -3px; max-height: 34px">Remove Background Image</button>
+				  		<div style="clear: both; margin-left: 30px">
+				  			<i style="font-size: 16px; font-weight: normal">(Maximum Image Size: 4MB)</i><br>
+				  			<input type="checkbox" id="checkboxRepeatBG" onchange="changeHeaderRepeat()" style="margin-left: 10px; margin-top: 15px;">
+				  			<span style="font-size: 16px; font-weight: normal"> Repeat Background Image</span> &nbsp; &nbsp; 
+				  			<input type="checkbox" id="checkboxStretchBG" onchange="changeStretchBG()" style="margin-left: 10px; margin-top: 15px;">
+				  			<span style="font-size: 16px; font-weight: normal"> Stretch Background Image to Fit Screen Width</span>
+				  		</div>
+					  	<br>
+					  	
+					  	Gameroom Logo Image:<br>
+						<div style="width: 300px; margin-left: 34px; float: left;">
+							<input type="file" class="filestyle" id="bannerLogoImgInp" data-icon="false" data-buttontext="Choose Image" data-size="" data-buttonname="btn-info" data-placeholder="No file selected" tabindex="-1" style="position: absolute; clip: rect(0px, 0px, 0px, 0px);"><div class="bootstrap-filestyle input-group"><input type="text" class="form-control input-" placeholder="No file selected" disabled=""> <span class="group-span-filestyle input-group-btn" tabindex="0"><label for="bannerLogoImgInp" class="btn btn-info btn-"><span class="buttonText">Choose Image</span></label></span></div>					  	
+						</div>
+				  		<button type="button" class="btn btn-danger" onclick="removeBannerLogo()" style="margin-left: 20px; margin-top: -3px; max-height: 34px">Remove Gameroom Logo Image</button>
+				  		<div style="clear: both; margin-left: 30px">
+				  			<i style="font-size: 16px; font-weight: normal">(Maximum Image Size: 4MB)</i><br>
+				  		</div>
+					  	<br>
+
+				  		Players Shown Per Game: <input type="number" id="inputMaxScoresPerGame" onchange="changeMaxScoresPerGameOption()" style="width: 75px; text-align: right;" value="10"><br>
+						<div class="optionDescription">
+							This sets the maximum number of players shown per game. &nbsp; This does NOT limit how many scores can be recorded -- only how many are displayed on the leaderboard. &nbsp; Default is 10.
+						</div>
+						<br>
+						
+						<input type="checkbox" id="hideEmptyGamesCheckbox" onchange="toggleSetting('hideEmptyGames')" style="margin-left: 10px; margin-top: 15px;">
+						Hide Empty Games<br>
+						<div class="optionDescription">
+							This hides any games that do not have any scores entered for them. &nbsp; 
+							"Show Empty Games" can be toggled on or off from the gameroom screen by clicking the "Show/Hide Empty Games" button in the navigation menu. &nbsp;
+							Scores can still be entered for a hidden game via QR code, the API, or other screens, at which point it will become visible automatically.
+						</div>
+						<br>
+						
+				  		Game Title Height: <input type="number" id="inputGameTitleHeight" onchange="changeGameTitleHeightOption()" style="width: 75px; text-align: right;">px<br>
+						<div class="optionDescription">
+							This sets how much space there is at the top of each column for your game logos.  You can decrease this value if you're using shorter game logos, or increase it if your score boxes are covering your game logos.   
+							The default value is 184px.
+						</div>
+						<br>
+
+						Game Width: <input type="number" id="inputGameWidth" onchange="changeGameWidthOption()" style="width: 75px; text-align: right;">px<br>
+						<div class="optionDescription">
+							This value sets the width in pixels of all your games. &nbsp; 
+							Default value is 310px, but you may want to increase this if you are using long names instead of initials.
+						</div>
+						<br>						
+
+				  		Game Spacing: <br>
+				  		<div class="optionDescription" style="width: 100%">
+				  			<div style="width: 610px; float: left; margin-right: 35px">
+	    			  			Customize how much space you have between your games, as well as above and below them.  
+								Your gameroom background image will fill in the surrounding area.  The default value is 0.
+								<br><br>
+        			  			<input type="text" id="inputGameMarginsLeft" onchange="changeGameMarginOption()" style="text-align: right; margin-left: 10px; margin-bottom: 5px; width: 75px;" value="0">px left margin<br>
+        			  			<input type="text" id="inputGameMarginsRight" onchange="changeGameMarginOption()" style="text-align: right; margin-left: 10px; margin-bottom: 5px; width: 75px;" value="0">px right margin<br>
+        			  			<input type="text" id="inputGameMarginsTop" onchange="changeGameMarginOption()" style="text-align: right; margin-left: 10px; margin-bottom: 5px; width: 75px;" value="0">px top margin<br>
+        			  			<input type="text" id="inputGameMarginsBottom" onchange="changeGameMarginOption()" style="text-align: right; margin-left: 10px; margin-bottom: 5px; width: 75px;" value="0">px bottom margin<br>
+    			  			</div>
+    			  			<div style="width: 420px; font-size: 18px; font-style: italic; float: left; text-align: center; margin-top: 10px">
+								<img src="/newsPics/spacing.png"><br>
+								Example using 30px left margin, 30px<br> 
+								right margin, and 20px bottom margin
+    			  			</div>
+				  		</div>
+				  		<hr style="clear:both; border-width: 0px;">
+				  						  		
+				  		Scaling Factor (Zoom): <input type="number" id="inputScale" onchange="changeScaleOption()" style="width: 75px; text-align: right;"><br>
+						<div class="optionDescription">
+							This setting changes the overall scale of the app. &nbsp; It's like a zoom level.
+							 &nbsp; The lower the value, the smaller or more "zoomed out" your gameroom will look. 
+							&nbsp; 0.7 is the default value (equivalent to 70% zoom level -- like being slightly zoomed out). 
+							&nbsp; 1.0 would be no zoom at all.<br>
+							By default, this setting only applies to low-resolution devices such as phones, tablets, and some TVs.
+							<br>
+							<input type="checkbox" id="scaleAllResolutionsCheckbox" onchange="toggleSetting('scaleAllResolutions')" style="margin-left: 10px; margin-top: 15px;">
+				  			<span> Apply scaling to ALL devices, regardless of resolution.</span>
+						</div>
+						<br>
+						
+						Global Game Settings:
+						<div class="optionDescription">
+							Any CSS properties specified here will override properties set within the games themselves.  This is useful for giving a more uniform look to your gameroom.  
+							For example, if you want all of your games to have the same narrow score boxes, you can enter the following into the "CSS for All Score Boxes" field:
+							<pre style="width: 400px">height: 80px; min-height: 80px; max-height: 80px;</pre>
+							It's also useful if you have a large gameroom and wish to set a single font family and size for all of your games at once.<br>
+    						
+    						<!-- This works fine, i just kinda doubt it's gonna be of use to anyone, and it takes up a lot of space and could be confusing. 
+    						      .... well whattday know, someone immediately requested this feature! -->
+    						<label for="CSSTitleGlobal" style="margin-top: 10px;">CSS for All Game Titles:</label>&nbsp; &nbsp; <span id="CSSTitleGlobalAlert"></span><br>
+    					    <textarea id="CSSTitleGlobal" rows="2" style="width: 90%;" onchange="saveSettingAndRepaint('CSSTitleGlobal',this.value, true)"></textarea>
+    						<br>
+    						
+    	             		<label for="CSSInitialsGlobal" style="margin-top: 10px;">CSS for All Player Names:</label>&nbsp; &nbsp; <span id="CSSInitialsGlobalAlert"></span><br>
+    					    <textarea id="CSSInitialsGlobal" rows="2" style="width: 90%;" onchange="saveSettingAndRepaint('CSSInitialsGlobal',this.value, true)"></textarea>
+    					    <br>
+    					    <label for="CSSScoresGlobal" style="margin-top: 10px;">CSS for All Player Scores:</label>&nbsp; &nbsp; <span id="CSSScoresGlobalAlert"></span><br>
+    					    <textarea id="CSSScoresGlobal" rows="2" style="width: 90%;" onchange="saveSettingAndRepaint('CSSScoresGlobal',this.value, true)"></textarea>
+    					    <br>
+    					    <label for="CSSBoxGlobal" style="margin-top: 10px;">CSS for All Score Boxes:</label>&nbsp; &nbsp; <span id="CSSBoxGlobalAlert"></span><br>
+    					    <textarea id="CSSBoxGlobal" rows="2" style="width: 90%;" onchange="saveSettingAndRepaint('CSSBoxGlobal',this.value, true)"></textarea>
+    					</div>
+						<br>
+                  	</fieldset></div>
+
+                    <div class="tab-pane fade" id="order" style="font-size: 20px;">
+	                    <h2>Lineup</h2>
+    	                Drag the game names up and down to change the order they appear on the main page.<br>
+    	                "Hidden" games will not be displayed, but scores can still be entered via QR code, URL, or API.<br>
+    	                "Locked" games will not allow new scores to be entered, and will display a lock icon on that game.
+		                <br><br>
+		                <table style="width: 760px; min-width: 760px; max-width: 760px; text-align: center">
+    		                <tbody><tr>
+    		                	<td style="padding-bottom: 10px">
+        		                	<button type="button" class="btn btn-success" onclick="alphabetizeGames()" id="alphabetizeGames">
+            		                 	Sort Games Alphabetically
+            		             	</button>
+		             	 		</td>
+    		                	<td style="padding-bottom: 10px">
+    		             			<button type="button" class="btn btn-success" onclick="hideAllGames()">
+		                 				Hide All Games
+		             	 			</button>
+    		                	</td>
+    		                	<td style="padding-bottom: 10px">
+            		             	 <button type="button" class="btn btn-success" onclick="lockAllGames()">
+            		                 	Lock All Games
+            		             	 </button>    		                	
+    		                	</td>
+    	                	</tr>
+    	                	<tr>
+    	                		<td>
+									<button type="button" class="btn btn-success" onclick="reverseGames()">
+		                 				Reverse Game List Order
+		             	 			</button>    	                		
+    	                		</td>
+    	                		<td>
+    	                			<button type="button" class="btn btn-success" onclick="showAllGames()">
+		                 				Unhide All Games
+		             	 			</button>
+    	                		</td>
+    	                		<td>
+              		                 <button type="button" class="btn btn-success" onclick="unlockAllGames()">
+            		                 	Unlock All Games
+            		             	 </button>
+    	                		</td>
+                    		</tr>
+                		</tbody></table>
+		             	 
+		             	 <br>
+		                <table style="width: 760px; min-width: 760px; max-width: 760px">
+		                  <tbody><tr>
+		                  	<td style="width: 460px; padding-left: 16px">Game Name</td>
+		                  	<td style="width: 100px; text-align: right">Hidden</td>
+		                  	<td style="width: 100px; text-align: right">Locked</td>
+		                  	<td style="width: 200px; text-align: left; padding-left: 20px">Tags</td>
+		                  </tr>
+		                </tbody></table>
+		                <ul id="orderGameUL" class="list-group" style="max-width: 580px;"><li class="list-group-item" id="90744" data-id="90744" style="height: 50px"><span class="dragHandle"><img src="icons/updown.png" style="height: 15px;"> 24</span><span style="float:right; margin-left: 60px;"><input type="checkbox" onclick="lockGame('90744')" id="lock90744" name="lock90744" value="True" class="lockCheckbox"></span><span style="float:right;"><input type="checkbox" onclick="hideGame('90744')" id="hide90744" name="hide90744" value="True" class="showHideCheckbox"></span><span style="font-size: 14px; position: absolute; left: 600px; top: 5px"><tags class="tagify tagInput tagify--noTags tagify--empty" tabindex="-1">
+            <span contenteditable="" data-placeholder="write some tags" aria-placeholder="write some tags" class="tagify__input" role="textbox" aria-autocomplete="both" aria-multiline="false"></span>
+        </tags><input name="tagInput90744" id="tagInput90744" class="tagInput" placeholder="write some tags" value=""></span></li><li class="list-group-item" id="91155" data-id="91155" style="height: 50px"><span class="dragHandle"><img src="icons/updown.png" style="height: 15px;"> Twilight Zone DG</span><span style="float:right; margin-left: 60px;"><input type="checkbox" onclick="lockGame('91155')" id="lock91155" name="lock91155" value="True" class="lockCheckbox"></span><span style="float:right;"><input type="checkbox" onclick="hideGame('91155')" id="hide91155" name="hide91155" value="True" class="showHideCheckbox"></span><span style="font-size: 14px; position: absolute; left: 600px; top: 5px"><tags class="tagify tagInput tagify--noTags tagify--empty" tabindex="-1">
+            <span contenteditable="" data-placeholder="write some tags" aria-placeholder="write some tags" class="tagify__input" role="textbox" aria-autocomplete="both" aria-multiline="false"></span>
+        </tags><input name="tagInput91155" id="tagInput91155" class="tagInput" placeholder="write some tags" value=""></span></li><li class="list-group-item" id="91158" data-id="91158" style="height: 50px"><span class="dragHandle"><img src="icons/updown.png" style="height: 15px;"> Table Test Weekly WG-VPXS</span><span style="float:right; margin-left: 60px;"><input type="checkbox" onclick="lockGame('91158')" id="lock91158" name="lock91158" value="True" class="lockCheckbox"></span><span style="float:right;"><input type="checkbox" onclick="hideGame('91158')" id="hide91158" name="hide91158" value="True" class="showHideCheckbox"></span><span style="font-size: 14px; position: absolute; left: 600px; top: 5px"><tags class="tagify tagInput tagify--noTags tagify--empty" tabindex="-1">
+            <span contenteditable="" data-placeholder="write some tags" aria-placeholder="write some tags" class="tagify__input" role="textbox" aria-autocomplete="both" aria-multiline="false"></span>
+        </tags><input name="tagInput91158" id="tagInput91158" class="tagInput" placeholder="write some tags" value=""></span></li><li class="list-group-item" id="91067" data-id="91067" style="height: 50px"><span class="dragHandle"><img src="icons/updown.png" style="height: 15px;"> Metallica WG-VR</span><span style="float:right; margin-left: 60px;"><input type="checkbox" onclick="lockGame('91067')" id="lock91067" name="lock91067" value="True" class="lockCheckbox"></span><span style="float:right;"><input type="checkbox" onclick="hideGame('91067')" id="hide91067" name="hide91067" value="True" class="showHideCheckbox"></span><span style="font-size: 14px; position: absolute; left: 600px; top: 5px"><tags class="tagify tagInput tagify--noTags tagify--empty" tabindex="-1">
+            <span contenteditable="" data-placeholder="write some tags" aria-placeholder="write some tags" class="tagify__input" role="textbox" aria-autocomplete="both" aria-multiline="false"></span>
+        </tags><input name="tagInput91067" id="tagInput91067" class="tagInput" placeholder="write some tags" value=""></span></li><li class="list-group-item" id="91148" data-id="91148" style="height: 50px"><span class="dragHandle"><img src="icons/updown.png" style="height: 15px;"> Cactus Canyon MG</span><span style="float:right; margin-left: 60px;"><input type="checkbox" onclick="lockGame('91148')" id="lock91148" name="lock91148" value="True" class="lockCheckbox"></span><span style="float:right;"><input type="checkbox" onclick="hideGame('91148')" id="hide91148" name="hide91148" value="True" class="showHideCheckbox"></span><span style="font-size: 14px; position: absolute; left: 600px; top: 5px"><tags class="tagify tagInput tagify--noTags tagify--empty" tabindex="-1">
+            <span contenteditable="" data-placeholder="write some tags" aria-placeholder="write some tags" class="tagify__input" role="textbox" aria-autocomplete="both" aria-multiline="false"></span>
+        </tags><input name="tagInput91148" id="tagInput91148" class="tagInput" placeholder="write some tags" value=""></span></li><li class="list-group-item" id="91066" data-id="91066" style="height: 50px"><span class="dragHandle"><img src="icons/updown.png" style="height: 15px;"> World Cup Soccer WG-VPXS</span><span style="float:right; margin-left: 60px;"><input type="checkbox" onclick="lockGame('91066')" id="lock91066" name="lock91066" value="True" class="lockCheckbox"></span><span style="float:right;"><input type="checkbox" onclick="hideGame('91066')" id="hide91066" name="hide91066" value="True" class="showHideCheckbox"></span><span style="font-size: 14px; position: absolute; left: 600px; top: 5px"><tags class="tagify tagInput tagify--noTags tagify--empty" tabindex="-1">
+            <span contenteditable="" data-placeholder="write some tags" aria-placeholder="write some tags" class="tagify__input" role="textbox" aria-autocomplete="both" aria-multiline="false"></span>
+        </tags><input name="tagInput91066" id="tagInput91066" class="tagInput" placeholder="write some tags" value=""></span></li><li class="list-group-item" id="91149" data-id="91149" style="height: 50px"><span class="dragHandle"><img src="icons/updown.png" style="height: 15px;"> Deadpool (Pro) DG</span><span style="float:right; margin-left: 60px;"><input type="checkbox" onclick="lockGame('91149')" id="lock91149" name="lock91149" value="True" class="lockCheckbox"></span><span style="float:right;"><input type="checkbox" onclick="hideGame('91149')" id="hide91149" name="hide91149" value="True" class="showHideCheckbox"></span><span style="font-size: 14px; position: absolute; left: 600px; top: 5px"><tags class="tagify tagInput tagify--noTags tagify--empty" tabindex="-1">
+            <span contenteditable="" data-placeholder="write some tags" aria-placeholder="write some tags" class="tagify__input" role="textbox" aria-autocomplete="both" aria-multiline="false"></span>
+        </tags><input name="tagInput91149" id="tagInput91149" class="tagInput" placeholder="write some tags" value=""></span></li><li class="list-group-item" id="91159" data-id="91159" style="height: 50px"><span class="dragHandle"><img src="icons/updown.png" style="height: 15px;"> Table Test Weekly VR WG-VR</span><span style="float:right; margin-left: 60px;"><input type="checkbox" onclick="lockGame('91159')" id="lock91159" name="lock91159" value="True" class="lockCheckbox"></span><span style="float:right;"><input type="checkbox" onclick="hideGame('91159')" id="hide91159" name="hide91159" value="True" class="showHideCheckbox"></span><span style="font-size: 14px; position: absolute; left: 600px; top: 5px"><tags class="tagify tagInput tagify--noTags tagify--empty" tabindex="-1">
+            <span contenteditable="" data-placeholder="write some tags" aria-placeholder="write some tags" class="tagify__input" role="textbox" aria-autocomplete="both" aria-multiline="false"></span>
+        </tags><input name="tagInput91159" id="tagInput91159" class="tagInput" placeholder="write some tags" value=""></span></li><li class="list-group-item" id="91160" data-id="91160" style="height: 50px"><span class="dragHandle"><img src="icons/updown.png" style="height: 15px;"> Table Test Month MG</span><span style="float:right; margin-left: 60px;"><input type="checkbox" onclick="lockGame('91160')" id="lock91160" name="lock91160" value="True" class="lockCheckbox"></span><span style="float:right;"><input type="checkbox" onclick="hideGame('91160')" id="hide91160" name="hide91160" value="True" class="showHideCheckbox"></span><span style="font-size: 14px; position: absolute; left: 600px; top: 5px"><tags class="tagify tagInput tagify--noTags tagify--empty" tabindex="-1">
+            <span contenteditable="" data-placeholder="write some tags" aria-placeholder="write some tags" class="tagify__input" role="textbox" aria-autocomplete="both" aria-multiline="false"></span>
+        </tags><input name="tagInput91160" id="tagInput91160" class="tagInput" placeholder="write some tags" value=""></span></li><li class="list-group-item" id="91116" data-id="91116" style="height: 50px"><span class="dragHandle"><img src="icons/updown.png" style="height: 15px;"> Dark Chaos DG</span><span style="float:right; margin-left: 60px;"><input type="checkbox" onclick="lockGame('91116')" id="lock91116" name="lock91116" value="True" class="lockCheckbox"></span><span style="float:right;"><input type="checkbox" onclick="hideGame('91116')" id="hide91116" name="hide91116" value="True" class="showHideCheckbox"></span><span style="font-size: 14px; position: absolute; left: 600px; top: 5px"><tags class="tagify tagInput tagify--noTags tagify--empty" tabindex="-1">
+            <span contenteditable="" data-placeholder="write some tags" aria-placeholder="write some tags" class="tagify__input" role="textbox" aria-autocomplete="both" aria-multiline="false"></span>
+        </tags><input name="tagInput91116" id="tagInput91116" class="tagInput" placeholder="write some tags" value=""></span></li><li class="list-group-item" id="91157" data-id="91157" style="height: 50px"><span class="dragHandle"><img src="icons/updown.png" style="height: 15px;"> Table Test DG</span><span style="float:right; margin-left: 60px;"><input type="checkbox" onclick="lockGame('91157')" id="lock91157" name="lock91157" value="True" class="lockCheckbox"></span><span style="float:right;"><input type="checkbox" onclick="hideGame('91157')" id="hide91157" name="hide91157" value="True" class="showHideCheckbox"></span><span style="font-size: 14px; position: absolute; left: 600px; top: 5px"><tags class="tagify tagInput tagify--noTags tagify--empty" tabindex="-1">
+            <span contenteditable="" data-placeholder="write some tags" aria-placeholder="write some tags" class="tagify__input" role="textbox" aria-autocomplete="both" aria-multiline="false"></span>
+        </tags><input name="tagInput91157" id="tagInput91157" class="tagInput" placeholder="write some tags" value=""></span></li><li class="list-group-item" id="91054" data-id="91054" style="height: 50px"><span class="dragHandle"><img src="icons/updown.png" style="height: 15px;"> Bram Stoker's Dracula</span><span style="float:right; margin-left: 60px;"><input type="checkbox" onclick="lockGame('91054')" id="lock91054" name="lock91054" value="True" class="lockCheckbox"></span><span style="float:right;"><input type="checkbox" onclick="hideGame('91054')" id="hide91054" name="hide91054" value="True" class="showHideCheckbox"></span><span style="font-size: 14px; position: absolute; left: 600px; top: 5px"><tags class="tagify tagInput tagify--noTags tagify--empty" tabindex="-1">
+            <span contenteditable="" data-placeholder="write some tags" aria-placeholder="write some tags" class="tagify__input" role="textbox" aria-autocomplete="both" aria-multiline="false"></span>
+        </tags><input name="tagInput91054" id="tagInput91054" class="tagInput" placeholder="write some tags" value=""></span></li><li class="list-group-item" id="90806" data-id="90806" style="height: 50px"><span class="dragHandle"><img src="icons/updown.png" style="height: 15px;"> The Walking Dead (Limited Edition) (Stern 2014)</span><span style="float:right; margin-left: 60px;"><input type="checkbox" onclick="lockGame('90806')" id="lock90806" name="lock90806" value="True" class="lockCheckbox"></span><span style="float:right;"><input type="checkbox" onclick="hideGame('90806')" id="hide90806" name="hide90806" value="True" class="showHideCheckbox"></span><span style="font-size: 14px; position: absolute; left: 600px; top: 5px"><tags class="tagify tagInput tagify--noTags tagify--empty" tabindex="-1">
+            <span contenteditable="" data-placeholder="write some tags" aria-placeholder="write some tags" class="tagify__input" role="textbox" aria-autocomplete="both" aria-multiline="false"></span>
+        </tags><input name="tagInput90806" id="tagInput90806" class="tagInput" placeholder="write some tags" value=""></span></li><li class="list-group-item" id="90590" data-id="90590" style="height: 50px"><span class="dragHandle"><img src="icons/updown.png" style="height: 15px;"> Medieval Madness DG</span><span style="float:right; margin-left: 60px;"><input type="checkbox" onclick="lockGame('90590')" id="lock90590" name="lock90590" value="True" class="lockCheckbox"></span><span style="float:right;"><input type="checkbox" onclick="hideGame('90590')" id="hide90590" name="hide90590" value="True" class="showHideCheckbox"></span><span style="font-size: 14px; position: absolute; left: 600px; top: 5px"><tags class="tagify tagInput tagify--noTags tagify--empty" tabindex="-1">
+            <span contenteditable="" data-placeholder="write some tags" aria-placeholder="write some tags" class="tagify__input" role="textbox" aria-autocomplete="both" aria-multiline="false"></span>
+        </tags><input name="tagInput90590" id="tagInput90590" class="tagInput" placeholder="write some tags" value=""></span></li><li class="list-group-item" id="91156" data-id="91156" style="height: 50px"><span class="dragHandle"><img src="icons/updown.png" style="height: 15px;"> Table Test DG</span><span style="float:right; margin-left: 60px;"><input type="checkbox" onclick="lockGame('91156')" id="lock91156" name="lock91156" value="True" class="lockCheckbox"></span><span style="float:right;"><input type="checkbox" onclick="hideGame('91156')" id="hide91156" name="hide91156" value="True" class="showHideCheckbox"></span><span style="font-size: 14px; position: absolute; left: 600px; top: 5px"><tags class="tagify tagInput tagify--noTags tagify--empty" tabindex="-1">
+            <span contenteditable="" data-placeholder="write some tags" aria-placeholder="write some tags" class="tagify__input" role="textbox" aria-autocomplete="both" aria-multiline="false"></span>
+        </tags><input name="tagInput91156" id="tagInput91156" class="tagInput" placeholder="write some tags" value=""></span></li><li class="list-group-item" id="91145" data-id="91145" style="height: 50px"><span class="dragHandle"><img src="icons/updown.png" style="height: 15px;"> Batman '66 WG-VPXS</span><span style="float:right; margin-left: 60px;"><input type="checkbox" onclick="lockGame('91145')" id="lock91145" name="lock91145" value="True" class="lockCheckbox"></span><span style="float:right;"><input type="checkbox" onclick="hideGame('91145')" id="hide91145" name="hide91145" value="True" class="showHideCheckbox"></span><span style="font-size: 14px; position: absolute; left: 600px; top: 5px"><tags class="tagify tagInput tagify--noTags tagify--empty" tabindex="-1">
+            <span contenteditable="" data-placeholder="write some tags" aria-placeholder="write some tags" class="tagify__input" role="textbox" aria-autocomplete="both" aria-multiline="false"></span>
+        </tags><input name="tagInput91145" id="tagInput91145" class="tagInput" placeholder="write some tags" value=""></span></li><li class="list-group-item" id="91146" data-id="91146" style="height: 50px"><span class="dragHandle"><img src="icons/updown.png" style="height: 15px;"> Pinbot WG-VR</span><span style="float:right; margin-left: 60px;"><input type="checkbox" onclick="lockGame('91146')" id="lock91146" name="lock91146" value="True" class="lockCheckbox"></span><span style="float:right;"><input type="checkbox" onclick="hideGame('91146')" id="hide91146" name="hide91146" value="True" class="showHideCheckbox"></span><span style="font-size: 14px; position: absolute; left: 600px; top: 5px"><tags class="tagify tagInput tagify--noTags tagify--empty" tabindex="-1">
+            <span contenteditable="" data-placeholder="write some tags" aria-placeholder="write some tags" class="tagify__input" role="textbox" aria-autocomplete="both" aria-multiline="false"></span>
+        </tags><input name="tagInput91146" id="tagInput91146" class="tagInput" placeholder="write some tags" value=""></span></li><li class="list-group-item" id="91147" data-id="91147" style="height: 50px"><span class="dragHandle"><img src="icons/updown.png" style="height: 15px;"> Monster Bash MG</span><span style="float:right; margin-left: 60px;"><input type="checkbox" onclick="lockGame('91147')" id="lock91147" name="lock91147" value="True" class="lockCheckbox"></span><span style="float:right;"><input type="checkbox" onclick="hideGame('91147')" id="hide91147" name="hide91147" value="True" class="showHideCheckbox"></span><span style="font-size: 14px; position: absolute; left: 600px; top: 5px"><tags class="tagify tagInput tagify--noTags tagify--empty" tabindex="-1">
+            <span contenteditable="" data-placeholder="write some tags" aria-placeholder="write some tags" class="tagify__input" role="textbox" aria-autocomplete="both" aria-multiline="false"></span>
+        </tags><input name="tagInput91147" id="tagInput91147" class="tagInput" placeholder="write some tags" value=""></span></li><li class="list-group-item" id="91163" data-id="91163" style="height: 50px"><span class="dragHandle"><img src="icons/updown.png" style="height: 15px;"> Test Game</span><span style="float:right; margin-left: 60px;"><input type="checkbox" onclick="lockGame('91163')" id="lock91163" name="lock91163" value="True" class="lockCheckbox"></span><span style="float:right;"><input type="checkbox" onclick="hideGame('91163')" id="hide91163" name="hide91163" value="True" class="showHideCheckbox"></span><span style="font-size: 14px; position: absolute; left: 600px; top: 5px"><tags class="tagify tagInput tagify--noTags tagify--empty" tabindex="-1">
+            <span contenteditable="" data-placeholder="write some tags" aria-placeholder="write some tags" class="tagify__input" role="textbox" aria-autocomplete="both" aria-multiline="false"></span>
+        </tags><input name="tagInput91163" id="tagInput91163" class="tagInput" placeholder="write some tags" value=""></span></li></ul>
+						<br><br>
+                    </div>
+
+                    <!--  <div class="tab-pane fade" style="font-size: 20px;" id="cycler">
+	                    <H2 style="margin-bottom: 24px;">Content Cycler</H2>
+	                    Cycle through content other than your iScored Gameroom, such as flyers for events, promo videos, other leaderboards, etc.
+	                    <br><br>
+	                    <button type='button' class='btn btn-info btn-sm' onClick='explainContentCycler()' style='display: inline;'>Details and Caveats</button>
+                    </div> -->
+                    
+                   <div class="tab-pane fade" id="competition" style="font-size: 20px;">
+	                    <h2>Ranking</h2>
+	                    <div style="float: left; width: 650px; margin-right: 55px;">
+    	                    <input type="checkbox" id="tournamentColumnCheckbox" onchange="toggleSetting('tournamentColumn')" unchecked=""> 
+    	                    Show The Overall Player Rankings Column
+    	                    <br><br>
+       	                    <input type="checkbox" id="tournamentColumnStickyCheckbox" onchange="toggleSetting('tournamentColumnSticky')" unchecked=""> 
+    	                    Keep Player Rankings Visible When Scrolling
+    	                    <br><br>
+    	                    <div class="optionDescription">
+        	                    <b>Rank Method:</b>
+        	                    <select id="selectTournamentFormat" onchange="setTournamentFormat()" style="display: inline; width: 230px; font-weight: bold" class="form-control">
+        	                    	<option value="Average Rank">Average Rank</option>
+        	                    	<option value="PAPA" selected="">Best Game (PAPA)</option>
+        	                    	<!--  <option value="PAPA Circuit">Best Game (PAPA Circuit)</option> -->
+        	                    	<option value="Linear">Best Game (Linear)</option>
+        	                    	<option value="Max 10">Max 10</option>
+        	        
+        	                    	<!--  <option value="Linear 150">Linear 150</option> -->
+        	                    	<!--  <option value="Linear 200">Linear 200</option> -->
+        	                    	<!--  <option value="INDISC">INDISC</option> -->
+        	                    	<!--  <option value="INDISC 200">INDISC 200</option> -->
+                            	</select>
+                            	&nbsp; <b>Number of Games:</b> <input type="number" id="inputTournamentLimit" onchange="changeTournamentLimit()" style="width: 50px; text-align: right;">
+                            	<br>
+                            	<div id="formatRules" style="border-radius: 10px; border: 1px solid grey; padding: 10px; margin-top: 5px; margin-bottom: 30px; padding-top: 0px; min-width: 615px; max-width: 615px; background-color: rgb(231 243 255); box-shadow: 4px 4px 4px grey;"><h3>Best Game (PAPA)</h3>This format awards points to players based on their rank on each game. &nbsp; Their <b>10</b> best games are factored into their total score. &nbsp; Points are awarded as follows:<br>1st:  100 points<br>2nd:  90 points<br>3rd:  85 points<br>Each subsequent place is worth 1 point less.<br></div>
+    	                    </div>
+	                    </div>
+	                    
+    	                <div style="font-size: 18px; font-style: italic; float: left; text-align: center; margin-top:-5px; margin-bottom: 20px;">
+						  <img src="/newsPics/averageRank3.png"><br>
+    			  		</div>
+    			  		
+    			  		<div style="clear: both; width: 100%">
+        			  		<h2>Events</h2>
+        			  		When an event is active, only scores recorded during that event will be shown or used in player rank calculations. &nbsp;
+        			  		This can be useful for single-day competitions or special events. &nbsp; Once created, an event can be started, stopped, 
+        			  		or resumed as many times as desired. &nbsp; Only one event can be running at a time.
+        			  		<br>
+        			  		<button id="deleteScoresSelectedGameButton" type="button" class="btn btn-success btn-sm" data-toggle="modal" data-target="#createEventModal" style="width: 240px;">
+    		                	Create New Event
+    		             	</button>
+        			  		<div id="eventTableDiv" class="eventTableDiv">
+	                    	<table class="table table-hover adminTable" id="eventTable" style="width: 100%">
+								<thead>
+									<tr>
+										<th style="width: 100%">Event Name</th>
+										<th style="min-width: 140px; max-width: 140px;">Date Created</th>
+										<th style="min-width: 100px; max-width: 100px;">Status</th>
+										<th style="min-width: 160px; max-width: 160px;">Control</th>
+									</tr>
+								</thead>
+								<tbody>
+								</tbody>
+							</table>
+	                    </div>
+    			  		</div>
+	                    
+                    </div>
+
+                    <div class="tab-pane fade options" id="options">
+                    	<br>
+	                    <h2 style="margin-bottom: 24px;">Gameroom Options</h2>
+	                    <!--  they're dynamically generated now -->                         
+                    <input type="checkbox" id="publicScoresEnabledCheckbox" onchange="toggleSetting('publicScoresEnabled')" unchecked="">Allow a Public (Read-Only) Version of Your Gameroom<br><div class="optionDescription">This enables a public version of your gameroom that you can share with others, so they can see your gameroom scores without logging in.  They cannot modify your scores, lineup, or settings.  The URL to your public gameroom is:<br><b><a href="https://www.iScored.info/Mekelburgj">https://www.iScored.info/Mekelburgj</a></b><br><b>NOTE:</b> This URL will ALWAYS be read-only, even if you have Public Scores enabled.</div><br><input type="checkbox" id="publicScoreEntryEnabledCheckbox" onchange="toggleSetting('publicScoreEntryEnabled')" unchecked="">Allow Public Score Entry<br><div class="optionDescription">This allows anyone to enter and update scores without being logged in.  They cannot modify your lineup or settings.  If using this feature, you might consider enabling the "Require Admin Approval" option located in the Admin tab above.  The URL for your gameroom with Public Score Entry enabled is: <br><b><a href="https://www.iScored.info?mode=public&amp;user=Mekelburgj">https://www.iScored.info?mode=public&amp;user=Mekelburgj</a></b></div><br><input type="checkbox" id="requirePhotoCheckbox" onchange="toggleSetting('requirePhoto')" unchecked="">Require Photo<br><div class="optionDescription">This prevents scores from being submitted unless a photo is attached.</div><br><input type="checkbox" id="idleScrollCheckbox" onchange="toggleSetting('idleScroll')" unchecked="">Enable Idle Scrolling Animation<br><div class="optionDescription">Scrolls the screen when idle. &nbsp; Default speed is 10. &nbsp; Speeds above 200 or so are a bit silly.<br><b>Method:</b> <select id="selectIdleScrollMethod" onchange="setIdleScrollMethod()" style="display: inline; width: 230px; font-weight: bold" class="form-control"><option value="JustInTime">Infinite Scroll (Default)</option><option value="Swing">Swing</option><option value="Basic">Basic</option></select> &nbsp; <button type="button" class="btn btn-info btn-sm" onclick="explainIdleScrollMethods()" style="display: inline;">What Do These Mean?</button><br><b>Idle time before animation begins: <input type="number" id="inputIdleScrollDelay" onchange="changeIdleScrollDelayOption()" style="width: 75px; text-align: right;"> seconds<br>Animation speed: <input type="number" id="inputIdleScrollSpeed" onchange="changeIdleScrollSpeedOption()" style="width: 75px; text-align: right;"></b></div><br><input type="checkbox" id="longNamesEnabledCheckbox" onchange="toggleSetting('longNamesEnabled')" unchecked="">Allow Names Instead of Initials<br><div class="optionDescription">This allows users to enter up to 25 characters instead of just 3.  Note that you will need to modify the font sizes on your games to accomodate this.  Font size of about 20px is a good place to start.</div><br><input type="checkbox" id="showQRCheckbox" onchange="toggleSetting('showQR')" unchecked="">Show QR Code for Each Game<br><div class="optionDescription">Shows a QR Code at the top right side of each game column, which links to the score entry screen for that game.<br><input type="checkbox" id="smallQRsCheckbox" onchange="toggleSetting(&quot;smallQRs&quot;)">Use smaller QR codes<br><input type="checkbox" id="qrAtBottomCheckbox" onchange="toggleSetting(&quot;qrAtBottom&quot;)">Move QR to bottom of game column</div><br><input type="checkbox" id="showClockCheckbox" onchange="toggleSetting('showClock')" unchecked="">Show the Current Time<br><div class="optionDescription">Enables a digital clock in the upper right corner of the main gameroom screen.<br><b>Clock Style:</b> <select id="selectClockStyle" onchange="setClockStyle()" style="width: 190px; display: inline; font-weight: bold" class="form-control"><option value="blackHole">Black Hole (animated)</option><option value="blackHoleStatic">Black Hole</option><option value="transporter">Funhouse (animated)</option><option value="transporterStatic">Funhouse</option><option value="rainbow">Rainbow (animated)</option><option value="spooky">Spooky</option><option value="basic">Basic</option></select><br><input type="checkbox" id="clock24hCheckbox" onchange="toggleSetting(&quot;clock24h&quot;)">Use 24-hour clock instead of AM/PM<br><b>NOTE:</b> Animated options might make the idle scroll choppy on some devices.</div><br><input type="checkbox" id="useAlternateDelimitersCheckbox" onchange="toggleSetting('useAlternateDelimiters')" unchecked="">Use Alternate Digit Delimiters<br><div class="optionDescription">Separates thousands digits using periods instead of commas, and uses commas instead of periods for decimals.</div><br><input type="checkbox" id="datesEnabledCheckbox" onchange="toggleSetting('datesEnabled')" unchecked="">Display Dates for Scores<br><div class="optionDescription">Shows the date a score was achieved in the lower right corner of the score box.<br><b>NOTE:</b> if idle scroll animation is choppy, try disabling this feature.</div><br><input type="checkbox" id="emailsEnabledCheckbox" onchange="toggleSetting('emailsEnabled')" unchecked="">Display Email Addresses on Leaderboard<br><div class="optionDescription">If a player has set up a Default Identity and specified an email address, then that email will be displayed when their score is clicked on.</div><br><input type="checkbox" id="showLogoCheckbox" onchange="toggleSetting('showLogo')" unchecked="">Show a Small iScored Logo on the Banner<br><div class="optionDescription">This displays a small iScored logo on the top right side of the screen.</div><br><input type="checkbox" id="autoLockSettingsCheckbox" onchange="toggleSetting('autoLockSettings')" unchecked="">Auto-Lock the Navigation Menu<br><div class="optionDescription">This option automatically locks the Navigation Menu after each use.  Your password is required to unlock it.  Users can enter and update scores, but can't do anything else without a password.  (The Navigation Bar will stay unlocked as long as you remain within the Settings and Community pages, so that you don't have to repeatedly enter your password while setting up your game room).</div><br><input type="checkbox" id="horizontalScrollbarDisabledCheckbox" onchange="toggleSetting('horizontalScrollbarDisabled')" unchecked="">Disable Horizontal Scrollbar<br><div class="optionDescription">Hides the scrollbar that runs along the bottom of the screen on some devices.</div><br><input type="checkbox" id="gameScrollbarsCheckbox" onchange="toggleSetting('gameScrollbars')" unchecked="">Show Game Scrollbars<br><div class="optionDescription">This puts a scrollbar on each game's column.  This shouldn't be necessary on touchscreen devices, but might be handy in some situations, such as if you are using a mouse without a scroll wheel.</div><br><input type="checkbox" id="useOnscreenKeyboardsCheckbox" onchange="toggleSetting('useOnscreenKeyboards')" checked="">Enable On-Screen Keyboards and Number Pads<br><div class="optionDescription"><b>Button size: <input type="number" id="inputKeyboardButtonSize" onchange="changeKeyboardButtonSizeOption()" value="1.5" style="width: 75px; text-align: right;">em</b> (Default is 1.5)</div><div class="optionDescription">Disable this option if you wish to use a physical keyboard, or if your device pops up a keyboard automatically.  (requires a page refresh to take effect)</div><br><input type="checkbox" id="useFullscreenPopupCheckbox" onchange="toggleSetting('useFullscreenPopup')" unchecked="">Enable Fullscreen Reminder<br><div class="optionDescription">This option provides a popup reminder to go fullscreen the first time your game room is displayed after logging in. &nbsp; This has no effect on certain devices such as iPads, which consider themselves in "fullscreen" mode at all times. &nbsp; (iScored cannot go fullscreen automatically -- Web browsers require a "user action" to go fullscreen as a security precaution.)</div><br><input type="checkbox" id="disableEdgeScrollingCheckbox" onchange="toggleSetting('disableEdgeScrolling')" unchecked="">Disable Edge Scrolling<br><div class="optionDescription">Prevents the iScored Gameroom from scrolling games when the mouse pointer is near the edge of the screen. &nbsp; You can still scroll using either the scrollbar or the arrow keys.</div><br><input type="checkbox" id="apiReadAccessCheckbox" onchange="toggleSetting('apiReadAccess')" unchecked="">Allow Read Access through the iScored API [ALPHA]<br><div class="optionDescription">This allows programmatic access to read information about your games, scores and gameroom settings via the iScored API. &nbsp; The iScored API is in ALPHA testing and is not feature-complete. &nbsp; You can read more about it here: <a target="_new" href="https://iscored.info/api/">https://iscored.info/api/</a>.</div><br><input type="checkbox" id="apiWriteAccessCheckbox" onchange="toggleSetting('apiWriteAccess')" unchecked="">Allow Write Access through the iScored API [ALPHA]<br><div class="optionDescription">This allows programmatic access to submit scores to your gameroom via the iScored API. &nbsp; The iScored API is in ALPHA testing and is not feature-complete. &nbsp; You can read more about it here: <a target="_new" href="https://iscored.info/api/">https://iscored.info/api/</a>.</div><br><input type="checkbox" id="publicScoreDeleteEnabledCheckbox" onchange="toggleSetting('publicScoreDeleteEnabled')" unchecked="">Allow Public Users to Delete Scores<br><div class="optionDescription">This allows anyone to delete scores without being logged in as you.  Please be aware that score deletion is not subject to Admin Approval, so any score a public user deletes is gone forever. &nbsp; <b>This option is not recommended for public locations or large communities!</b></div><br><br><br></div>
+                    
+                    <div class="tab-pane fade" id="social" style="font-size: 20px;">
+                    
+		             	<h2>Stern Leaderboard Synchronization</h2>
+		             	Display games and scores from a Stern Leaderboard in your iScored Gameroom!  Scores are pulled directly from Stern in real-time. &nbsp;
+		             	<b>NOTE: Stern Leaderboards require a Pro or All-Access Stern Insider Connected account</b>.
+		             	<br><br>
+						Stern Leaderboard Kiosk URL:<br>
+						<input type="text" id="inputSternLeaderboardUrl" onchange="changeSternLeaderboardUrl()" style="width: 420px; display: inline;" class="keyboard form-control" data-original-title="" title=""> &nbsp;
+				     	<button type="button" class="btn btn-success btn-sm" onclick="syncWithStern()" style="margin-left: 10px; padding-left: 15px; display: inline;">Sync Now</button>
+				     	<button type="button" class="btn btn-danger btn-sm" onclick="unSyncWithStern()" style="margin-left: 10px; padding-left: 15px; display: inline;">Remove Sync</button>
+				     	<button type="button" class="btn btn-info btn-sm" onclick="explainSternSync()" style="margin-left: 10px; padding-left: 15px; display: inline;" id="botInfoButton">More Info</button>
+				     	<br>
+						<span style="font-size: 14px; font-style: italic">example: https://insider.sternpinball.com/kiosk/abcde-fghij-klmno or https://sternlb.com/dcyayjl</span><br>
+				     	Status: <span id="syncStatus" style="color: black; size: 14px; font-weight: bold">Not Synchronized</span><br>
+						<span id="sternEventName" style="color: black; size: 14px;"></span>
+					    <br>
+		             	                    
+	                    <h2 style="margin-bottom: 24px;">Official iScored Discord Server</h2>
+	                    <div style="width: 510px; style=" float:="" left;="" margin-right:="" 35px;="" margin-bottom:="" 20px;"="">
+	                    	Join our Discord server to chat about gaming, pinball (physical or virtual), and arcades.  Show off your high scores or your gameroom!  
+	                    	Also a great place to interact with the developer regarding setup, new features, the API, or get tech help from the community.
+	                    	<br><br>
+	                    	Click "Join Discord" on the widget shown, or use this link:  <a href="https://discord.gg/qW5acyEz2e" target="_tab">https://discord.gg/qW5acyEz2e</a>.
+                    	</div>
+	                    <div style="float: left; margin-left: 545px; margin-top: -270px; margin-bottom: 40px;">
+                    		<iframe src="https://discord.com/widget?id=1146567608729088010&amp;theme=dark" width="350" height="250" allowtransparency="true" frameborder="0" sandbox="allow-popups allow-popups-to-escape-sandbox allow-same-origin allow-scripts"></iframe>
+                    	</div>
+                    	<div style="clear:both"></div>
+	                    <h2 style="margin-bottom: 24px;">Official iScored Discord Bot</h2>
+	                    <div style="width: 510px; float: left; margin-right: 35px; margin-bottom: 20px;">
+    	                    This bot spices up your Discord server by posting an alert whenever a new top-10 high score is achieved. &nbsp; It can also look up game or score information
+    	                    for any iScored gameroom, and even tracks standings and statistics for a number of pinball leagues. &nbsp;  It has some fun easter eggs built in, too!
+    	                </div>
+    	                <div style="font-size: 18px; font-style: italic; float: left; text-align: center; margin-top: -5px; margin-bottom: 20px;">
+						  <img src="/newsPics/bot2.jpg"><br>
+								Just one of its features
+    			  		</div>
+    			  		<div style="clear:both">
+    	                    <button type="button" class="btn btn-success" onclick="addBot()" id="addBotButton">
+    		                  Add the Official iScored Bot to Your Discord Server
+    		             	</button>		             	
+    		             	&nbsp; &nbsp;
+    	                    <button type="button" class="btn btn-info" onclick="showBotInfo()" id="botInfoButton">
+    		                  More Info - Usage, Help, Etc.
+    		             	</button>
+		             	</div>
+		             	<br>
+		             	<h2>Contact and Social Media</h2>
+		             	<ul>
+		             		<!--  <li> <a target="_new" href="https://www.facebook.com/iScored.info/">Facebook</a></li> -->
+    		             	<li> <a target="_new" href="https://www.instagram.com/iscored_gaming/">Instagram</a></li>
+    		             	<li> <a target="_new" href="mailto:pezpunk@iscored.info">E-Mail</a></li>
+		             	</ul>
+                        <br><br><br><br><br><br>
+                    </div>
+                    
+                    <div class="tab-pane fade options" id="admin">
+	                    <h2>Score Administration</h2>
+
+	                    <span style="font-size: 16px;">
+    	                    <input type="checkbox" id="adminApprovalCheckbox" onchange="toggleSetting('adminApproval')" unchecked="">
+    	                    Require admin approval for any new incoming scores
+    	                    <br>
+    
+       	                    <input type="checkbox" id="adminApprovalEmailCheckbox" onchange="toggleSetting('adminApprovalEmail')" unchecked="">
+    	                    Send new score notifications to these email addresses:<br>
+    	                    <input type="text" id="inputAdminApprovalEmailList" style="font-weight: normal; width: 650px; text-align: left; margin-left: 28px;"><br>
+    	                    <div style="margin-left: 30px; font-weight: normal; font-style: italic">(comma-separated, 5 addresses max)<br>
+    	                    <b>NOTE:</b> "@hotmail.com" and "@outlook.com" addresses frequently reject Admin Approval emails as spam.  Consider using alternatives if possible.</div>
+						</span>
+	                    <div id="adminTableDiv" class="adminTableDiv">
+	                    	<table class="table table-hover adminTable" id="adminApprovalTable">
+								<thead>
+									<tr>
+										<th style="">Game</th>
+										<th style="">Name</th>
+										<th style="">Score</th>
+										<th style="min-width: 150px; max-width: 150px;">Date</th>
+										<th style="min-width: 35px; max-width: 35px;">Image</th>
+										<th style=""> </th>
+									</tr>
+								</thead>
+								<tbody>
+								</tbody>
+							</table>
+	                    </div>
+
+                    </div>
+                    
+                                          
+                    <div class="tab-pane fade options" id="user" style="line-height: 0.75;">
+                    	<h2>Change Password</h2>
+                    	<span style="font-weight: normal; font-size: 16px;"><i>Passwords must be between 6 and 20 characters in length.</i></span><br><br>
+                    	<input type="password" id="currentPassword" placeholder="Current Password" style="width: 250px;" class="keyboard form-control" data-original-title="" title="">
+                    	<br>
+                    	<input type="password" id="newPassword" maxlength="20" placeholder="New Password" style="width: 250px;" class="keyboard form-control" data-original-title="" title="">
+                    	<br>
+                    	<input type="password" id="newPassword2" maxlength="20" placeholder="Repeat New Password" style="width: 250px;" class="keyboard form-control" data-original-title="" title="">
+                    	<br>
+                    	<button type="button" class="btn btn-success btn" style="float: left; width: 160px;" id="changePassword" onclick="changePassword();">
+		                  Change Password
+		             	</button>
+		             	<div id="passwordResponse" style="margin: 6px; float: left;"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+	</div>
+</div>
+
+
+<!-- Add New Game (With Community Support) Modal -->     
+
+<div id="addGameModal" class="modal fade" role="dialog" style="display: none;">
+  <div class="modal-dialog" style="width: 90%; max-width: 1000px;">
+
+    <!-- Modal content-->
+    <div class="modal-content">
+      <div class="modal-header">
+        <button type="button" class="close" data-dismiss="modal">×</button>
+        <h4 class="modal-title">Create New Game</h4>
+		Type the name of your game in the Search box below.  You can either use style from our community, or create a blank game with no styling.   
+      </div>
+      <div class="modal-body" style="min-height: 650px;">
+        <div style="padding-right: 285px; padding-bottom: 30px;">
+			<div id="stylesTable_wrapper" class="dataTables_wrapper form-inline dt-bootstrap no-footer"><div><div class="styleFilter"><div id="stylesTable_filter" class="dataTables_filter"><label>Search:<input type="search" class="form-control input-sm" placeholder="" aria-controls="stylesTable"></label></div></div><div class="stylefilter"></div><div><table class="table table-hover dataTable no-footer" id="stylesTable" role="grid" aria-describedby="stylesTable_info">
+				<thead>
+					<tr role="row"><th style="width: 230px" class="sorting_asc" tabindex="0" aria-controls="stylesTable" rowspan="1" colspan="1" aria-label="Game: activate to sort column descending" aria-sort="ascending">Game</th><th style="width: 300px" class="sorting" tabindex="0" aria-controls="stylesTable" rowspan="1" colspan="1" aria-label="Notes: activate to sort column ascending">Notes</th><th style="width: 100px" class="sorting" tabindex="0" aria-controls="stylesTable" rowspan="1" colspan="1" aria-label="Author: activate to sort column ascending">Author</th></tr>
+				</thead>
+				<tbody><tr onclick="loadStylePreview(3401)" role="row" class="odd"><td style="font-weight: bold" class="sorting_1">Sega Rally Desert</td><td style="font-style: italic"> Just testing a few things, I am going to make all my games with this same template - cab at top, with flyer, then marquee, and then any additional in</td><td>Sbdesign</td></tr></tbody>
+			</table></div><div class="dataTables_info" id="stylesTable_info" role="status" aria-live="polite">Showing 1 to 1 of 1 entries (filtered from 4,635 total entries)</div><div class="dataTables_paginate paging_simple_numbers" id="stylesTable_paginate"><ul class="pagination"><li class="paginate_button previous disabled" id="stylesTable_previous"><a href="#" aria-controls="stylesTable" data-dt-idx="0" tabindex="0">Previous</a></li><li class="paginate_button active"><a href="#" aria-controls="stylesTable" data-dt-idx="1" tabindex="0">1</a></li><li class="paginate_button next disabled" id="stylesTable_next"><a href="#" aria-controls="stylesTable" data-dt-idx="2" tabindex="0">Next</a></li></ul></div></div></div>
+		</div>
+        <div class="game testGame newGame" id="newGamePreview" style="overflow: hidden; display: none;">
+           	<div id="newGameName" class="gameTitle">[Game Preview]</div>
+			<div class="scorebox testScorebox">
+				<div class="name testText">PEZ</div>
+				<div class="score testScore">123,456,789</div>
+			</div>
+			
+			<div class="scorebox testScorebox">
+				<div class="name testText">KAY</div>
+				<div class="score testScore">123,456</div>
+			</div>
+			
+			<div class="scorebox testScorebox">
+				<div class="name testText">MAL</div>
+				<div class="score testScore">123,450</div>
+			</div>
+			
+			<div class="scorebox testScorebox">
+				<div class="name testText">NOV</div>
+				<div class="score testScore">120</div>
+			</div>						
+		</div>
+
+      </div>
+      <div class="modal-footer" style="text-align: center">
+       <button type="button" class="btn btn-default btn-success" onclick="createGame(currentStyleID)">Create Game Using Selected Style</button>
+       <button type="button" class="btn btn-default btn-info" onclick="createGame(-1)">Create Blank Game</button>
+       <button type="button" class="btn btn-default btn-danger" id="cancelCreateGameButton" data-dismiss="modal">Cancel</button>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<div id="timeWrapper" class="timeWrapper" style="right: 94px; display: block;">
+	<div id="digitalTime" class="digitalTime" style="animation: 5s linear 0s infinite normal none running blackHoleStatic;">10:34pm </div>
+</div>
+
+<div id="logoWrapper" class="logoWrapper" style="right: 234px;">
+	<img src="/icons/powered by iscored.png">
+</div>
+
+<!-- invisible canvas where resizing is done -->
+<canvas id="imageCanvas" style="width: 460px; display: none; z-index: -1000;" width="430" height="322"></canvas>
+
+<!-- Explain Content Cycler Limitations -->
+<div id="explainContentCyclerModal" class="modal fade" role="dialog">
+  <div class="modal-dialog" style="width: 900px">
+
+    <!-- Modal content-->
+    <div class="modal-content">
+      <div class="modal-header">
+        <button type="button" class="close" data-dismiss="modal">×</button>
+        <h4 class="modal-title">Content Cycler Details and Caveats</h4>
+      </div>
+      <div class="modal-body" style="overflow: auto; max-height: 70vh">
+        <p>
+        	The Content Cycler works by creating an iFrame within the page, and loading content into that iFrame.  This creates several fundamental limitations:
+        	<br><br>
+        	1.  iScored can only cycle through content that is hosted on secure pages (i.e. any URL that begins with "https://").  URLs that begin with "http://" will not load, because you cannot mix secure and unsecure content.
+        	<br><br>
+        	2.  iScored can auto-play videos, but only if they have no audio or the audio is muted.  Browsers do not allow websites to automatically play audio without user interaction.
+        </p>
+      </div>
+      <div class="modal-footer" style="text-align: center;">
+        <button type="button" class="btn btn-default btn-info" data-dismiss="modal">Got it</button>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- Explain Stern Sync Modal -->
+<div id="explainSternSyncModal" class="modal fade" role="dialog">
+  <div class="modal-dialog" style="width: 900px">
+
+    <!-- Modal content-->
+    <div class="modal-content">
+      <div class="modal-header">
+        <button type="button" class="close" data-dismiss="modal">×</button>
+        <h4 class="modal-title">Stern Leaderboard Synchronization</h4>
+      </div>
+      <div class="modal-body" style="overflow: auto; max-height: 70vh">
+        <b>Wait, What is This?</b><br>
+        If you have a Stern Insider Connected Pro or All-Access account, you can create leaderboards that are accessible through a kiosk URL.
+        If you provide that URL to iScored, then the scores from that leaderboard can also be displayed in iScored, alongside any other games in 
+        your iScored gameroom.
+        <br><br>      
+        <b>What Does the Synchronize Button do, Exactly?</b><br>
+        When you provide a Stern Leaderboard Kiosk URL and click "Sync Now", iScored checks what games are in that leaderboard, and creates corresponding games 
+        in iScored for each one.  These games will be in addition to any games you already 
+        have in your iScored gameroom (so if you already have, for example, a King Kong in iScored, it won't replace it, it will create another one).  
+        These special "Synced" games can be edited like normal iScored games - you can upload custom graphics or set custom fonts and colors.  
+        However, you cannot change their name, nor can you enter scores for them via iScored.  Scores for synced games can come only from Stern Insider Connected.
+        <br><br>
+        It's also worth noting that no Stern player names or scores are ever imported or stored in iScored's database.
+        <br><br>
+        <b>OK, Then How Are the Stern Scores Shown in iScored?</b><br>
+        When your iScored gameroom display loads, it pulls the scores and names fresh from Stern, and updates them every 10 seconds or so.
+        <br><br>
+        <b>What Does "Remove Sync" Do?</b><br>
+        The "Remove Sync" button tells iScored to stop trying to retrieve data from a Stern Leaderboard.  Note that it also permanently removes those games from your gameroom.
+        If you wish to sync a new leaderboard URL, but don't want to lose any changes you made to the graphics or formating of your games, then you can simply press the 
+        "Sync Now" button without hitting "Remove Sync" first.
+        </div>
+      <div class="modal-footer" style="text-align: center;">
+        <button type="button" class="btn btn-default btn-info" data-dismiss="modal">Got it!</button>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- Explain Idle Scroll Methods Modal -->
+<div id="explainIdleScrollMethodsModal" class="modal fade" role="dialog">
+  <div class="modal-dialog" style="width: 900px">
+
+    <!-- Modal content-->
+    <div class="modal-content">
+      <div class="modal-header">
+        <button type="button" class="close" data-dismiss="modal">×</button>
+        <h4 class="modal-title">What Do These Mean?</h4>
+      </div>
+      <div class="modal-body" style="overflow: auto; max-height: 70vh">
+        <b>Infinite Scroll (Default)</b><br>
+        Infinitely scrolls the game columns from left to right, through all the pages in your gameroom.  When it reaches the last game, the first game appears, then the second, 
+        and so on.
+        <br><br>
+        <b>Swing</b><br>
+        This method is the same as Infinite Scroll, except that it scrolls the width of one game at a time, and then pauses.  The length of the pause 
+        is determined by the Animation Speed setting -- the lower the speed, the longer the pause.  This method may help obscure stuttering or jagged animation
+        on devices with lower capabilities. 
+        <br><br>
+        <b>Basic</b><br>
+        This method simply scrolls left to right until it reaches the end, then reverses direction.  It uses the least processing by far, so 
+        if your issue is that the scroll is stuttering or struggling, this might be your best option.  However, games at the far left and far right 
+        will be seen less often than other games in the game room, since it reverses direciton when it reaches them.  
+        Also note that if you have more than 200 games in your gameroom, this option will only scroll through the currently-selected page of games.
+        </div>
+      <div class="modal-footer" style="text-align: center;">
+        <button type="button" class="btn btn-default btn-info" data-dismiss="modal">Got it!</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+<!-- Fonts Help Modal -->
+<div id="fontsHelpModal" class="modal fade" role="dialog">
+  <div class="modal-dialog" style="width: 900px">
+
+    <!-- Modal content-->
+    <div class="modal-content">
+      <div class="modal-header">
+        <button type="button" class="close" data-dismiss="modal">×</button>
+        <h4 class="modal-title">Available Fonts and CSS Help</h4>
+      </div>
+      <div class="modal-body" style="overflow: auto; max-height: 70vh">
+        Good news, everyone! &nbsp; iScored now supports all 1600+ fonts in the Google Fonts Library! &nbsp; You can choose from any of the fonts found on this list: <a href="https://fonts.google.com/" target="_new">https://fonts.google.com/</a>.
+        <br><br>
+        Additionally, iScored still supports all of the old fonts as well. (<a href="#" onclick="$('#legacyFontsDiv').show()">Click Here to see that list</a>).
+        <br><br>
+        <div id="legacyFontsDiv" style="display: none; margin-bottom: 20px; border: 2px solid black; border-radius: 15px; margin-left: 20%; margin-right: 20%"><table class="fontsTable"><tbody><tr><td style="font-family: 'Aclonica'">Aclonica</td></tr><tr><td style="font-family: 'ActionMan'">ActionMan</td></tr><tr><td style="font-family: 'Berkshire Swash'">Berkshire Swash</td></tr><tr><td style="font-family: 'Cinzel Decorative'">Cinzel Decorative</td></tr><tr><td style="font-family: 'Creepster'">Creepster</td></tr><tr><td style="font-family: 'ComicRelief'">ComicRelief</td></tr><tr><td style="font-family: 'dseg14'">dseg14</td></tr><tr><td style="font-family: 'Enriqueta'">Enriqueta</td></tr><tr><td style="font-family: 'Federation'">Federation</td></tr><tr><td style="font-family: 'Fontdiner Swanky'">Fontdiner Swanky</td></tr><tr><td style="font-family: 'Fredericka the Great'">Fredericka the Great</td></tr><tr><td style="font-family: 'Ghostbusters'">Ghostbusters</td></tr><tr><td style="font-family: 'IM Fell English'">IM Fell English</td></tr><tr><td style="font-family: 'IM Fell English SC'">IM Fell English SC</td></tr><tr><td style="font-family: 'JUDGEDREDD'">JUDGEDREDD</td></tr><tr><td style="font-family: 'Krupper'">Krupper</td></tr><tr><td style="font-family: 'LeagueGothic'">LeagueGothic</td></tr><tr><td style="font-family: 'LeagueGothicCondensed'">LeagueGothicCondensed</td></tr><tr><td style="font-family: 'Londrina Solid'">Londrina Solid</td></tr><tr><td style="font-family: 'Marcellus SC'">Marcellus SC</td></tr><tr><td style="font-family: 'Metallica'">Metallica</td></tr><tr><td style="font-family: 'Metamorphous'">Metamorphous</td></tr><tr><td style="font-family: 'New Rocker'">New Rocker</td></tr><tr><td style="font-family: 'OzsWizard'">OzsWizard</td></tr><tr><td style="font-family: 'PinballData'">PinballData</td></tr><tr><td style="font-family: 'Pirata One'">Pirata One</td></tr><tr><td style="font-family: 'Press Start 2P'">Press Start 2P</td></tr><tr><td style="font-family: 'Racing Sans One'">Racing Sans One</td></tr><tr><td style="font-family: 'ringbearermedium'">ringbearermedium</td></tr><tr><td style="font-family: 'Russo One'">Russo One</td></tr><tr><td style="font-family: 'Signika'">Signika</td></tr><tr><td style="font-family: 'Squealer'">Squealer</td></tr><tr><td style="font-family: 'Ubuntu'">Ubuntu</td></tr><tr><td style="font-family: 'Ultra'">Ultra</td></tr><tr><td style="font-family: 'UnifrakturCook'">UnifrakturCook</td></tr><tr><td style="font-family: 'UnifrakturMaguntia'">UnifrakturMaguntia</td></tr><tr><td style="font-family: 'VanillaExtract'">VanillaExtract</td></tr><tr><td style="font-family: 'Wendy One'">Wendy One</td></tr><tr><td style="font-family: 'Yatra One'">Yatra One</td></tr></tbody></table></div>
+        Once you've found a font you like, simply specify it with the "font-family" CSS attribute, as in the example below:
+        <br><br>
+        <center>
+        <img src="/newsPics/fontsHelp.jpg" style="border: 2px solid black; border-radius: 15px; margin-bottom: 20px">
+        </center>
+        
+        You can use as many fonts as you like. &nbsp; Just bear in mind that Google font names are case sensitive! &nbsp; So if the font is called "Spectral SC" and you type "Spectral sc", it will not work.
+        <br><br>
+        Hope that helps!
+        <br><br>    
+      </div>
+      <div class="modal-footer" style="text-align: center;">
+        <button type="button" class="btn btn-default btn-info" data-dismiss="modal">Got it!</button>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- Share Style Modal -->
+<div id="shareStyleModal" class="modal fade" role="dialog">
+  <div class="modal-dialog">
+
+    <!-- Modal content-->
+    <div class="modal-content">
+      <div class="modal-header">
+        <button type="button" class="close" data-dismiss="modal">×</button>
+        <h4 class="modal-title">Share This Style with the iScored Community</h4>
+      </div>
+      <div class="modal-body" style="">
+        <h3 style="margin-top: 0px;">Style Name</h3>
+        <p>
+          Usually the name of the game that it's for, but it could also be something more general, such as "Space Theme" or "Generic EM Theme". 
+        </p>
+        <input type="text" id="sharedStyleName" style="width: 100%; display: inline;" class="form-control">
+        <h3>Notes</h3>
+        <p>
+          Any relevant comments about this style.  Include any recommended game room settings, if applicable.
+        </p>
+ 		<textarea id="sharedStyleDescription" rows="3" style="width: 100%;"></textarea>
+        
+        
+      </div>
+      <div class="modal-footer" style="text-align: center;">
+        <button type="button" class="btn btn-default btn-success btn" onclick="shareStyle('share')">Save and share it now!</button>
+        <button type="button" class="btn btn-default btn-info" onclick="shareStyle('hide')">Save it but don't share it.</button>
+        <button type="button" class="btn btn-default btn-danger btn-sm" id="cancelShareStyleButton" data-dismiss="modal" style="margin-top: 15px;">Actually, never mind.  I just wanted to see what that button did.</button>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- Create Event Modal -->
+<div id="createEventModal" class="modal fade" role="dialog">
+  <div class="modal-dialog">
+
+    <!-- Modal content-->
+    <div class="modal-content">
+      <div class="modal-header">
+        <button type="button" class="close" data-dismiss="modal">×</button>
+        <h4 class="modal-title">Create Event</h4>
+      </div>
+      <div class="modal-body"><center>
+        Please enter a name for your new event.<br>
+        <input id="newEventName" style="width: 400px;">
+        </center>
+
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-default btn-success" data-dismiss="modal" onclick="addEvent()">Create</button>
+        <button type="button" class="btn btn-default btn-info" data-dismiss="modal">Cancel</button>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- Delete Scores Modal -->
+<div id="deleteScoresModal" class="modal fade" role="dialog">
+  <div class="modal-dialog">
+
+    <!-- Modal content-->
+    <div class="modal-content">
+      <div class="modal-header">
+        <button type="button" class="close" data-dismiss="modal">×</button>
+        <h4 class="modal-title">Delete Scores</h4>
+      </div>
+      <div class="modal-body">
+        <p>Are you really super duper sure you want to delete all scores for <span style="font-weight: bolder;" id="scoresToDelete"> </span>?  This cannot be undone.
+      </p></div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-default btn-danger" data-dismiss="modal" onclick="deleteScoresConfirmed()">Yes I'm definitely sure.</button>
+        <button type="button" class="btn btn-default btn-info" data-dismiss="modal">Actually, never mind.</button>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- Archive Game Modal -->
+<div id="archiveGameModal" class="modal fade" role="dialog">
+  <div class="modal-dialog">
+
+    <!-- Modal content-->
+    <div class="modal-content">
+      <div class="modal-header">
+        <button type="button" class="close" data-dismiss="modal">×</button>
+        <h4 class="modal-title">Archive Game</h4>
+      </div>
+      <div class="modal-body">
+        <p>This will create an exact duplicate of <span style="font-weight: bolder;" id="gameToArchive"> </span>, including all scores, graphics, and settings.
+        <br><br>
+        This new game will be hidden from your main gameroom by default, but it can be enabled via the "Lineup" tab".
+        <br><br>
+        Your current game will be unmodified.</p>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-default btn-success" data-dismiss="modal" onclick="archiveConfirmed()">Make it so</button>
+        <button type="button" class="btn btn-default btn-info" data-dismiss="modal">Belay that order</button>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- Delete Game Modal -->
+<div id="deleteGameModal" class="modal fade" role="dialog">
+  <div class="modal-dialog">
+
+    <!-- Modal content-->
+    <div class="modal-content">
+      <div class="modal-header">
+        <button type="button" class="close" data-dismiss="modal">×</button>
+        <h4 class="modal-title">Delete Game</h4>
+      </div>
+      <div class="modal-body">
+        <p>Are you really super duper sure you want to delete <span style="font-weight: bolder;" id="gameToDelete"> </span> and all the scores associated with it?  
+      </p></div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-default btn-danger" data-dismiss="modal" onclick="deleteConfirmed()">Yes I'm definitely sure.</button>
+        <button type="button" class="btn btn-default btn-info" data-dismiss="modal">Actually, never mind.</button>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- Busy Modal -->
+<div id="busyModal" class="modal" role="dialog" style="display: none;">
+  <div class="modal-dialog" style="width: 275px;">
+
+    <!-- Modal content-->
+    <div class="modal-content">
+      <div class="modal-body">
+      <img src="/icons/loadingSmall.gif" style="display: block">
+        <div id="busyModalText" style="width: 100%; height: 100%; text-align: center; vertical-align: middle; position: absolute; top: 70px; font-family: ubuntu; font-size: 14px;">Uploading Image...</div>
+      	<button type="button" id="closeBusyModal" class="btn btn-default btn-info" data-dismiss="modal" style="display: none;"></button>
+      </div>
+
+    </div>
+
+  </div>
+</div>
+
+<script src="js/tether.min.js"></script>
+<script src="bootstrap/js/bootstrap.min.js"></script>
+<script type="text/javascript" src="js/bootstrap-filestyle.min.js"> </script>
+<script src="js/bootbox.min.js"></script>
+<script src="js/jqbtk.min.js"></script>
+<script src="js/jquery.keyframes.min.js"></script>
+
+    <script>
+        $(document).on("click", ".alert", function(e) {
+            bootbox.alert("Hello world!", function() {
+                console.log("Alert Callback");
+            });
+        });
+    </script>
+
+
+
+<div class="colorpicker dropdown-menu colorpicker-with-alpha colorpicker-right colorpicker-hidden" style="top: 557.281px; left: 19px;"><div class="colorpicker-saturation" style="background-color: rgb(255, 0, 0);"><i style="top: 250px; left: 0px;"><b></b></i></div><div class="colorpicker-hue"><i style="top: 250px; left: 0px;"></i></div><div class="colorpicker-alpha" style="background-color: transparent;"><i style="top: 250px;"></i></div><div class="colorpicker-color" style="background-color: transparent;"><div style="background-color: transparent;"></div></div><div class="colorpicker-selectors"></div></div></body>

@@ -2,7 +2,7 @@ import { Client, GatewayIntentBits, Events, EmbedBuilder } from 'discord.js';
 import { Browser } from 'playwright';
 import { loginToIScored, createGame, submitScoreToIscored } from './iscored.js';
 import { getIscoredNameByDiscordId, getDiscordIdByIscoredName } from './userMapping.js';
-import { getPicker, setPicker, updateQueuedGame, getNextQueuedGame } from './database.js';
+import { getPicker, setPicker, updateQueuedGame, getNextQueuedGame, searchTables, getTable } from './database.js';
 import { getLastWinner, getHistory, getTableStats } from './history.js';
 import { getTablesFromSheet } from './googleSheet.js';
 import { getStandingsFromApi, findActiveGame } from './api.js';
@@ -41,6 +41,33 @@ export function startDiscordBot() {
 
     // --- Command Handler ---
     client.on(Events.InteractionCreate, async interaction => {
+        if (interaction.isAutocomplete()) {
+            const focusedOption = interaction.options.getFocused(true);
+
+            if (focusedOption.name === 'table-name') {
+                const gameType = interaction.options.getString('game-type');
+                console.log(`Debug: Autocomplete. GameType: '${gameType}', Search: '${focusedOption.value}'`);
+                
+                let choices: any[] = [];
+
+                if (gameType === 'DG') {
+                    choices = await searchTables(focusedOption.value, 25, 'atgames');
+                } else if (gameType === 'WG-VR') {
+                    choices = await searchTables(focusedOption.value, 25, 'vr');
+                } else if (gameType === 'WG-VPXS') {
+                    choices = await searchTables(focusedOption.value, 25, 'vpxs');
+                } else {
+                    // For MG or others, provide no suggestions (allow free typing)
+                    await interaction.respond([]);
+                    return;
+                }
+
+                const filtered = choices.map(t => ({ name: t.name, value: t.name }));
+                await interaction.respond(filtered);
+            }
+            return;
+        }
+
         if (!interaction.isChatInputCommand()) return;
 
         const { commandName } = interaction;
@@ -66,7 +93,23 @@ export function startDiscordBot() {
                 return;
             }
 
-            // 2. Create the game in iScored
+            // 2. Validate Table Selection (Only for DG)
+            if (gameType === 'DG') {
+                const tableData = await getTable(tableName);
+                
+                if (!tableData) {
+                    await interaction.editReply(`❌ The table '**${tableName}**' is not recognized in our database. Please select a valid table from the list for Daily Grind.`);
+                    return;
+                }
+
+                if (!tableData.is_atgames) {
+                    await interaction.editReply(`❌ The table '**${tableName}**' is not marked as available on **AtGames**. Please select an AtGames-compatible table for Daily Grind.`);
+                    return;
+                }
+            } 
+            // For WG-VR, WG-VPXS, and MG: No validation required.
+
+            // 3. Create the game in iScored
             let browser: Browser | null = null;
             try {
                 console.log(`🚀 Handling /picktable for ${gameType} with table: ${tableName}`);
@@ -76,7 +119,7 @@ export function startDiscordBot() {
                 // This function now creates the game and returns the iScored ID
                 const iscoredGameId = await createGame(page, newGameName); 
                 
-                // 3. Update the game entry in our database
+                // 4. Update the game entry in our database
                 await updateQueuedGame(nextGame.id, newGameName, iscoredGameId);
 
                 const confirmationMessage = `✅ Thank you, ${interaction.user.toString()}! The table **${newGameName}** has been selected and created. It will be the table for the tournament in 2 days.`;
@@ -291,7 +334,7 @@ export function startDiscordBot() {
         }
         
         else if (commandName === 'dg-table-selection') {
-            await interaction.deferReply();
+            await interaction.deferReply({ ephemeral: true });
 
             const gid = process.env.GOOGLE_SHEET_GID;
             if (!gid) {
@@ -319,7 +362,7 @@ export function startDiscordBot() {
 
                 await interaction.editReply(messageChunks[0]);
                 for (let i = 1; i < messageChunks.length; i++) {
-                    await interaction.followUp(messageChunks[i]);
+                    await interaction.followUp({ content: messageChunks[i], ephemeral: true });
                 }
 
             } catch (error) {

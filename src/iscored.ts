@@ -20,7 +20,7 @@ export interface Game {
 
 export async function loginToIScored(): Promise<{ browser: Browser, page: Page }> {
     console.log('🚀 Launching browser and logging into iScored...');
-    const browser = await chromium.launch({ headless: false });
+    const browser = await chromium.launch({ headless: true });
     
     const context = await browser.newContext({
         userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/109.0.0.0 Safari/537.36',
@@ -470,10 +470,30 @@ export async function submitScoreToIscored(iScoredUsername: string, discordUserI
         // 3. Click the correct element to open the score modal.
         // The element ID on the main page is in the format 'a<gameId>Scores'.
         const scoreEntryActivator = mainFrame.locator(`#a${activeGame.id}Scores`);
-        await scoreEntryActivator.click();
+        
+        // Retry logic for opening the modal
+        let modalVisible = false;
+        for (let i = 0; i < 3; i++) {
+            try {
+                console.log(`   -> Attempt ${i + 1} to open score modal...`);
+                await scoreEntryActivator.click({ timeout: 5000 });
+                await mainFrame.locator('#scoreEntryDiv').waitFor({ state: 'visible', timeout: 5000 });
+                modalVisible = true;
+                break;
+            } catch (e) {
+                console.warn(`   -> Attempt ${i + 1} failed or timed out. Retrying...`);
+                // If the modal didn't appear, maybe the click didn't register or the page wasn't ready.
+                // Waiting a bit before retry.
+                await page.waitForTimeout(2000);
+            }
+        }
+
+        if (!modalVisible) {
+             throw new Error('Failed to open score entry modal after 3 attempts.');
+        }
 
         // 4. Wait for the score entry modal to be visible and fill in the details.
-        await mainFrame.locator('#scoreEntryDiv').waitFor({ state: 'visible' });
+        // (Already waited in the loop, but good to ensure element reference is fresh if needed, though locator is lazy)
         await mainFrame.locator('#newInitials').fill(iScoredUsername);
         await mainFrame.locator('#newScore').fill(score.toString());
 

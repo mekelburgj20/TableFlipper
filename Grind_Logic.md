@@ -1,0 +1,6 @@
+Grind Logic
+
+Any Daily Grind table selected must be available on the AtGames platform, indicated by 'atgames=true' or similar attribute for the table in the db (if you have a better suggestion on how to indicate in the database that the table is available on AtGames then recommend that). The table selected does not have to be available on any other platform like wg-vr, wg-vpsx, etc. but we should check after user makes the selection and notify as an FYI "FYI - Table may not be available on {platform} but is available on AtGames."
+Any Weekly Grind VR (wg-vr) table selected does not have any requirements except 'wg-vr=true', indicating it is available on VR.
+Any Weekly Grind VPXS (wg-vpxs) table selected does not have any requirements except 'wg-vpsx=true', indicating it is available on VPXS
+Any Monthly Grind (mg) table selected does not have any requirements. We do not need an attribute in the database for mg availability. Any table input by user is allowed, even if no match in database is found even for game name. 

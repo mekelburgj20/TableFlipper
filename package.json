@@ -13,6 +13,10 @@
     "deploy-commands": "node dist/deploy-commands.js",
     "premigrate-history": "tsc",
     "migrate-history": "node dist/migrate-history.js",
+    "presync-tables": "tsc",
+    "sync-tables": "node dist/sync-tables.js",
+    "premigrate-games-schema": "tsc",
+    "migrate-games-schema": "node dist/migrate-games-schema.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [

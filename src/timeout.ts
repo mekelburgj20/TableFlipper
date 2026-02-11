@@ -4,13 +4,15 @@ import { loginToIScored } from './iscored.js';
 import { randomTableList } from './tableList.js';
 import { sendDiscordNotification } from './discord.js';
 
-const ALL_GAME_TYPES = ['DG', 'WG-VPXS', 'WG-VR', 'MG'];
-const PICKER_TIMEOUT_HOURS = 12;
+const PICKER_TIMEOUT_HOURS = 18;
+
+// Monthly Grind (MG) is excluded from timeouts as per requirements.
+const TIMEOUT_GAME_TYPES = ['DG', 'WG-VPXS', 'WG-VR'];
 
 export async function checkPickerTimeouts() {
     console.log('⏳ Checking for picker timeouts...');
 
-    for (const gameType of ALL_GAME_TYPES) {
+    for (const gameType of TIMEOUT_GAME_TYPES) {
         const game = await getPicker(gameType);
 
         if (game && game.picker_designated_at && game.picker_discord_id) {

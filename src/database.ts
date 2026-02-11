@@ -69,16 +69,82 @@ export async function initializeDatabase() {
                 created_at DATETIME DEFAULT CURRENT_TIMESTAMP
             );
         `);
+        
+        // Re-create tables table with new schema
+        // await db.exec(`DROP TABLE IF EXISTS tables;`); // Removed to persist data
         await db.exec(`
             CREATE TABLE IF NOT EXISTS tables (
                 name TEXT PRIMARY KEY,
-                aliases TEXT
+                aliases TEXT,
+                is_atgames INTEGER DEFAULT 0,
+                is_wg_vr INTEGER DEFAULT 0,
+                is_wg_vpxs INTEGER DEFAULT 0
             );
         `);
         console.log('✅ Database tables initialized successfully.');
     } catch (error) {
         console.error('❌ Error initializing database tables:', error);
         throw error;
+    } finally {
+        await db.close();
+    }
+}
+
+// --- Table Functions ---
+
+export interface TableRow {
+    name: string;
+    aliases?: string | null;
+    is_atgames: number; // 0 or 1
+    is_wg_vr: number; // 0 or 1
+    is_wg_vpxs: number; // 0 or 1
+}
+
+export async function upsertTable(table: TableRow): Promise<void> {
+    const db = await openDb();
+    try {
+        await db.run(
+            `INSERT INTO tables (name, aliases, is_atgames, is_wg_vr, is_wg_vpxs)
+             VALUES (?, ?, ?, ?, ?)
+             ON CONFLICT(name) DO UPDATE SET
+                is_atgames = excluded.is_atgames,
+                is_wg_vr = excluded.is_wg_vr,
+                is_wg_vpxs = excluded.is_wg_vpxs,
+                aliases = COALESCE(excluded.aliases, tables.aliases)`,
+            table.name, table.aliases, table.is_atgames, table.is_wg_vr, table.is_wg_vpxs
+        );
+    } finally {
+        await db.close();
+    }
+}
+
+export async function getTable(name: string): Promise<TableRow | null> {
+    const db = await openDb();
+    try {
+        return await db.get<TableRow>("SELECT * FROM tables WHERE name = ?", name) ?? null;
+    } finally {
+        await db.close();
+    }
+}
+
+export async function searchTables(query: string, limit: number = 25, filterPlatform: 'atgames' | 'vr' | 'vpxs' | null = null): Promise<TableRow[]> {
+    const db = await openDb();
+    try {
+        let sql = "SELECT * FROM tables WHERE name LIKE ?";
+        const params: any[] = [`%${query}%`];
+
+        if (filterPlatform === 'atgames') {
+            sql += " AND is_atgames = 1";
+        } else if (filterPlatform === 'vr') {
+            sql += " AND is_wg_vr = 1";
+        } else if (filterPlatform === 'vpxs') {
+            sql += " AND is_wg_vpxs = 1";
+        }
+
+        sql += " ORDER BY name ASC LIMIT ?";
+        params.push(limit);
+
+        return await db.all<TableRow[]>(sql, ...params);
     } finally {
         await db.close();
     }
