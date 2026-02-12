@@ -140,7 +140,6 @@ All primary interaction with the bot is through its Discord slash commands. Refe
     *   `history.ts`: Manages persistent storage of tournament results in the SQLite database.
     *   `userMapping.ts`: Manages mapping between Discord user IDs and iScored usernames.
     *   `scheduler.ts`: Manages future game unlocks (used by `createGame`).
-    *   `tableList.ts`: Provides a list of random tables for timeout selections.
     *   `timeout.ts`: Contains logic for checking and handling picker timeouts.
     *   `database.ts`: Handles the SQLite database connection, schema, and core CRUD operations for games and winners.
     *   `deploy-commands.ts`: Script for registering slash commands with Discord.*   `.env`: Stores confidential environment variables (ignored by git).

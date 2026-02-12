@@ -157,6 +157,67 @@ export async function searchTables(query: string, limit: number = 25, filterPlat
     }
 }
 
+export async function getRecentGameNames(gameType: string, daysLookback: number): Promise<string[]> {
+    const db = await openDb();
+    try {
+        const rows = await db.all<{ name: string }[]>(
+            `SELECT name FROM games WHERE type = ? AND created_at >= date('now', '-' || ? || ' days')`,
+            gameType, daysLookback
+        );
+        // Note: game names in 'games' table might be formatted like "Table Name DG". 
+        // We might need to handle stripping the suffix if the 'tables' table has clean names.
+        // However, the 'tables' table has clean names. The 'games' table has "Table Name DG".
+        // The comparison needs to handle this.
+        // Wait, 'games.name' usually includes " DG" or " WG-VR".
+        // We should strip the suffix to get the raw table name for exclusion.
+        
+        return rows.map(r => {
+            // Attempt to strip known suffixes based on gameType or common patterns
+            // Or just return as is if the logic handles partial matches?
+            // "Table Name DG" -> "Table Name"
+            // "Table Name WG-VPXS" -> "Table Name"
+            
+            let name = r.name;
+            const suffixes = [` ${gameType}`, ' DG', ' WG-VR', ' WG-VPXS', ' MG'];
+            for (const suffix of suffixes) {
+                if (name.endsWith(suffix)) {
+                    name = name.slice(0, -suffix.length);
+                    break; 
+                }
+            }
+            return name;
+        });
+    } finally {
+        await db.close();
+    }
+}
+
+export async function getRandomCompatibleTable(filterPlatform: 'atgames' | 'vr' | 'vpxs', excludeNames: string[]): Promise<TableRow | null> {
+    const db = await openDb();
+    try {
+        let sql = "SELECT * FROM tables WHERE 1=1";
+        
+        if (filterPlatform === 'atgames') {
+            sql += " AND is_atgames = 1";
+        } else if (filterPlatform === 'vr') {
+            sql += " AND is_wg_vr = 1";
+        } else if (filterPlatform === 'vpxs') {
+            sql += " AND is_wg_vpxs = 1";
+        }
+
+        if (excludeNames.length > 0) {
+            const placeholders = excludeNames.map(() => '?').join(',');
+            sql += ` AND name NOT IN (${placeholders})`;
+        }
+
+        sql += " ORDER BY RANDOM() LIMIT 1";
+
+        return await db.get<TableRow>(sql, ...excludeNames) ?? null;
+    } finally {
+        await db.close();
+    }
+}
+
 // --- Game Table Functions ---
 
 export async function createGameEntry(game: Omit<GameRow, 'id' | 'created_at' | 'status' | 'name' | 'iscored_game_id'> & { name?: string, iscored_game_id?: string }): Promise<GameRow> {

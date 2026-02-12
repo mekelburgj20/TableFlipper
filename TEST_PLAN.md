@@ -53,6 +53,15 @@ These steps require interacting with the bot in your Discord server.
     2.  Type any random text for `table-name`.
     3.  **Verify:** Bot accepts it (MG has no strict validation).
 
+*   **Test D: Surprise Me**
+    1.  Type `/picktable game-type: Daily Grind (DG) surprise-me: True`.
+    2.  Leave `table-name` blank.
+    3.  **Verify:** Bot replies "Fate has chosen: [Random Table]. Do you want to proceed?" with Yes/No buttons.
+    4.  Click **No**.
+    5.  **Verify:** Bot says "Selection cancelled."
+    6.  Run it again and Click **Yes**.
+    7.  **Verify:** Bot proceeds to create the game.
+
 ### 2. Viewing the Table List
 **Goal:** Verify the ephemeral list command.
 

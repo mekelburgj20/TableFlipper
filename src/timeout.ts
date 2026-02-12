@@ -1,7 +1,6 @@
-import { getPicker, updateQueuedGame } from './database.js';
+import { getPicker, updateQueuedGame, getRecentGameNames, getRandomCompatibleTable } from './database.js';
 import { createGame } from './iscored.js';
 import { loginToIScored } from './iscored.js';
-import { randomTableList } from './tableList.js';
 import { sendDiscordNotification } from './discord.js';
 
 const PICKER_TIMEOUT_HOURS = 18;
@@ -24,8 +23,28 @@ export async function checkPickerTimeouts() {
 
                 let browser = null;
                 try {
-                    // 1. Pick a random table
-                    const randomTable = randomTableList[Math.floor(Math.random() * randomTableList.length)];
+                    // 1. Pick a random valid table
+                    // DG: 21 days lookback, AtGames
+                    // WG: 3 turns (approx 21 days) lookback, Respective Platform
+                    
+                    const daysLookback = 21;
+                    const recentGames = await getRecentGameNames(gameType, daysLookback);
+                    
+                    let platformFilter: 'atgames' | 'vr' | 'vpxs' = 'atgames'; // Default to DG logic
+                    if (gameType === 'WG-VR') platformFilter = 'vr';
+                    if (gameType === 'WG-VPXS') platformFilter = 'vpxs';
+
+                    const randomTableRow = await getRandomCompatibleTable(platformFilter, recentGames);
+
+                    if (!randomTableRow) {
+                        console.error(`❌ Could not find a valid random table for ${gameType} (Platform: ${platformFilter}, Excluded: ${recentGames.length} recent games).`);
+                        // Fallback? Or just fail safely? 
+                        // If we fail, we shouldn't update the game status so it retries or alerts?
+                        // For now, let's log error and continue loop.
+                        continue;
+                    }
+
+                    const randomTable = randomTableRow.name;
                     const newGameName = `${randomTable} ${gameType}`;
                     console.log(`🤖 Randomly selected table: ${newGameName}`);
 

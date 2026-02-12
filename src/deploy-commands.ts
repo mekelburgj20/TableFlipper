@@ -26,8 +26,14 @@ const commands = [
                 name: 'table-name',
                 type: 3, // STRING
                 description: 'The name of the pinball table to play next.',
-                required: true,
+                required: false,
                 autocomplete: true,
+            },
+            {
+                name: 'surprise-me',
+                type: 5, // BOOLEAN
+                description: 'Let the bot pick a random valid table for you.',
+                required: false,
             },
         ],
     },

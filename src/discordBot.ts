@@ -1,8 +1,8 @@
-import { Client, GatewayIntentBits, Events, EmbedBuilder } from 'discord.js';
+import { Client, GatewayIntentBits, Events, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, ComponentType } from 'discord.js';
 import { Browser } from 'playwright';
 import { loginToIScored, createGame, submitScoreToIscored } from './iscored.js';
 import { getIscoredNameByDiscordId, getDiscordIdByIscoredName } from './userMapping.js';
-import { getPicker, setPicker, updateQueuedGame, getNextQueuedGame, searchTables, getTable } from './database.js';
+import { getPicker, setPicker, updateQueuedGame, getNextQueuedGame, searchTables, getTable, getRecentGameNames, getRandomCompatibleTable } from './database.js';
 import { getLastWinner, getHistory, getTableStats } from './history.js';
 import { getTablesFromSheet } from './googleSheet.js';
 import { getStandingsFromApi, findActiveGame } from './api.js';
@@ -78,8 +78,13 @@ export function startDiscordBot() {
         
         else if (commandName === 'picktable') {
             const gameType = interaction.options.getString('game-type', true);
-            const tableName = interaction.options.getString('table-name', true);
-            const newGameName = `${tableName} ${gameType}`;
+            let tableName = interaction.options.getString('table-name');
+            const surpriseMe = interaction.options.getBoolean('surprise-me');
+
+            if (!tableName && !surpriseMe) {
+                await interaction.reply({ content: '❌ You must either provide a **table-name** or select **surprise-me: True**.', ephemeral: true });
+                return;
+            }
 
             await interaction.deferReply();
 
@@ -93,23 +98,90 @@ export function startDiscordBot() {
                 return;
             }
 
-            // 2. Validate Table Selection (Only for DG)
-            if (gameType === 'DG') {
-                const tableData = await getTable(tableName);
+            // 2. Handle Surprise Me Logic
+            if (surpriseMe) {
+                const daysLookback = 21;
+                const recentGames = await getRecentGameNames(gameType, daysLookback);
                 
-                if (!tableData) {
-                    await interaction.editReply(`❌ The table '**${tableName}**' is not recognized in our database. Please select a valid table from the list for Daily Grind.`);
+                let platformFilter: 'atgames' | 'vr' | 'vpxs' = 'atgames'; 
+                if (gameType === 'WG-VR') platformFilter = 'vr';
+                if (gameType === 'WG-VPXS') platformFilter = 'vpxs';
+
+                const randomTable = await getRandomCompatibleTable(platformFilter, recentGames);
+
+                if (!randomTable) {
+                    await interaction.editReply(`❌ I couldn't find a valid random table that matches the criteria (Platform: ${platformFilter}, History: ${daysLookback} days).`);
                     return;
                 }
 
-                if (!tableData.is_atgames) {
-                    await interaction.editReply(`❌ The table '**${tableName}**' is not marked as available on **AtGames**. Please select an AtGames-compatible table for Daily Grind.`);
+                // Confirmation UI
+                const confirmBtn = new ButtonBuilder()
+                    .setCustomId('confirm_pick')
+                    .setLabel(`Yes, pick ${randomTable.name}`)
+                    .setStyle(ButtonStyle.Success);
+                
+                const cancelBtn = new ButtonBuilder()
+                    .setCustomId('cancel_pick')
+                    .setLabel('No, pick another')
+                    .setStyle(ButtonStyle.Secondary);
+
+                const row = new ActionRowBuilder<ButtonBuilder>().addComponents(confirmBtn, cancelBtn);
+
+                const response = await interaction.editReply({
+                    content: `🎲 **Fate has chosen:** **${randomTable.name}**\n\nDo you want to proceed with this table?`,
+                    components: [row]
+                });
+
+                try {
+                    const confirmation = await response.awaitMessageComponent({ 
+                        filter: i => i.user.id === interaction.user.id, 
+                        time: 60000 
+                    });
+
+                    if (confirmation.customId === 'cancel_pick') {
+                        await confirmation.update({ content: '❌ Selection cancelled. You can run `/picktable` again.', components: [] });
+                        return;
+                    }
+
+                    await confirmation.update({ content: `✅ Confirmed! Setting up **${randomTable.name}**...`, components: [] });
+                    tableName = randomTable.name;
+
+                } catch (e) {
+                    await interaction.editReply({ content: '❌ Confirmation timed out. Selection cancelled.', components: [] });
                     return;
                 }
-            } 
-            // For WG-VR, WG-VPXS, and MG: No validation required.
+            }
 
-            // 3. Create the game in iScored
+            // 3. Validate Table Selection (Skip if Surprise Me was used, as it came from DB)
+            if (!surpriseMe && tableName) {
+                // Manual selection validation
+                if (gameType === 'DG') {
+                    const tableData = await getTable(tableName);
+                    
+                    if (!tableData) {
+                        await interaction.editReply(`❌ The table '**${tableName}**' is not recognized in our database. Please select a valid table from the list for Daily Grind.`);
+                        return;
+                    }
+
+                    if (!tableData.is_atgames) {
+                        await interaction.editReply(`❌ The table '**${tableName}**' is not marked as available on **AtGames**. Please select an AtGames-compatible table for Daily Grind.`);
+                        return;
+                    }
+                }
+                // For WG-VR and WG-VPXS, we implemented STRICT filtering in autocomplete,
+                // but the user could still type "Africa".
+                // The requirements said: "For the Weekly and Monthly Grinds, no validation is necessary..."
+                // BUT later the user said "list... is showing games that are not available...".
+                // I updated autocomplete filtering.
+                // Should I add validation here too?
+                // The prompt for THIS task didn't ask for it, but "Surprise Me" handles it.
+                // I will stick to existing logic: Only strict validation for DG, filtering for others was UI-only (Autocomplete).
+                // Wait, if I type "Africa" for WG-VPXS manually, should it fail?
+                // Previously I implemented NO validation for WG. I'll keep it that way unless asked.
+            }
+
+            // 4. Create the game in iScored
+            const newGameName = `${tableName} ${gameType}`;
             let browser: Browser | null = null;
             try {
                 console.log(`🚀 Handling /picktable for ${gameType} with table: ${tableName}`);
@@ -119,11 +191,16 @@ export function startDiscordBot() {
                 // This function now creates the game and returns the iScored ID
                 const iscoredGameId = await createGame(page, newGameName); 
                 
-                // 4. Update the game entry in our database
+                // 5. Update the game entry in our database
                 await updateQueuedGame(nextGame.id, newGameName, iscoredGameId);
 
                 const confirmationMessage = `✅ Thank you, ${interaction.user.toString()}! The table **${newGameName}** has been selected and created. It will be the table for the tournament in 2 days.`;
-                await interaction.editReply(confirmationMessage);
+                
+                // If we already replied via button update, we need to edit that or follow up?
+                // We did `await confirmation.update({ content: ... })`.
+                // So the interaction is technically "replied".
+                // `interaction.editReply` edits the ORIGINAL reply (which is now the "Confirmed! Setting up..." message).
+                await interaction.editReply({ content: confirmationMessage, components: [] });
 
             } catch (error) {
                 console.error(error);
