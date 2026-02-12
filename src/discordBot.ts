@@ -2,11 +2,10 @@ import { Client, GatewayIntentBits, Events, EmbedBuilder, ActionRowBuilder, Butt
 import { Browser } from 'playwright';
 import { loginToIScored, createGame, submitScoreToIscored } from './iscored.js';
 import { getIscoredNameByDiscordId, getDiscordIdByIscoredName } from './userMapping.js';
-import { getPicker, setPicker, updateQueuedGame, getNextQueuedGame, searchTables, getTable, getRecentGameNames, getRandomCompatibleTable } from './database.js';
+import { getPicker, setPicker, updateQueuedGame, getNextQueuedGame, searchTables, getTable, getRecentGameNames, getRandomCompatibleTable, injectSpecialGame } from './database.js';
 import { getLastWinner, getHistory, getTableStats } from './history.js';
 import { getTablesFromSheet } from './googleSheet.js';
 import { getStandingsFromApi, findActiveGame } from './api.js';
-import { setPause, getPauseState } from './pauseState.js';
 import { triggerAllMaintenanceRoutines, runMaintenanceForGameType } from './maintenance.js';
 
 export function startDiscordBot() {
@@ -346,7 +345,7 @@ export function startDiscordBot() {
         
         else if (commandName === 'pause-dg-pick') {
             const specialGameName = interaction.options.getString('special-game-name', true);
-            const durationHours = interaction.options.getInteger('duration-hours') ?? 24;
+            // duration-hours is ignored as the queue shift logic handles the delay naturally (pushing by 24h)
 
             await interaction.deferReply({ ephemeral: true });
 
@@ -357,19 +356,37 @@ export function startDiscordBot() {
                 return;
             }
             
-            const memberRoles = interaction.member?.roles as any; // any is not ideal, but discord.js v14 types are complex
+            const memberRoles = interaction.member?.roles as any;
             if (!memberRoles || !memberRoles.cache.has(modRoleId)) {
                 await interaction.editReply('You do not have permission to use this command.');
                 return;
             }
 
-            // 2. Set the pause state
-            await setPause(specialGameName, durationHours);
+            // 2. Create the game in iScored FIRST
+            // The maintenance routine expects the game to exist on iScored.
+            const fullGameName = specialGameName.endsWith(' DG') ? specialGameName : `${specialGameName} DG`;
+            
+            let browser: Browser | null = null;
+            try {
+                console.log(`🚀 Manual Override: Creating/Finding special game '${fullGameName}'...`);
+                const { browser: newBrowser, page } = await loginToIScored();
+                browser = newBrowser;
+                
+                // Create (or find) the game and get its ID
+                const iscoredGameId = await createGame(page, fullGameName);
+                
+                // 3. Inject into Database
+                await injectSpecialGame('DG', fullGameName, iscoredGameId);
+                
+                await interaction.editReply(`✅ **Manual Override Successful!**\n\nThe game **${fullGameName}** has been injected at the front of the queue.\nThe existing winner's pick (and any other queued games) have been pushed back by 24 hours.`);
 
-            // 3. Confirm
-            await interaction.editReply(`✅ Picker pause has been activated for ${durationHours} hours. The special game will be **${specialGameName}**.`);
-            if (interaction.channel && 'send' in interaction.channel) {
-                await interaction.channel.send(`**Attention:** Normal table picking has been paused by a moderator. The next tournament will be on **${specialGameName}**.`);
+            } catch (error) {
+                console.error('Error during manual override:', error);
+                await interaction.editReply(`❌ An error occurred while trying to inject the special game: ${error}`);
+            } finally {
+                if (browser) {
+                    await browser.close();
+                }
             }
         }
         

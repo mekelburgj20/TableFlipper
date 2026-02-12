@@ -218,6 +218,57 @@ export async function getRandomCompatibleTable(filterPlatform: 'atgames' | 'vr' 
     }
 }
 
+export async function injectSpecialGame(gameType: string, gameName: string, iscoredGameId: string): Promise<void> {
+    const db = await openDb();
+    try {
+        // 1. Get existing queued games
+        const existingGames = await db.all<GameRow[]>(
+            "SELECT * FROM games WHERE type = ? AND status = 'QUEUED' ORDER BY scheduled_to_be_active_at ASC",
+            gameType
+        );
+
+        const now = new Date();
+        // Default target time is "Now" (so it's picked up next)
+        // If there are existing games, we match the first one's time, then push the others.
+        let targetTime = now;
+        if (existingGames.length > 0 && existingGames[0].scheduled_to_be_active_at) {
+            targetTime = new Date(existingGames[0].scheduled_to_be_active_at);
+            // Ensure the new game is slightly before if we want to be strictly safe, 
+            // but pushing existing games is safer.
+        }
+
+        // 2. Insert the new special game
+        const newGameId = uuidv4();
+        await db.run(
+            `INSERT INTO games (id, iscored_game_id, name, type, status, scheduled_to_be_active_at, created_at)
+             VALUES (?, ?, ?, ?, 'QUEUED', ?, ?)`,
+            newGameId, iscoredGameId, gameName, gameType, targetTime.toISOString(), now.toISOString()
+        );
+        console.log(`✅ Injected special game '${gameName}' at the front of the queue.`);
+
+        // 3. Shift existing games forward by 24 hours
+        for (const game of existingGames) {
+            const currentSchedule = game.scheduled_to_be_active_at ? new Date(game.scheduled_to_be_active_at) : new Date();
+            // If the existing game was scheduled for "TargetTime", we push it to "TargetTime + 24h"
+            // Actually, we just add 24h to its current schedule to maintain relative order
+            
+            // Wait, if we use `targetTime` for the new game, and `targetTime` was `existingGames[0].time`,
+            // then they have the same time. `ORDER BY` might be unstable.
+            // We should definitely push `existingGames` forward.
+            
+            const newSchedule = new Date(currentSchedule.getTime() + 24 * 60 * 60 * 1000);
+            await db.run(
+                `UPDATE games SET scheduled_to_be_active_at = ? WHERE id = ?`,
+                newSchedule.toISOString(), game.id
+            );
+            console.log(`   -> Shifted '${game.name}' to ${newSchedule.toISOString()}`);
+        }
+
+    } finally {
+        await db.close();
+    }
+}
+
 // --- Game Table Functions ---
 
 export async function createGameEntry(game: Omit<GameRow, 'id' | 'created_at' | 'status' | 'name' | 'iscored_game_id'> & { name?: string, iscored_game_id?: string }): Promise<GameRow> {

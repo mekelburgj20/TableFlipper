@@ -5,13 +5,11 @@ import { checkWinnerHistory, updateWinnerHistory } from './history.js';
 import { sendDiscordNotification } from './discord.js';
 import { getDiscordIdByIscoredName } from './userMapping.js';
 import { getActiveGame, getNextQueuedGame, updateGameStatus, setPicker, createGameEntry, GameRow } from './database.js';
-import { checkPauseExpiration } from './pauseState.js';
 
 const ALL_GAME_TYPES = ['DG', 'WG-VPXS', 'WG-VR', 'MG'];
 
 export async function triggerAllMaintenanceRoutines() {
     console.log('Manual trigger: Running maintenance for all game types...');
-    await checkPauseExpiration();
 
     for (const gameType of ALL_GAME_TYPES) {
         try {

@@ -89,7 +89,13 @@ These steps require interacting with the bot in your Discord server.
         *   Next queued game becomes Active (Visible) on iScored.
         *   Bot confirms completion.
 
-*   **Test B: Trigger Weekly/Monthly**
+*   **Test C: Manual Override**
+    1.  Run `/pause-dg-pick special-game-name: "Test Override Game"`.
+    2.  **Verify:** Bot confirms "Manual Override Successful".
+    3.  **Verify:** "Test Override Game" appears as the *next* game on iScored (Hidden).
+    4.  **Verify:** The previous winner's pick is still in the database but scheduled for +24 hours later.
+
+*   **Test D: Trigger Weekly/Monthly**
     1.  Run `/trigger-maintenance-weekly` or `/trigger-maintenance-monthly`.
     2.  **Verify:** Similar rotation occurs for the respective tournament type.
 
