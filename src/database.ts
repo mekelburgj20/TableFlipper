@@ -6,7 +6,14 @@ import { v4 as uuidv4 } from 'uuid';
 
 // Define the path for the database file
 const DB_DIR = path.join(process.cwd(), 'data');
-const DB_PATH = path.join(DB_DIR, 'tableflipper.db');
+let DB_FILENAME = process.env.DB_FILENAME || 'tableflipper.db';
+let DB_PATH = path.join(DB_DIR, DB_FILENAME);
+
+export function setDbFilename(filename: string) {
+    DB_FILENAME = filename;
+    DB_PATH = path.join(DB_DIR, DB_FILENAME);
+    console.log(`🔌 Database switched to: ${DB_PATH}`);
+}
 
 export interface GameRow {
     id: string;

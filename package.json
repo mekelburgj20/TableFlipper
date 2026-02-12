@@ -17,6 +17,11 @@
     "sync-tables": "node dist/sync-tables.js",
     "premigrate-games-schema": "tsc",
     "migrate-games-schema": "node dist/migrate-games-schema.js",
+    "premigrate-fix-schema": "tsc",
+    "migrate-fix-schema": "node dist/migrate-fix-schema.js",
+    "test:db": "node dist/tests/test-database.js",
+    "test:iscored": "node dist/tests/test-iscored.js",
+    "test:sheets": "node dist/tests/test-sheets.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [
