@@ -326,23 +326,35 @@ export async function showGame(page: Page, game: Game): Promise<void> {
 }
 
 export async function navigateToSettingsPage(page: Page) {
-    console.log('Navigating to Settings page via URL...');
-    await page.goto(ISCORED_SETTINGS_URL);
-    // Wait for a known element on the settings page to be visible
-    await page.locator('#main a[href="#order"]').waitFor({ state: 'visible', timeout: 10000 });
+    console.log('Navigating to Settings page via UI...');
+    const mainFrame = page.frameLocator('#main');
+    
+    // Try to find the settings link
+    const settingsLink = mainFrame.locator('a[href="/settings.php"]');
+    
+    if (await settingsLink.isVisible()) {
+        await settingsLink.click();
+    } else {
+        // Try toggling nav
+        console.log('   -> Settings link hidden, toggling nav...');
+        await mainFrame.locator('a.dropdown-toggle[onclick="toggleNav()"]').click();
+        await settingsLink.waitFor({ state: 'visible', timeout: 5000 });
+        await settingsLink.click();
+    }
+
+    // Wait for the settings page to load (look for the tabs)
+    await mainFrame.locator('a[href="#order"]').waitFor({ state: 'visible', timeout: 10000 });
     console.log('✅ On Settings page.');
 }
 
 export async function navigateToLineupPage(page: Page) {
-    console.log('Navigating to Lineup page via URL + Click...');
+    console.log('Navigating to Lineup page...');
+    
     try {
-        // Navigate to settings page base
-        await page.goto(ISCORED_SETTINGS_URL);
-        console.log(`   -> Current URL: ${page.url()}`);
+        await navigateToSettingsPage(page);
         
-        // Explicitly click the Lineup tab to ensure it renders/shows
+        // Explicitly click the Lineup tab
         const lineupTab = page.frameLocator('#main').locator('a[href="#order"]');
-        await lineupTab.waitFor({ state: 'visible', timeout: 30000 });
         await lineupTab.click();
         
         console.log('   -> Clicked Lineup tab. Waiting for list...');
