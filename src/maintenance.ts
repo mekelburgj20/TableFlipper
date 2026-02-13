@@ -30,8 +30,9 @@ export async function runMaintenanceForGameType(gameType: string) {
         const activeGame = await getActiveGame(gameType);
         const nextGame = await getNextQueuedGame(gameType);
 
-        ({ browser } = await loginToIScored());
-        const page = await browser.newPage();
+        const { browser: b, page } = await loginToIScored();
+        browser = b;
+        
         await navigateToLineupPage(page);
 
         // --- Phase 2: Process Active Game (if one exists) ---
