@@ -15,12 +15,12 @@ TableFlipper is a Node.js Discord bot designed to automate and manage pinball to
     *   **Dynasty Rule Enforcement:** Prevents consecutive wins from giving picking rights to the same player. Repeat winners must `/nominate-picker` another user.
     *   **Picker Timeout:** If a designated picker or nominee fails to select a table within 12 hours, the bot automatically selects a random table from a predefined list.
 *   **Comprehensive Discord Slash Commands:**
-    *   **`/submitscore-dg [game-type] [score] [photo] [iscored_username]`**: Submit your score and a photo for validation for a specific tournament.
-    *   **`/picktable [game-type] [table-name]`**: Allows the designated winner to choose the next table for a tournament. Includes strict platform filtering (e.g., only shows VPXS-compatible tables for WG-VPXS).
-    *   **`/nominate-picker [game-type] [user]`**: Allows a repeat winner to nominate another player to pick the table.
-    *   **`/list-winners [game-type] (period)`**: Lists past winners for a specified tournament and period (e.g., last 7 days, 30 days, 90 days, all time).
+    *   **`/submit-score [grind-type] [score] [photo] [iscored_username]`**: Submit your score and a photo for validation for a specific tournament.
+    *   **`/picktable [grind-type] [table-name]`**: Allows the designated winner to choose the next table for a tournament. Includes strict platform filtering (e.g., only shows VPXS-compatible tables for WG-VPXS).
+    *   **`/nominate-picker [grind-type] [user]`**: Allows a repeat winner to nominate another player to pick the table.
+    *   **`/list-winners [grind-type] (period)`**: Lists past winners for a specified tournament and period (e.g., last 7 days, 30 days, 90 days, all time).
     *   **`/table-stats [table-name]`**: Displays play count and high score records for a specific pinball table from historical data.
-    *   **`/current-dg-scores [game-type]`**: Shows the live leaderboard for the active game of a specified tournament, displayed ephemerally.
+    *   **`/current-dg-scores [grind-type]`**: Shows the live leaderboard for the active game of a specified tournament, displayed ephemerally.
     *   **`/dg-table-selection`**: Lists all available pinball tables for selection, pulled from a Google Sheet.
     *   **`/pause-dg-pick [special-game-name] (duration-hours)`**: (Moderator only) Pauses regular picking and schedules a special game.
 *   **User Mapping:** Maintains a JSON-based mapping between Discord user IDs and iScored usernames for seamless score submissions.

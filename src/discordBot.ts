@@ -44,7 +44,7 @@ export function startDiscordBot() {
             const focusedOption = interaction.options.getFocused(true);
 
             if (focusedOption.name === 'table-name') {
-                const gameType = interaction.options.getString('game-type');
+                const gameType = interaction.options.getString('grind-type');
                 console.log(`Debug: Autocomplete. GameType: '${gameType}', Search: '${focusedOption.value}'`);
                 
                 let choices: any[] = [];
@@ -76,7 +76,7 @@ export function startDiscordBot() {
         } 
         
         else if (commandName === 'picktable') {
-            const gameType = interaction.options.getString('game-type', true);
+            const gameType = interaction.options.getString('grind-type', true);
             let tableName = interaction.options.getString('table-name');
             const surpriseMe = interaction.options.getBoolean('surprise-me');
 
@@ -235,7 +235,7 @@ export function startDiscordBot() {
         }
         
         else if (commandName === 'list-winners') {
-            const gameType = interaction.options.getString('game-type', true);
+            const gameType = interaction.options.getString('grind-type', true);
             const period = interaction.options.getString('period') ?? '7d'; // Default to last 7 days
 
             await interaction.deferReply();
@@ -391,7 +391,7 @@ export function startDiscordBot() {
         }
         
         else if (commandName === 'current-dg-scores') {
-            const gameType = interaction.options.getString('game-type', true);
+            const gameType = interaction.options.getString('grind-type', true);
             await interaction.deferReply({ ephemeral: true });
 
             try {
@@ -466,7 +466,7 @@ export function startDiscordBot() {
         }
         
         else if (commandName === 'nominate-picker') {
-            const gameType = interaction.options.getString('game-type', true);
+            const gameType = interaction.options.getString('grind-type', true);
             const nominatedUser = interaction.options.getUser('user', true);
             const nominatorUser = interaction.user;
 
@@ -501,8 +501,8 @@ export function startDiscordBot() {
 
         }
         
-        else if (commandName === 'submitscore-dg') { // Note: Command name was updated
-            const gameType = interaction.options.getString('game-type', true);
+        else if (commandName === 'submit-score') { // Note: Command name was updated
+            const gameType = interaction.options.getString('grind-type', true);
             const score = interaction.options.getInteger('score', true);
             const photoAttachment = interaction.options.getAttachment('photo', true);
             const iScoredUsername = interaction.options.getString('iscored_username', true);

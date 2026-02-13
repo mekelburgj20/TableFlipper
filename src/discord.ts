@@ -39,7 +39,7 @@ export async function sendDiscordNotification(params: NotificationParams) {
         if (isRepeatWinner) {
             messageLines.push(
                 `\n⚠️ **Dynasty Rule Alert!** As a repeat winner, you must nominate another player to choose the next table.`,
-                `Use the \`/nominate-picker game-type:<game-type> user:<@user>\` command.`
+                `Use the \`/nominate-picker grind-type:<grind-type> user:<@user>\` command.`
             );
         } else if (winnerId) {
             messageLines.push(

@@ -11,7 +11,7 @@ const commands = [
         description: 'Allows the previous winner to pick the next table.',
         options: [
             {
-                name: 'game-type',
+                name: 'grind-type',
                 type: 3, // STRING
                 description: 'The type of tournament you are picking for.',
                 required: true,
@@ -54,7 +54,7 @@ const commands = [
         description: 'Lists past winners for a tournament.',
         options: [
             {
-                name: 'game-type',
+                name: 'grind-type',
                 type: 3, // STRING
                 description: 'The tournament to get the winner list for.',
                 required: true,
@@ -114,7 +114,7 @@ const commands = [
         description: 'View the current standings for a tournament.',
         options: [
             {
-                name: 'game-type',
+                name: 'grind-type',
                 type: 3, // STRING
                 description: 'The tournament to get scores for.',
                 required: true,
@@ -136,7 +136,7 @@ const commands = [
         description: 'Allows a repeat winner to nominate another player to pick the next table.',
         options: [
             {
-                name: 'game-type',
+                name: 'grind-type',
                 type: 3, // STRING
                 description: 'The type of tournament you are nominating for.',
                 required: true,
@@ -156,11 +156,11 @@ const commands = [
         ],
     },
     {
-        name: 'submitscore-dg',
+        name: 'submit-score',
         description: 'Submit your tournament score and a photo for validation.',
         options: [
             {
-                name: 'game-type',
+                name: 'grind-type',
                 type: 3, // STRING
                 description: 'The type of tournament you are submitting a score for.',
                 required: true,
@@ -196,7 +196,7 @@ const commands = [
         description: 'Shows the currently active table for a tournament.',
         options: [
             {
-                name: 'game-type',
+                name: 'grind-type',
                 type: 3, // STRING
                 description: 'The tournament to check.',
                 required: true,

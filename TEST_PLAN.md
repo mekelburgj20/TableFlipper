@@ -37,24 +37,24 @@ These steps require interacting with the bot in your Discord server.
 **Goal:** Verify that `/picktable` suggests the correct tables and filters invalid ones.
 
 *   **Test A: Daily Grind (DG)**
-    1.  Type `/picktable game-type: Daily Grind (DG)`.
+    1.  Type `/picktable grind-type: Daily Grind (DG)`.
     2.  Click `table-name` and type `Aero`.
     3.  **Verify:** You see "Aerobatics" (if marked for AtGames).
     4.  Type a nonsense name (e.g. `XYz123`) and submit.
     5.  **Verify:** Bot rejects it with an error message.
 
 *   **Test B: Weekly Grind VPXS (WG-VPXS)**
-    1.  Type `/picktable game-type: Weekly Grind VPXS`.
+    1.  Type `/picktable grind-type: Weekly Grind VPXS`.
     2.  Click `table-name` (leave blank).
     3.  **Verify:** The list ONLY shows VPXS-compatible tables (e.g. "Africa" should NOT appear if `wg-vpxs=0`).
 
 *   **Test C: Monthly Grind (MG)**
-    1.  Type `/picktable game-type: Monthly Grind`.
+    1.  Type `/picktable grind-type: Monthly Grind`.
     2.  Type any random text for `table-name`.
     3.  **Verify:** Bot accepts it (MG has no strict validation).
 
 *   **Test D: Surprise Me**
-    1.  Type `/picktable game-type: Daily Grind (DG) surprise-me: True`.
+    1.  Type `/picktable grind-type: Daily Grind (DG) surprise-me: True`.
     2.  Leave `table-name` blank.
     3.  **Verify:** Bot replies "Fate has chosen: [Random Table]. Do you want to proceed?" with Yes/No buttons.
     4.  Click **No**.
@@ -63,9 +63,9 @@ These steps require interacting with the bot in your Discord server.
     7.  **Verify:** Bot proceeds to create the game.
 
 *   **Test E: List Active Games**
-    1.  Type `/list-active game-type: Daily Grind (DG)`.
+    1.  Type `/list-active grind-type: Daily Grind (DG)`.
     2.  **Verify:** Bot replies with the currently active table name or says "no active table".
-    3.  Type `/list-active game-type: Monthly Grind (MG)`.
+    3.  Type `/list-active grind-type: Monthly Grind (MG)`.
     4.  **Verify:** Bot replies with the status of the MG table.
 
 ### 2. Viewing the Table List
@@ -79,7 +79,7 @@ These steps require interacting with the bot in your Discord server.
 **Goal:** Verify score submission flow.
 
 1.  Wait for an active game to be present (or use maintenance trigger to cycle one).
-2.  Type `/submitscore-dg`.
+2.  Type `/submit-score`.
 3.  Fill in Score, Attach a dummy image, and enter your iScored Username.
 4.  **Verify:** Bot replies "Received your score... Submission to iScored successful!".
 5.  **Verify:** Check iScored.info to see if the score appears on the dashboard.
@@ -108,7 +108,7 @@ These steps require interacting with the bot in your Discord server.
 ### 5. Statistics
 **Goal:** Verify reporting commands.
 
-1.  Run `/list-winners game-type: Daily Grind period: All Time`.
+1.  Run `/list-winners grind-type: Daily Grind period: All Time`.
 2.  **Verify:** A leaderboard of winners is displayed.
 3.  Run `/table-stats table-name: [A known table]`.
 4.  **Verify:** Play count and high score are displayed.

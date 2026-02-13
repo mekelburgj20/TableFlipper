@@ -11,7 +11,7 @@ We need you to try and break it! 💥 Please try these out in order:
 
 ### 1. 🏆 Submit a Score
 Play a game and submit your score directly through Discord.
-*   Type `/submitscore-dg`.
+*   Type `/submit-score`.
 *   Enter your score, attach a pic, and put in your initials.
 *   *The bot will post it to iScored for you!*
 
@@ -22,7 +22,7 @@ Check back tomorrow (or after a maintenance cycle) to see who won!
 
 ### 3. 🎱 Pick a Table (If you win!)
 If you win a Daily/Weekly grind, you get to pick the next one.
-*   Type `/picktable` and choose a game type.
+*   Type `/picktable` and choose a grind type.
 *   Start typing a table name (like "Addams") and pick from the list.
 *   **Fun Mode:** Pick the `surprise-me: True` option to let the bot choose a random table for you!
 
