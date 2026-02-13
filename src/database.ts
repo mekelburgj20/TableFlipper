@@ -306,6 +306,32 @@ export async function syncActiveGame(gameType: string, iscoredGameId: string | n
     }
 }
 
+export async function syncQueuedGame(gameType: string, iscoredGameId: string, gameName: string): Promise<void> {
+    const db = await openDb();
+    try {
+        const existingGame = await db.get<GameRow>("SELECT * FROM games WHERE iscored_game_id = ?", iscoredGameId);
+
+        if (existingGame) {
+            if (existingGame.status !== 'QUEUED') {
+                await db.run("UPDATE games SET status = 'QUEUED', completed_at = NULL WHERE id = ?", existingGame.id);
+                console.log(`🔄 Synced DB: Set existing game '${gameName}' to QUEUED.`);
+            }
+        } else {
+            const newId = uuidv4();
+            // We set scheduled_to_be_active_at to now for simplicity, or we could try to order them?
+            // For now, simple import.
+            await db.run(
+                `INSERT INTO games (id, iscored_game_id, name, type, status, created_at, scheduled_to_be_active_at)
+                 VALUES (?, ?, ?, ?, 'QUEUED', ?, ?)`,
+                newId, iscoredGameId, gameName, gameType, new Date().toISOString(), new Date().toISOString()
+            );
+            console.log(`🔄 Synced DB: Created new QUEUED entry for '${gameName}'.`);
+        }
+    } finally {
+        await db.close();
+    }
+}
+
 // --- Game Table Functions ---
 
 export async function createGameEntry(game: Omit<GameRow, 'id' | 'created_at' | 'status' | 'name' | 'iscored_game_id'> & { name?: string, iscored_game_id?: string }): Promise<GameRow> {

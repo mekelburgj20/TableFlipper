@@ -1,5 +1,5 @@
 import { loginToIScored, findGames, navigateToLineupPage } from './iscored.js';
-import { syncActiveGame } from './database.js';
+import { syncActiveGame, syncQueuedGame } from './database.js';
 
 const GAME_TYPES = ['DG', 'WG-VPXS', 'WG-VR', 'MG'];
 
@@ -15,7 +15,7 @@ async function main() {
 
         for (const type of GAME_TYPES) {
             console.log(`🔎 Checking state for ${type}...`);
-            const { activeGames } = await findGames(page, type);
+            const { activeGames, nextGames } = await findGames(page, type);
             
             if (activeGames.length > 0) {
                 const active = activeGames[0];
@@ -24,6 +24,16 @@ async function main() {
             } else {
                 console.log(`   -> No active game found on iScored.`);
                 await syncActiveGame(type, null, null);
+            }
+
+            if (nextGames.length > 0) {
+                console.log(`   -> Found ${nextGames.length} queued (hidden) games on iScored.`);
+                for (const next of nextGames) {
+                    console.log(`      -> Syncing Queued: ${next.name} (${next.id})`);
+                    await syncQueuedGame(type, next.id, next.name);
+                }
+            } else {
+                console.log(`   -> No queued games found on iScored.`);
             }
         }
 
