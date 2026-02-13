@@ -369,7 +369,7 @@ export async function navigateToLineupPage(page: Page) {
             if (style.display === 'none' || style.visibility === 'hidden') {
                 return false;
             }
-            return true;
+            return list.children.length > 0;
         }, { timeout: 30000 });
         
         console.log('✅ On Lineup page.');
