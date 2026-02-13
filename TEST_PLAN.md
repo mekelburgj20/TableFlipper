@@ -62,6 +62,12 @@ These steps require interacting with the bot in your Discord server.
     6.  Run it again and Click **Yes**.
     7.  **Verify:** Bot proceeds to create the game.
 
+*   **Test E: List Active Games**
+    1.  Type `/list-active game-type: Daily Grind (DG)`.
+    2.  **Verify:** Bot replies with the currently active table name or says "no active table".
+    3.  Type `/list-active game-type: Monthly Grind (MG)`.
+    4.  **Verify:** Bot replies with the status of the MG table.
+
 ### 2. Viewing the Table List
 **Goal:** Verify the ephemeral list command.
 

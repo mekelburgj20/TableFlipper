@@ -191,6 +191,24 @@ const commands = [
             },
         ],
     },
+    {
+        name: 'list-active',
+        description: 'Shows the currently active table for a tournament.',
+        options: [
+            {
+                name: 'game-type',
+                type: 3, // STRING
+                description: 'The tournament to check.',
+                required: true,
+                choices: [
+                    { name: 'Daily Grind (DG)', value: 'DG' },
+                    { name: 'Weekly Grind VPXS (WG-VPXS)', value: 'WG-VPXS' },
+                    { name: 'Weekly Grind VR (WG-VR)', value: 'WG-VR' },
+                    { name: 'Monthly Grind (MG)', value: 'MG' },
+                ]
+            }
+        ]
+    },
 ];
 
 const token = process.env.DISCORD_BOT_TOKEN;
