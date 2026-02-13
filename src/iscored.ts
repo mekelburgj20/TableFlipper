@@ -335,16 +335,17 @@ export async function navigateToSettingsPage(page: Page) {
 
 export async function navigateToLineupPage(page: Page) {
     console.log('Navigating to Lineup page via URL + Click...');
-    // Navigate to settings page base
-    await page.goto(ISCORED_SETTINGS_URL);
-    
-    // Explicitly click the Lineup tab to ensure it renders/shows
-    const lineupTab = page.frameLocator('#main').locator('a[href="#order"]');
-    await lineupTab.waitFor({ state: 'visible', timeout: 10000 });
-    await lineupTab.click();
-    
-    console.log('   -> Clicked Lineup tab. Waiting for list...');
     try {
+        // Navigate to settings page base
+        await page.goto(ISCORED_SETTINGS_URL);
+        console.log(`   -> Current URL: ${page.url()}`);
+        
+        // Explicitly click the Lineup tab to ensure it renders/shows
+        const lineupTab = page.frameLocator('#main').locator('a[href="#order"]');
+        await lineupTab.waitFor({ state: 'visible', timeout: 30000 });
+        await lineupTab.click();
+        
+        console.log('   -> Clicked Lineup tab. Waiting for list...');
         await page.waitForFunction(() => {
             const iframe = document.querySelector('#main');
             if (!iframe) return false;
@@ -357,14 +358,20 @@ export async function navigateToLineupPage(page: Page) {
                 return false;
             }
             return true;
-        }, { timeout: 15000 });
+        }, { timeout: 30000 });
+        
+        console.log('✅ On Lineup page.');
+
     } catch (e) {
-        console.error('❌ Timeout waiting for lineup page to populate. Taking a screenshot.');
-        await page.screenshot({ path: 'lineup_page_timeout_error.png', fullPage: true });
+        console.error('❌ Timeout or error in navigateToLineupPage. Taking a screenshot.');
+        try {
+            await page.screenshot({ path: 'lineup_page_error.png', fullPage: true });
+            console.log(`📷 Screenshot saved to lineup_page_error.png.`);
+        } catch (sError) {
+            console.error('Failed to take screenshot:', sError);
+        }
         throw e;
     }
-    
-    console.log('✅ On Lineup page.');
 }
 
 
