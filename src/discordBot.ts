@@ -2,7 +2,7 @@ import { Client, GatewayIntentBits, Events, EmbedBuilder, ActionRowBuilder, Butt
 import { Browser } from 'playwright';
 import { loginToIScored, createGame, submitScoreToIscored } from './iscored.js';
 import { getIscoredNameByDiscordId, getDiscordIdByIscoredName } from './userMapping.js';
-import { getPicker, setPicker, updateQueuedGame, getNextQueuedGame, searchTables, getTable, getRecentGameNames, getRandomCompatibleTable, injectSpecialGame } from './database.js';
+import { getPicker, setPicker, updateQueuedGame, getNextQueuedGame, searchTables, getTable, getRecentGameNames, getRandomCompatibleTable, injectSpecialGame, getActiveGame } from './database.js';
 import { getLastWinner, getHistory, getTableStats } from './history.js';
 import { getTablesFromSheet } from './googleSheet.js';
 import { getStandingsFromApi, findActiveGame } from './api.js';
@@ -75,6 +75,23 @@ export function startDiscordBot() {
             await interaction.reply('Pong!');
         } 
         
+        else if (commandName === 'list-active') {
+            const gameType = interaction.options.getString('grind-type', true);
+            await interaction.deferReply();
+
+            try {
+                const activeGame = await getActiveGame(gameType);
+                if (activeGame) {
+                    await interaction.editReply(`🟢 The currently active table for **${gameType}** is: **${activeGame.name}**`);
+                } else {
+                    await interaction.editReply(`⚪ There is no active table for **${gameType}** at this time.`);
+                }
+            } catch (error) {
+                console.error(`Error in /list-active for ${gameType}:`, error);
+                await interaction.editReply('❌ An error occurred while fetching the active game.');
+            }
+        }
+
         else if (commandName === 'picktable') {
             const gameType = interaction.options.getString('grind-type', true);
             let tableName = interaction.options.getString('table-name');
