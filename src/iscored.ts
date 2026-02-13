@@ -350,7 +350,7 @@ export async function navigateToLineupPage(page: Page) {
             if (style.display === 'none' || style.visibility === 'hidden') {
                 return false;
             }
-            return list.children.length > 0;
+            return true;
         }, { timeout: 15000 });
     } catch (e) {
         console.error('❌ Timeout waiting for lineup page to populate. Taking a screenshot.');
@@ -397,7 +397,7 @@ export async function createGame(page: Page, gameName: string): Promise<string> 
             if (style.display === 'none' || style.visibility === 'hidden') {
                 return false;
             }
-            return list.children.length > 0;
+            return true;
         }, { timeout: 15000 });
 
         const newlyCreatedGame = await findGameByName(page, gameName);
