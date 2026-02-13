@@ -1,3 +1,4 @@
+import 'dotenv/config';
 import { loginToIScored, findGames, navigateToLineupPage } from './iscored.js';
 import { syncActiveGame, syncQueuedGame } from './database.js';
 
