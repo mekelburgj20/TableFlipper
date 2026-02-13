@@ -326,17 +326,10 @@ export async function showGame(page: Page, game: Game): Promise<void> {
 }
 
 export async function navigateToSettingsPage(page: Page) {
-    console.log('Navigating to Settings page via UI...');
-    const mainFrame = page.frameLocator('#main');
-
-    // 1. Click the dropdown toggle
-    await mainFrame.locator('a.dropdown-toggle[onclick="toggleNav()"]').click();
-
-    // 2. Click the "Settings" link in the dropdown
-    await mainFrame.locator('a[href="/settings.php"]').click();
-
-    // 3. Wait for a known element on the settings page to be visible
-    await mainFrame.locator('a[href="#order"]').waitFor({ state: 'visible', timeout: 10000 });
+    console.log('Navigating to Settings page via URL...');
+    await page.goto(ISCORED_SETTINGS_URL);
+    // Wait for a known element on the settings page to be visible
+    await page.locator('#main a[href="#order"]').waitFor({ state: 'visible', timeout: 10000 });
     console.log('✅ On Settings page.');
 }
 
