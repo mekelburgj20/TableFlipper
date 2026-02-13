@@ -1,5 +1,8 @@
 # Active Tasks
 1. **Persistent Logging:** We need persistent logging for troubleshooting inspection in case issues arise. Currently logs are ephemeral console outputs.
+2. **Show active game when posting score:** When a user uses /submit-score grind-type , we should display the active game for each grind-type so they can validate which game they are in fact submitting a score for. This functionality exists in the /list-active command already, however this needs to be added to /submit-score for additional quick confirmation during score submission.
+3. **Use Tags for Grind-Type ID** The iscored Lineup has an optional 'Tags' for each Game. I'd like to consider switching the grind-type identifier from the current text string in the Game Name (example "DG" = Daily Grind) to a Tag we can apply during each game creation. I would like to add the appropriate Tag that identifies the grind-type for each game created rather than put the ID text in the Game Name. See @Tags_outerHTML for the outerHTML for this capability.
+4. For the game selection database (games available to choose from for each grind-type) there are a lot of additional games available on VPXS. These are contained and maintained in a .json database and is accessible via API. If the game is available in this database, it can be selected for wg-vpxs. When choosing a wg-vpxs table, autocomplete and table list should pull from this database to show users their options. The API instructions are here @iScored_API.md 
 
 # Future Considerations
 1. **Community Styles:** Investigate associating tables with iScored 'Community Styles' (e.g., `loadStylePreview(2924)`). Load these into the database so the bot can automatically apply the correct style when creating a game.

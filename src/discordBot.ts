@@ -551,8 +551,52 @@ export function startDiscordBot() {
                     return;
                 }
 
-                await submitScoreToIscored(iScoredUsername, interaction.user.id, score, photoAttachment.url, gameType);
-                await interaction.editReply(`✅ Received your score of ${score} for ${iScoredUsername} (${gameType}). Submission to iScored successful!`);
+                // Get active game name for confirmation
+                const activeGame = await getActiveGame(gameType);
+                const activeGameName = activeGame ? activeGame.name : "Unknown (Check /list-active)";
+
+                if (!activeGame) {
+                    await interaction.editReply(`⚠️ I couldn't find an active game for **${gameType}** in my database. Please check if the tournament is active.`);
+                    return;
+                }
+
+                // Confirmation UI
+                const confirmBtn = new ButtonBuilder()
+                    .setCustomId('confirm_score')
+                    .setLabel(`Yes, submit for ${activeGameName}`)
+                    .setStyle(ButtonStyle.Primary);
+                
+                const cancelBtn = new ButtonBuilder()
+                    .setCustomId('cancel_score')
+                    .setLabel('Cancel')
+                    .setStyle(ButtonStyle.Secondary);
+
+                const row = new ActionRowBuilder<ButtonBuilder>().addComponents(confirmBtn, cancelBtn);
+
+                const response = await interaction.editReply({
+                    content: `📝 **Score Submission Review**\n\n**Tournament:** ${gameType}\n**Active Table:** ${activeGameName}\n**Score:** ${score}\n**Player:** ${iScoredUsername}\n\nIs this correct?`,
+                    components: [row]
+                });
+
+                try {
+                    const confirmation = await response.awaitMessageComponent({ 
+                        filter: i => i.user.id === interaction.user.id, 
+                        time: 60000 
+                    });
+
+                    if (confirmation.customId === 'cancel_score') {
+                        await confirmation.update({ content: '❌ Submission cancelled.', components: [] });
+                        return;
+                    }
+
+                    await confirmation.update({ content: `✅ Confirmed! Submitting score to iScored...`, components: [] });
+
+                    await submitScoreToIscored(iScoredUsername, interaction.user.id, score, photoAttachment.url, gameType);
+                    await interaction.editReply(`✅ **Success!** Score of ${score} posted for ${activeGameName}.`);
+
+                } catch (e) {
+                    await interaction.editReply({ content: '❌ Confirmation timed out. Submission cancelled.', components: [] });
+                }
             } catch (error) {
                 console.error(error);
                 await interaction.editReply(`❌ An error occurred while trying to submit your score.`);

@@ -5,15 +5,16 @@ import { loadUserMapping } from './userMapping.js';
 import { initializeDatabase } from './database.js';
 import cron from 'node-cron';
 import { checkPickerTimeouts } from './timeout.js';
+import { logInfo, logError } from './logger.js';
 
 async function main() {
-    console.log('🤖 TableFlipper Bot starting...');
+    logInfo('🤖 TableFlipper Bot starting...');
 
     // Initialize the database first
     try {
         await initializeDatabase();
     } catch (error) {
-        console.error('❌ Failed to initialize database:', error);
+        logError('❌ Failed to initialize database:', error);
         process.exit(1); // Exit if database cannot be initialized
     }
     
@@ -21,19 +22,19 @@ async function main() {
     try {
         await loadUserMapping();
     } catch (error) {
-        console.error('❌ Failed to load user mappings at startup:', error);
+        logError('❌ Failed to load user mappings at startup:', error);
         process.exit(1); // Exit if user mappings cannot be loaded
     }
 
     // Check for manual maintenance trigger
     if (process.argv.includes('--trigger-maintenance')) {
-        console.log('Detected --trigger-maintenance argument. Running all maintenance routines...');
+        logInfo('Detected --trigger-maintenance argument. Running all maintenance routines...');
         try {
             await triggerAllMaintenanceRoutines();
-            console.log('Manual maintenance trigger completed. Exiting.');
+            logInfo('Manual maintenance trigger completed. Exiting.');
             process.exit(0);
         } catch (error) {
-            console.error('Error during manual maintenance trigger:', error);
+            logError('Error during manual maintenance trigger:', error);
             process.exit(1);
         }
     } else {
@@ -42,9 +43,9 @@ async function main() {
 
         // Schedule the Daily Grind maintenance to run at 12:00 AM Central Time
         cron.schedule('0 0 * * *', () => {
-            console.log('⏰ Kicking off scheduled maintenance for DG...');
+            logInfo('⏰ Kicking off scheduled maintenance for DG...');
             runMaintenanceForGameType('DG').catch((error: any) => {
-                console.error('🚨 DG maintenance task failed:', error);
+                logError('🚨 DG maintenance task failed:', error);
             });
         }, {
             scheduled: true,
@@ -53,12 +54,12 @@ async function main() {
 
         // Schedule the Weekly Grind maintenance to run at 12:01 AM on Wednesdays
         cron.schedule('1 0 * * 3', () => {
-            console.log('⏰ Kicking off scheduled maintenance for Weekly Grinds...');
+            logInfo('⏰ Kicking off scheduled maintenance for Weekly Grinds...');
             runMaintenanceForGameType('WG-VPXS').catch((error: any) => {
-                console.error('🚨 WG-VPXS maintenance task failed:', error);
+                logError('🚨 WG-VPXS maintenance task failed:', error);
             });
             runMaintenanceForGameType('WG-VR').catch((error: any) => {
-                console.error('🚨 WG-VR maintenance task failed:', error);
+                logError('🚨 WG-VR maintenance task failed:', error);
             });
         }, {
             scheduled: true,
@@ -67,9 +68,9 @@ async function main() {
 
         // Schedule the Monthly Grind maintenance to run at 12:01 AM on the 1st of the month
         cron.schedule('1 0 1 * *', () => {
-            console.log('⏰ Kicking off scheduled maintenance for Monthly Grind...');
+            logInfo('⏰ Kicking off scheduled maintenance for Monthly Grind...');
             runMaintenanceForGameType('MG').catch((error: any) => {
-                console.error('🚨 MG maintenance task failed:', error);
+                logError('🚨 MG maintenance task failed:', error);
             });
         }, {
             scheduled: true,
@@ -78,9 +79,9 @@ async function main() {
 
         // Schedule the picker timeout check to run every hour
         cron.schedule('0 * * * *', () => {
-            console.log('⏰ Kicking off hourly picker timeout check...');
+            logInfo('⏰ Kicking off hourly picker timeout check...');
             checkPickerTimeouts().catch((error: any) => {
-                console.error('🚨 Picker timeout check task failed:', error);
+                logError('🚨 Picker timeout check task failed:', error);
             });
         }, {
             scheduled: true,
@@ -90,6 +91,6 @@ async function main() {
 }
 
 main().catch(error => {
-    console.error("💥 Fatal error during startup:", error);
+    logError("💥 Fatal error during startup:", error);
     process.exit(1);
 });

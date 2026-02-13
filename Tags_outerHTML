@@ -1,0 +1,14 @@
+outerHTML for the Game Name in Lineup page:
+<li class="list-group-item" id="90590" data-id="90590" style="height: 50px"><span class="dragHandle"><img src="icons/updown.png" style="height: 15px;"> Medieval Madness DG</span><span style="float:right; margin-left: 60px;"><input type="checkbox" onclick="lockGame('90590')" id="lock90590" name="lock90590" value="True" class="lockCheckbox"></span><span style="float:right;"><input type="checkbox" onclick="hideGame('90590')" id="hide90590" name="hide90590" value="True" class="showHideCheckbox"></span><span style="font-size: 14px; position: absolute; left: 600px; top: 5px"><tags class="tagify tagInput tagify--noTags tagify--empty" tabindex="-1">
+            <span contenteditable="" data-placeholder="write some tags" aria-placeholder="write some tags" class="tagify__input" role="textbox" aria-autocomplete="both" aria-multiline="false"></span>
+        </tags><input name="tagInput90590" id="tagInput90590" class="tagInput" placeholder="write some tags" value=""></span></li>
+
+outerHTML for the Game Name under the li element:
+<span style="font-size: 14px; position: absolute; left: 600px; top: 5px"><tags class="tagify tagInput tagify--noTags tagify--empty" tabindex="-1">
+            <span contenteditable="" data-placeholder="write some tags" aria-placeholder="write some tags" class="tagify__input" role="textbox" aria-autocomplete="both" aria-multiline="false"></span>
+        </tags><input name="tagInput90590" id="tagInput90590" class="tagInput" placeholder="write some tags" value=""></span>
+
+outerHTML for the 'tags' element under the span element for the Game Name:
+<tags class="tagify tagInput tagify--noTags tagify--empty" tabindex="-1">
+            <span contenteditable="" data-placeholder="write some tags" aria-placeholder="write some tags" class="tagify__input" role="textbox" aria-autocomplete="both" aria-multiline="false"></span>
+        </tags>

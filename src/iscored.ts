@@ -487,6 +487,7 @@ export async function submitScoreToIscored(iScoredUsername: string, discordUserI
         for (let i = 0; i < 3; i++) {
             try {
                 console.log(`   -> Attempt ${i + 1} to open score modal...`);
+                await scoreEntryActivator.waitFor({ state: 'visible', timeout: 5000 });
                 await scoreEntryActivator.click({ timeout: 5000 });
                 await mainFrame.locator('#scoreEntryDiv').waitFor({ state: 'visible', timeout: 5000 });
                 modalVisible = true;
