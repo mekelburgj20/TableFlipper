@@ -8,9 +8,9 @@ import os from 'os'; // Import os module
 import axios from 'axios';
 
 const ISCORED_LOGIN_URL = 'https://iscored.info/';
-const ISCORED_SETTINGS_URL = 'https://iscored.info/settings';
-const ISCORED_LINEUP_URL = 'https://iscored.info/settings#order'; // Direct URL for the Lineup tab
-const ISCORED_GAMES_URL = 'https://iscored.info/settings#games'; // Direct URL for the Games tab
+const ISCORED_SETTINGS_URL = 'https://iscored.info/settings.php';
+const ISCORED_LINEUP_URL = 'https://iscored.info/settings.php#order'; // Direct URL for the Lineup tab
+const ISCORED_GAMES_URL = 'https://iscored.info/settings.php#games'; // Direct URL for the Games tab
 
 export interface Game {
     id: string;
