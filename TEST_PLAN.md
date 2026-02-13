@@ -67,6 +67,8 @@ These steps require interacting with the bot in your Discord server.
     2.  **Verify:** Bot replies with the currently active table name or says "no active table".
     3.  Type `/list-active grind-type: Monthly Grind (MG)`.
     4.  **Verify:** Bot replies with the status of the MG table.
+    5.  Type `/list-active` (leave `grind-type` empty).
+    6.  **Verify:** Bot lists active tables for DG, WG-VPXS, WG-VR, and MG.
 
 ### 2. Viewing the Table List
 **Goal:** Verify the ephemeral list command.

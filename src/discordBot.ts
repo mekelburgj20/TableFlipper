@@ -76,19 +76,36 @@ export function startDiscordBot() {
         } 
         
         else if (commandName === 'list-active') {
-            const gameType = interaction.options.getString('grind-type', true);
+            const gameType = interaction.options.getString('grind-type');
             await interaction.deferReply();
 
             try {
-                const activeGame = await getActiveGame(gameType);
-                if (activeGame) {
-                    await interaction.editReply(`🟢 The currently active table for **${gameType}** is: **${activeGame.name}**`);
+                if (gameType) {
+                    // Specific type requested
+                    const activeGame = await getActiveGame(gameType);
+                    if (activeGame) {
+                        await interaction.editReply(`🟢 The currently active table for **${gameType}** is: **${activeGame.name}**`);
+                    } else {
+                        await interaction.editReply(`⚪ There is no active table for **${gameType}** at this time.`);
+                    }
                 } else {
-                    await interaction.editReply(`⚪ There is no active table for **${gameType}** at this time.`);
+                    // List all types
+                    const types = ['DG', 'WG-VPXS', 'WG-VR', 'MG'];
+                    let message = '**Currently Active Tables:**\n';
+                    
+                    for (const type of types) {
+                        const activeGame = await getActiveGame(type);
+                        if (activeGame) {
+                            message += `🟢 **${type}:** ${activeGame.name}\n`;
+                        } else {
+                            message += `⚪ **${type}:** *None*\n`;
+                        }
+                    }
+                    await interaction.editReply(message);
                 }
             } catch (error) {
-                console.error(`Error in /list-active for ${gameType}:`, error);
-                await interaction.editReply('❌ An error occurred while fetching the active game.');
+                console.error(`Error in /list-active:`, error);
+                await interaction.editReply('❌ An error occurred while fetching the active games.');
             }
         }
 

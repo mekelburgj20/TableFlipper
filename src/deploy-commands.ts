@@ -199,7 +199,7 @@ const commands = [
                 name: 'grind-type',
                 type: 3, // STRING
                 description: 'The tournament to check.',
-                required: true,
+                required: false,
                 choices: [
                     { name: 'Daily Grind (DG)', value: 'DG' },
                     { name: 'Weekly Grind VPXS (WG-VPXS)', value: 'WG-VPXS' },

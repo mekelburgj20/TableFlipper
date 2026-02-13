@@ -22,6 +22,8 @@
     "test:db": "node dist/tests/test-database.js",
     "test:iscored": "node dist/tests/test-iscored.js",
     "test:sheets": "node dist/tests/test-sheets.js",
+    "presync-state": "tsc",
+    "sync-state": "node dist/sync-state.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [

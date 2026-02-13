@@ -269,6 +269,43 @@ export async function injectSpecialGame(gameType: string, gameName: string, isco
     }
 }
 
+export async function syncActiveGame(gameType: string, iscoredGameId: string | null, gameName: string | null): Promise<void> {
+    const db = await openDb();
+    try {
+        // 1. Deactivate any CURRENTLY active games for this type in DB
+        // (We assume iScored is truth. If iScored says Game X is active, Game Y in DB should stop being active)
+        await db.run(
+            `UPDATE games SET status = 'COMPLETED', completed_at = ? WHERE type = ? AND status = 'ACTIVE'`,
+            new Date().toISOString(), gameType
+        );
+
+        if (iscoredGameId && gameName) {
+            // 2. Check if the iScored game exists in DB
+            const existingGame = await db.get<GameRow>("SELECT * FROM games WHERE iscored_game_id = ?", iscoredGameId);
+
+            if (existingGame) {
+                // Update it to ACTIVE
+                await db.run("UPDATE games SET status = 'ACTIVE', completed_at = NULL WHERE id = ?", existingGame.id);
+                console.log(`🔄 Synced DB: Set existing game '${gameName}' to ACTIVE.`);
+            } else {
+                // Insert as new ACTIVE game
+                const newId = uuidv4();
+                await db.run(
+                    `INSERT INTO games (id, iscored_game_id, name, type, status, created_at)
+                     VALUES (?, ?, ?, ?, 'ACTIVE', ?)`,
+                    newId, iscoredGameId, gameName, gameType, new Date().toISOString()
+                );
+                console.log(`🔄 Synced DB: Created new ACTIVE entry for '${gameName}'.`);
+            }
+        } else {
+            console.log(`🔄 Synced DB: No active game found on iScored for ${gameType}. Cleared active state in DB.`);
+        }
+
+    } finally {
+        await db.close();
+    }
+}
+
 // --- Game Table Functions ---
 
 export async function createGameEntry(game: Omit<GameRow, 'id' | 'created_at' | 'status' | 'name' | 'iscored_game_id'> & { name?: string, iscored_game_id?: string }): Promise<GameRow> {
