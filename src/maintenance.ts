@@ -1,5 +1,5 @@
 import { Browser, Page } from 'playwright';
-import { loginToIScored, lockGame, showGame, Game as IscoredGame } from './iscored.js';
+import { loginToIScored, lockGame, showGame, navigateToLineupPage, Game as IscoredGame } from './iscored.js';
 import { getWinnerAndScoreFromApi } from './api.js';
 import { checkWinnerHistory, updateWinnerHistory } from './history.js';
 import { sendDiscordNotification } from './discord.js';
@@ -32,6 +32,7 @@ export async function runMaintenanceForGameType(gameType: string) {
 
         ({ browser } = await loginToIScored());
         const page = await browser.newPage();
+        await navigateToLineupPage(page);
 
         // --- Phase 2: Process Active Game (if one exists) ---
         if (activeGame) {
