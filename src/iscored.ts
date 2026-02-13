@@ -334,17 +334,10 @@ export async function navigateToSettingsPage(page: Page) {
 }
 
 export async function navigateToLineupPage(page: Page) {
-    console.log('Navigating to Lineup page...');
+    console.log('Navigating directly to Lineup page URL...');
+    await page.goto(ISCORED_LINEUP_URL);
     
-    // Navigate to the settings page first, which contains the tabs
-    await navigateToSettingsPage(page);
-
-    const mainFrame = page.frameLocator('#main');
-    
-    // Click the "Lineup" tab link
-    await mainFrame.locator('a[href="#order"]').click();
-    
-    console.log('   -> Waiting for game list to populate after click...');
+    console.log('   -> Waiting for game list to populate...');
     try {
         await page.waitForFunction(() => {
             const iframe = document.querySelector('#main');
