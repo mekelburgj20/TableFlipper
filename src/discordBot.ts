@@ -6,23 +6,21 @@ import { getPicker, setPicker, updateQueuedGame, getNextQueuedGame, searchTables
 import { getLastWinner, getHistory, getTableStats } from './history.js';
 import { getTablesFromSheet } from './googleSheet.js';
 import { getStandingsFromApi, findActiveGame } from './api.js';
-import { triggerAllMaintenanceRoutines, runMaintenanceForGameType } from './maintenance.js';
+import { triggerAllMaintenanceRoutines, runMaintenanceForGameType, runCleanupForGameType } from './maintenance.js';
+import { logInfo, logError, logWarn } from './logger.js';
 
 export function startDiscordBot() {
-    console.log('🤖 Starting Discord bot...');
-    console.log(`Debug: MOD_ROLE_ID from env: ${process.env.MOD_ROLE_ID}`);
+    logInfo('🤖 Starting Discord bot...');
+    logInfo(`Debug: MOD_ROLE_ID from env: ${process.env.MOD_ROLE_ID}`);
 
     // Global unhandled promise rejection handler for debugging
     process.on('unhandledRejection', (reason, promise) => {
-        console.error('--- Unhandled Rejection (Global) ---');
-        console.error('Reason:', reason);
-        console.error('Promise:', promise);
-        console.error('------------------------------------');
+        logError('--- Unhandled Rejection (Global) ---', reason);
     });
 
     const token = process.env.DISCORD_BOT_TOKEN;
     if (!token || token === 'your_discord_bot_token') {
-        console.error('❌ DISCORD_BOT_TOKEN not found in environment variables. Bot will not start.');
+        logError('❌ DISCORD_BOT_TOKEN not found in environment variables. Bot will not start.');
         return;
     }
 
@@ -35,17 +33,22 @@ export function startDiscordBot() {
     });
 
     client.once(Events.ClientReady, readyClient => {
-        console.log(`✅ Discord bot ready! Logged in as ${readyClient.user.tag}`);
+        logInfo(`✅ Discord bot ready! Logged in as ${readyClient.user.tag}`);
     });
 
     // --- Command Handler ---
     client.on(Events.InteractionCreate, async interaction => {
+        // Autocomplete logging handled inside the block if needed, but let's log chat commands
+        if (interaction.isChatInputCommand()) {
+             logInfo(`Received command: /${interaction.commandName} from ${interaction.user.tag} (${interaction.user.id})`);
+        }
+
         if (interaction.isAutocomplete()) {
             const focusedOption = interaction.options.getFocused(true);
 
             if (focusedOption.name === 'table-name') {
                 const gameType = interaction.options.getString('grind-type');
-                console.log(`Debug: Autocomplete. GameType: '${gameType}', Search: '${focusedOption.value}'`);
+                // logInfo(`Debug: Autocomplete. GameType: '${gameType}', Search: '${focusedOption.value}'`);
                 
                 let choices: any[] = [];
 
@@ -104,7 +107,7 @@ export function startDiscordBot() {
                     await interaction.editReply(message);
                 }
             } catch (error) {
-                console.error(`Error in /list-active:`, error);
+                logError(`Error in /list-active:`, error);
                 await interaction.editReply('An error occurred while fetching the active games.');
             }
         }
@@ -125,8 +128,8 @@ export function startDiscordBot() {
             const nextGame = await getNextQueuedGame(gameType);
 
             if (!nextGame || !nextGame.picker_discord_id || nextGame.picker_discord_id !== interaction.user.id) {
-                console.log(`❌ /picktable authorization failed for user ${interaction.user.id}.`);
-                console.log(`   - Next game picker slot: ${nextGame?.picker_discord_id}`);
+                logInfo(`❌ /picktable authorization failed for user ${interaction.user.id}.`);
+                logInfo(`   - Next game picker slot: ${nextGame?.picker_discord_id}`);
                 await interaction.editReply(`You are not authorized to pick a table for the ${gameType} tournament right now.`);
                 return;
             }
@@ -246,7 +249,7 @@ export function startDiscordBot() {
             const newGameName = tableName!; // Use clean table name (Tags handle the type)
             let browser: Browser | null = null;
             try {
-                console.log(`🚀 Handling /picktable for ${gameType} with table: ${tableName}`);
+                logInfo(`🚀 Handling /picktable for ${gameType} with table: ${tableName}`);
                 const { browser: newBrowser, page } = await loginToIScored();
                 browser = newBrowser;
                 
@@ -273,7 +276,7 @@ export function startDiscordBot() {
                 await interaction.editReply({ content: confirmationMessage, components: [] });
 
             } catch (error) {
-                console.error(error);
+                logError(`Error in /picktable:`, error);
                 await interaction.editReply(`An error occurred while trying to create the game '${newGameName}'.`);
             } finally {
                 if (browser) {
@@ -366,7 +369,7 @@ export function startDiscordBot() {
                 await runMaintenanceForGameType('DG');
                 await interaction.editReply('Daily Grind (DG) maintenance routine has been manually triggered and completed.');
             } catch (error) {
-                console.error('❌ Error manually triggering DG maintenance:', error);
+                logError('❌ Error manually triggering DG maintenance:', error);
                 await interaction.editReply('An error occurred while trying to manually trigger the DG maintenance routine.');
             }
         }
@@ -388,7 +391,7 @@ export function startDiscordBot() {
                 await runMaintenanceForGameType('WG-VR');
                 await interaction.editReply('Weekly Grind (WG-VPXS, WG-VR) maintenance routines have been manually triggered and completed.');
             } catch (error) {
-                console.error('❌ Error manually triggering Weekly maintenance:', error);
+                logError('❌ Error manually triggering Weekly maintenance:', error);
                 await interaction.editReply('An error occurred while trying to manually trigger the Weekly maintenance routines.');
             }
         }
@@ -409,8 +412,32 @@ export function startDiscordBot() {
                 await runMaintenanceForGameType('MG');
                 await interaction.editReply('Monthly Grind (MG) maintenance routine has been manually triggered and completed.');
             } catch (error) {
-                console.error('❌ Error manually triggering Monthly maintenance:', error);
+                logError('❌ Error manually triggering Monthly maintenance:', error);
                 await interaction.editReply('An error occurred while trying to manually trigger the Monthly maintenance routine.');
+            }
+        }
+
+        else if (commandName === 'trigger-cleanup') {
+            const gameType = interaction.options.getString('grind-type', true);
+            await interaction.deferReply({ ephemeral: true });
+            
+            const modRoleId = process.env.MOD_ROLE_ID;
+            if (!modRoleId) {
+                await interaction.editReply('The MOD_ROLE_ID is not configured. Please contact an admin.');
+                return;
+            }
+            const memberRoles = interaction.member?.roles as any;
+            if (!memberRoles || !memberRoles.cache.has(modRoleId)) {
+                await interaction.editReply('You do not have permission to use this command.');
+                return;
+            }
+
+            try {
+                await runCleanupForGameType(gameType);
+                await interaction.editReply(`Cleanup routine for **${gameType}** has been manually triggered and completed.`);
+            } catch (error) {
+                logError(`❌ Error manually triggering cleanup for ${gameType}:`, error);
+                await interaction.editReply(`An error occurred while trying to manually trigger the cleanup routine for ${gameType}.`);
             }
         }
         
@@ -439,7 +466,7 @@ export function startDiscordBot() {
             
             let browser: Browser | null = null;
             try {
-                console.log(`🚀 Manual Override: Creating/Finding special game '${fullGameName}'...`);
+                logInfo(`🚀 Manual Override: Creating/Finding special game '${fullGameName}'...`);
                 const { browser: newBrowser, page } = await loginToIScored();
                 browser = newBrowser;
                 
@@ -453,7 +480,7 @@ export function startDiscordBot() {
                 await interaction.editReply(`**Manual Override Successful!**\n\nThe game **${fullGameName}** has been injected at the front of the queue.\nThe existing winner's pick (and any other queued games) have been pushed back by 24 hours.`);
 
             } catch (error) {
-                console.error('Error during manual override:', error);
+                logError('Error during manual override:', error);
                 await interaction.editReply(`An error occurred while trying to inject the special game: ${error}`);
             } finally {
                 if (browser) {
@@ -494,7 +521,7 @@ export function startDiscordBot() {
                 await interaction.editReply({ embeds: [embed] });
 
             } catch (error) {
-                console.error(error);
+                logError(`Error in /current-dg-scores:`, error);
                 await interaction.editReply('An error occurred while trying to fetch the current scores.');
             }
         }
@@ -532,7 +559,7 @@ export function startDiscordBot() {
                 }
 
             } catch (error) {
-                console.error(error);
+                logError(`Error in /dg-table-selection:`, error);
                 await interaction.editReply('An error occurred while trying to fetch the table list.');
             }
         }
@@ -636,7 +663,7 @@ export function startDiscordBot() {
                     await interaction.editReply({ content: 'Confirmation timed out. Submission cancelled.', components: [] });
                 }
             } catch (error) {
-                console.error(error);
+                logError(`Error in /submit-score:`, error);
                 await interaction.editReply(`An error occurred while trying to submit your score.`);
             }
         }
