@@ -125,6 +125,21 @@ export async function upsertTable(table: TableRow): Promise<void> {
     }
 }
 
+export async function upsertVpxsTable(name: string): Promise<void> {
+    const db = await openDb();
+    try {
+        await db.run(
+            `INSERT INTO tables (name, is_wg_vpxs)
+             VALUES (?, 1)
+             ON CONFLICT(name) DO UPDATE SET
+                is_wg_vpxs = 1`,
+            name
+        );
+    } finally {
+        await db.close();
+    }
+}
+
 export async function getTable(name: string): Promise<TableRow | null> {
     const db = await openDb();
     try {

@@ -94,24 +94,30 @@ export async function findGames(page: Page, gameType: string): Promise<{ activeG
         for (const gameRow of gameElements) {
             const nameElement = gameRow.locator('span.dragHandle');
             const name = (await nameElement.innerText()).trim();
-            console.log(`   -> Processing game: "${name}"`);
+            
+            const idAttr = await gameRow.getAttribute('id');
+            if (!idAttr) continue;
+            const id = idAttr;
 
-            if (name.toUpperCase().includes(' ' + gameType.toUpperCase())) {
-                console.log(`      -> Game name includes ' ${gameType}'.`);
-                const idAttr = await gameRow.getAttribute('id');
-                if (!idAttr) {
-                    console.log(`      -> No id attribute found for ${gameType} game, skipping.`);
-                    continue;
-                }
-                
-                const id = idAttr; // The ID is directly on the <li> element, e.g., id="90658"
-                console.log(`      -> Game ID attribute: "${idAttr}", extracted ID: "${id}"`);
+            // Extract tags
+            // The input has name="tagInput{id}" and class="tagInput"
+            const tagInput = gameRow.locator(`input[name="tagInput${id}"]`);
+            const tagValue = await tagInput.getAttribute('value') || '';
+            
+            // Check matching: Name Suffix OR Tag
+            const nameMatch = name.toUpperCase().includes(' ' + gameType.toUpperCase());
+            // Tags are usually JSON or comma separated? The value attribute seems to be a JSON string or CSV.
+            // Based on typical tagify usage, value is often '[{"value":"DG"}, ...]' or 'DG,TAG2'.
+            // Simple includes check is usually enough, but let's be safe.
+            const tagMatch = tagValue.toUpperCase().includes(gameType.toUpperCase());
+
+            if (nameMatch || tagMatch) {
+                console.log(`   -> Found match for ${gameType}: "${name}" (ID: ${id}) [Tags: ${tagValue}]`);
 
                 const hideCheckbox = gameRow.locator('input[id^="hide"]'); // Target the specific hide checkbox
                 const isHidden = await hideCheckbox.isChecked();
-                console.log(`      -> isHidden: ${isHidden}`);
                 
-                const game: Game = { id, name, isHidden }; // Changed isLocked to isHidden
+                const game: Game = { id, name, isHidden }; 
 
                 if (!isHidden) {
                     activeGames.push(game);
@@ -144,7 +150,8 @@ export async function findGames(page: Page, gameType: string): Promise<{ activeG
         throw error;
     }
 }
-export async function findGameByName(page: Page, gameName: string): Promise<Game | null> {
+
+export async function findGameByName(page: Page, gameName: string, mustBeUntagged: boolean = false): Promise<Game | null> {
     try {
         const mainFrame = page.frameLocator('#main');
         
@@ -155,15 +162,26 @@ export async function findGameByName(page: Page, gameName: string): Promise<Game
         for (const row of gameRows) {
             const nameElement = row.locator('span.dragHandle');
             const name = (await nameElement.innerText()).trim();
+            
             if (name.trim().toUpperCase() === gameName.trim().toUpperCase()) {
                 const idAttr = await row.getAttribute('id');
                 if (!idAttr) continue;
                 const id = idAttr; // The ID is directly on the <li> element, e.g., id="90658"
                 
+                // Check Tags if required
+                if (mustBeUntagged) {
+                    const tagInput = row.locator(`input[name="tagInput${id}"]`);
+                    const tagValue = await tagInput.getAttribute('value');
+                    // If tagValue is not empty/null, and does not equal "[]" (empty json), skip
+                    if (tagValue && tagValue.length > 0 && tagValue !== '[]') {
+                        continue; // Skip this game as it has tags
+                    }
+                }
+
                 const hideCheckbox = row.locator(`input[id="hide${id}"]`); // Find the hide checkbox by ID
                 const isHidden = await hideCheckbox.isChecked();
                 
-                return { id, name, isHidden }; // Changed isLocked to isHidden
+                return { id, name, isHidden }; 
             }
         }
         return null; // Game not found
@@ -386,10 +404,41 @@ export async function navigateToLineupPage(page: Page) {
     }
 }
 
+export async function addTagToGame(page: Page, gameId: string, tag: string) {
+    console.log(`🏷️ Adding tag '${tag}' to game ID: ${gameId}`);
+    try {
+        const mainFrame = page.frameLocator('#main');
+        
+        // The tag input area is likely inside the row.
+        // Based on outerHTML: <tags class="tagify ..."> <span contenteditable ...>
+        
+        // Find the row first to be safe
+        const gameRow = mainFrame.locator(`li#${gameId}`);
+        
+        // Locate the tagify component (the contenteditable span)
+        // Adjust selector based on provided HTML: <tags ...><span contenteditable ... class="tagify__input">
+        const tagifyInput = gameRow.locator('tags.tagify span.tagify__input');
+        
+        if (await tagifyInput.isVisible()) {
+            await tagifyInput.click();
+            await page.keyboard.type(tag);
+            await page.keyboard.press('Enter');
+            
+            // Wait for partial save? Tagify usually updates the underlying input immediately.
+            await page.waitForTimeout(1000); 
+            
+            console.log(`✅ Tag '${tag}' added.`);
+        } else {
+             console.warn(`⚠️ Could not find tag input for game ${gameId}.`);
+        }
+    } catch (e) {
+        console.error(`❌ Error adding tag to game ${gameId}:`, e);
+        // Don't throw, as the game is created. Just log error.
+    }
+}
 
-
-export async function createGame(page: Page, gameName: string): Promise<string> {
-    console.log(`✨ Creating new game: ${gameName}`);
+export async function createGame(page: Page, gameName: string, grindType: string): Promise<string> {
+    console.log(`✨ Creating new game: ${gameName} [Type: ${grindType}]`);
     
     try {
         const mainFrame = page.frameLocator('#main');
@@ -425,11 +474,15 @@ export async function createGame(page: Page, gameName: string): Promise<string> 
             return true;
         }, { timeout: 15000 });
 
-        const newlyCreatedGame = await findGameByName(page, gameName);
+        // Find the newly created game. MUST be untagged to avoid confusion with existing games of same name.
+        const newlyCreatedGame = await findGameByName(page, gameName, true);
 
         if (!newlyCreatedGame) {
-            throw new Error(`Could not find newly created game '${gameName}' on the Lineup page.`);
+            throw new Error(`Could not find newly created (untagged) game '${gameName}' on the Lineup page.`);
         }
+
+        // Apply the Tag
+        await addTagToGame(page, newlyCreatedGame.id, grindType);
 
         // Hide the newly created game.
         await hideGame(page, newlyCreatedGame);

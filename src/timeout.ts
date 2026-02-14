@@ -45,13 +45,13 @@ export async function checkPickerTimeouts() {
                     }
 
                     const randomTable = randomTableRow.name;
-                    const newGameName = `${randomTable} ${gameType}`;
+                    const newGameName = randomTable; // Clean name (Tags handle ID)
                     console.log(`🤖 Randomly selected table: ${newGameName}`);
 
                     // 2. Create the game in iScored
                     const { browser: newBrowser, page } = await loginToIScored();
                     browser = newBrowser;
-                    const iscoredGameId = await createGame(page, newGameName);
+                    const iscoredGameId = await createGame(page, newGameName, gameType);
 
                     // 3. Update the game in the database
                     await updateQueuedGame(game.id, newGameName, iscoredGameId);
@@ -64,7 +64,7 @@ export async function checkPickerTimeouts() {
                         activeGame: 'None',
                         nextGame: newGameName,
                         isRepeatWinner: false,
-                        customMessage: `⏰ The picker for **${gameType}** timed out.\nI have randomly selected **${newGameName}** as the next game.`
+                        customMessage: `The picker for **${gameType}** timed out.\nI have randomly selected **${newGameName}** as the next game.`
                     });
 
                 } catch (error) {

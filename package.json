@@ -24,6 +24,8 @@
     "test:sheets": "node dist/tests/test-sheets.js",
     "presync-state": "tsc",
     "sync-state": "node dist/sync-state.js",
+    "presync-vpxs": "tsc",
+    "sync-vpxs": "node dist/sync-vpxs.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [

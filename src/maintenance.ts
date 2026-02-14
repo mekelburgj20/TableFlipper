@@ -1,6 +1,6 @@
 import { Browser, Page } from 'playwright';
 import { loginToIScored, lockGame, showGame, navigateToLineupPage, Game as IscoredGame } from './iscored.js';
-import { getWinnerAndScoreFromApi } from './api.js';
+import { getWinnerAndScoreFromPage } from './api.js';
 import { checkWinnerHistory, updateWinnerHistory } from './history.js';
 import { sendDiscordNotification } from './discord.js';
 import { getDiscordIdByIscoredName } from './userMapping.js';
@@ -33,14 +33,16 @@ export async function runMaintenanceForGameType(gameType: string) {
         const { browser: b, page } = await loginToIScored();
         browser = b;
         
-        await navigateToLineupPage(page);
-
         // --- Phase 2: Process Active Game (if one exists) ---
         if (activeGame) {
             console.log(`Found active game in DB: ${activeGame.name} (ID: ${activeGame.iscored_game_id})`);
             
-            // 1. Get winner from iScored API
-            const { winner, score } = await getWinnerAndScoreFromApi(activeGame.name);
+            // 1. Get winner from iScored (using scraper via existing page to handle Tags/ID correctly)
+            const { winner, score } = await getWinnerAndScoreFromPage(page, activeGame.iscored_game_id, activeGame.name);
+
+            // Re-navigate to lineup page to perform admin actions (locking, etc.)
+            // getWinnerAndScoreFromPage navigates to the public page, so we must go back to settings.
+            await navigateToLineupPage(page);
 
             // 2. Lock game on iScored
             const iscoredGame: IscoredGame = { id: activeGame.iscored_game_id, name: activeGame.name, isHidden: false };
@@ -86,6 +88,8 @@ export async function runMaintenanceForGameType(gameType: string) {
 
         } else {
             console.log(`⚠️ No active game found for ${gameType}. Skipping winner determination and locking.`);
+            // Ensure we are on lineup page for next steps if we didn't go there yet
+            await navigateToLineupPage(page);
         }
 
         // --- Phase 3: Activate Next Queued Game ---

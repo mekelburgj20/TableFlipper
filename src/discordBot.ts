@@ -84,9 +84,9 @@ export function startDiscordBot() {
                     // Specific type requested
                     const activeGame = await getActiveGame(gameType);
                     if (activeGame) {
-                        await interaction.editReply(`🟢 The currently active table for **${gameType}** is: **${activeGame.name}**`);
+                        await interaction.editReply(`The currently active table for **${gameType}** is: **${activeGame.name}**`);
                     } else {
-                        await interaction.editReply(`⚪ There is no active table for **${gameType}** at this time.`);
+                        await interaction.editReply(`There is no active table for **${gameType}** at this time.`);
                     }
                 } else {
                     // List all types
@@ -96,16 +96,16 @@ export function startDiscordBot() {
                     for (const type of types) {
                         const activeGame = await getActiveGame(type);
                         if (activeGame) {
-                            message += `🟢 **${type}:** ${activeGame.name}\n`;
+                            message += `**${type}:** ${activeGame.name}\n`;
                         } else {
-                            message += `⚪ **${type}:** *None*\n`;
+                            message += `**${type}:** *None*\n`;
                         }
                     }
                     await interaction.editReply(message);
                 }
             } catch (error) {
                 console.error(`Error in /list-active:`, error);
-                await interaction.editReply('❌ An error occurred while fetching the active games.');
+                await interaction.editReply('An error occurred while fetching the active games.');
             }
         }
 
@@ -115,7 +115,7 @@ export function startDiscordBot() {
             const surpriseMe = interaction.options.getBoolean('surprise-me');
 
             if (!tableName && !surpriseMe) {
-                await interaction.reply({ content: '❌ You must either provide a **table-name** or select **surprise-me: True**.', ephemeral: true });
+                await interaction.reply({ content: 'You must either provide a **table-name** or select **surprise-me: True**.', ephemeral: true });
                 return;
             }
 
@@ -143,7 +143,7 @@ export function startDiscordBot() {
                 const randomTable = await getRandomCompatibleTable(platformFilter, recentGames);
 
                 if (!randomTable) {
-                    await interaction.editReply(`❌ I couldn't find a valid random table that matches the criteria (Platform: ${platformFilter}, History: ${daysLookback} days).`);
+                    await interaction.editReply(`I couldn't find a valid random table that matches the criteria (Platform: ${platformFilter}, History: ${daysLookback} days).`);
                     return;
                 }
 
@@ -161,7 +161,7 @@ export function startDiscordBot() {
                 const row = new ActionRowBuilder<ButtonBuilder>().addComponents(confirmBtn, cancelBtn);
 
                 const response = await interaction.editReply({
-                    content: `🎲 **Fate has chosen:** **${randomTable.name}**\n\nDo you want to proceed with this table?`,
+                    content: `**Fate has chosen:** **${randomTable.name}**\n\nDo you want to proceed with this table?`,
                     components: [row]
                 });
 
@@ -172,15 +172,15 @@ export function startDiscordBot() {
                     });
 
                     if (confirmation.customId === 'cancel_pick') {
-                        await confirmation.update({ content: '❌ Selection cancelled. You can run `/picktable` again.', components: [] });
+                        await confirmation.update({ content: 'Selection cancelled. You can run `/picktable` again.', components: [] });
                         return;
                     }
 
-                    await confirmation.update({ content: `✅ Confirmed! Setting up **${randomTable.name}**...`, components: [] });
+                    await confirmation.update({ content: `Confirmed! Setting up **${randomTable.name}**...`, components: [] });
                     tableName = randomTable.name;
 
                 } catch (e) {
-                    await interaction.editReply({ content: '❌ Confirmation timed out. Selection cancelled.', components: [] });
+                    await interaction.editReply({ content: 'Confirmation timed out. Selection cancelled.', components: [] });
                     return;
                 }
             }
@@ -192,29 +192,19 @@ export function startDiscordBot() {
                     const tableData = await getTable(tableName);
                     
                     if (!tableData) {
-                        await interaction.editReply(`❌ The table '**${tableName}**' is not recognized in our database. Please select a valid table from the list for Daily Grind.`);
+                        await interaction.editReply(`The table '**${tableName}**' is not recognized in our database. Please select a valid table from the list for Daily Grind.`);
                         return;
                     }
 
                     if (!tableData.is_atgames) {
-                        await interaction.editReply(`❌ The table '**${tableName}**' is not marked as available on **AtGames**. Please select an AtGames-compatible table for Daily Grind.`);
+                        await interaction.editReply(`The table '**${tableName}**' is not marked as available on **AtGames**. Please select an AtGames-compatible table for Daily Grind.`);
                         return;
                     }
                 }
-                // For WG-VR and WG-VPXS, we implemented STRICT filtering in autocomplete,
-                // but the user could still type "Africa".
-                // The requirements said: "For the Weekly and Monthly Grinds, no validation is necessary..."
-                // BUT later the user said "list... is showing games that are not available...".
-                // I updated autocomplete filtering.
-                // Should I add validation here too?
-                // The prompt for THIS task didn't ask for it, but "Surprise Me" handles it.
-                // I will stick to existing logic: Only strict validation for DG, filtering for others was UI-only (Autocomplete).
-                // Wait, if I type "Africa" for WG-VPXS manually, should it fail?
-                // Previously I implemented NO validation for WG. I'll keep it that way unless asked.
             }
 
             // 4. Create the game in iScored
-            const newGameName = `${tableName} ${gameType}`;
+            const newGameName = tableName!; // Use clean table name (Tags handle the type)
             let browser: Browser | null = null;
             try {
                 console.log(`🚀 Handling /picktable for ${gameType} with table: ${tableName}`);
@@ -222,22 +212,30 @@ export function startDiscordBot() {
                 browser = newBrowser;
                 
                 // This function now creates the game and returns the iScored ID
-                const iscoredGameId = await createGame(page, newGameName); 
+                // We pass the grind-type as the second argument to be added as a Tag
+                const iscoredGameId = await createGame(page, newGameName, gameType); 
                 
                 // 5. Update the game entry in our database
                 await updateQueuedGame(nextGame.id, newGameName, iscoredGameId);
 
-                const confirmationMessage = `✅ Thank you, ${interaction.user.toString()}! The table **${newGameName}** has been selected and created. It will be the table for the tournament in 2 days.`;
+                // Format the activation time
+                let formattedTime = 'Unknown Time';
+                if (nextGame.scheduled_to_be_active_at) {
+                    const activeDate = new Date(nextGame.scheduled_to_be_active_at);
+                     formattedTime = activeDate.toLocaleDateString('en-US', {
+                        year: 'numeric', month: 'numeric', day: 'numeric', timeZone: 'America/Chicago'
+                     }) + ' at ' + activeDate.toLocaleTimeString('en-US', {
+                         hour: 'numeric', minute: '2-digit', hour12: true, timeZone: 'America/Chicago'
+                     }).toLowerCase() + ' Central';
+                }
+
+                const confirmationMessage = `Thank you, ${interaction.user.toString()}! The table **${newGameName}** has been selected and created. It will be the table for the tournament beginning ${formattedTime}.`;
                 
-                // If we already replied via button update, we need to edit that or follow up?
-                // We did `await confirmation.update({ content: ... })`.
-                // So the interaction is technically "replied".
-                // `interaction.editReply` edits the ORIGINAL reply (which is now the "Confirmed! Setting up..." message).
                 await interaction.editReply({ content: confirmationMessage, components: [] });
 
             } catch (error) {
                 console.error(error);
-                await interaction.editReply(`❌ An error occurred while trying to create the game '${newGameName}'.`);
+                await interaction.editReply(`An error occurred while trying to create the game '${newGameName}'.`);
             } finally {
                 if (browser) {
                     await browser.close();
@@ -327,10 +325,10 @@ export function startDiscordBot() {
             }
             try {
                 await runMaintenanceForGameType('DG');
-                await interaction.editReply('✅ Daily Grind (DG) maintenance routine has been manually triggered and completed.');
+                await interaction.editReply('Daily Grind (DG) maintenance routine has been manually triggered and completed.');
             } catch (error) {
                 console.error('❌ Error manually triggering DG maintenance:', error);
-                await interaction.editReply('❌ An error occurred while trying to manually trigger the DG maintenance routine.');
+                await interaction.editReply('An error occurred while trying to manually trigger the DG maintenance routine.');
             }
         }
         
@@ -349,10 +347,10 @@ export function startDiscordBot() {
             try {
                 await runMaintenanceForGameType('WG-VPXS');
                 await runMaintenanceForGameType('WG-VR');
-                await interaction.editReply('✅ Weekly Grind (WG-VPXS, WG-VR) maintenance routines have been manually triggered and completed.');
+                await interaction.editReply('Weekly Grind (WG-VPXS, WG-VR) maintenance routines have been manually triggered and completed.');
             } catch (error) {
                 console.error('❌ Error manually triggering Weekly maintenance:', error);
-                await interaction.editReply('❌ An error occurred while trying to manually trigger the Weekly maintenance routines.');
+                await interaction.editReply('An error occurred while trying to manually trigger the Weekly maintenance routines.');
             }
         }
 
@@ -370,10 +368,10 @@ export function startDiscordBot() {
             }
             try {
                 await runMaintenanceForGameType('MG');
-                await interaction.editReply('✅ Monthly Grind (MG) maintenance routine has been manually triggered and completed.');
+                await interaction.editReply('Monthly Grind (MG) maintenance routine has been manually triggered and completed.');
             } catch (error) {
                 console.error('❌ Error manually triggering Monthly maintenance:', error);
-                await interaction.editReply('❌ An error occurred while trying to manually trigger the Monthly maintenance routine.');
+                await interaction.editReply('An error occurred while trying to manually trigger the Monthly maintenance routine.');
             }
         }
         
@@ -398,7 +396,7 @@ export function startDiscordBot() {
 
             // 2. Create the game in iScored FIRST
             // The maintenance routine expects the game to exist on iScored.
-            const fullGameName = specialGameName.endsWith(' DG') ? specialGameName : `${specialGameName} DG`;
+            const fullGameName = specialGameName; // Use clean name, Tag handles ID
             
             let browser: Browser | null = null;
             try {
@@ -407,16 +405,17 @@ export function startDiscordBot() {
                 browser = newBrowser;
                 
                 // Create (or find) the game and get its ID
-                const iscoredGameId = await createGame(page, fullGameName);
+                // Apply 'DG' tag
+                const iscoredGameId = await createGame(page, fullGameName, 'DG');
                 
                 // 3. Inject into Database
                 await injectSpecialGame('DG', fullGameName, iscoredGameId);
                 
-                await interaction.editReply(`✅ **Manual Override Successful!**\n\nThe game **${fullGameName}** has been injected at the front of the queue.\nThe existing winner's pick (and any other queued games) have been pushed back by 24 hours.`);
+                await interaction.editReply(`**Manual Override Successful!**\n\nThe game **${fullGameName}** has been injected at the front of the queue.\nThe existing winner's pick (and any other queued games) have been pushed back by 24 hours.`);
 
             } catch (error) {
                 console.error('Error during manual override:', error);
-                await interaction.editReply(`❌ An error occurred while trying to inject the special game: ${error}`);
+                await interaction.editReply(`An error occurred while trying to inject the special game: ${error}`);
             } finally {
                 if (browser) {
                     await browser.close();
@@ -457,7 +456,7 @@ export function startDiscordBot() {
 
             } catch (error) {
                 console.error(error);
-                await interaction.editReply('❌ An error occurred while trying to fetch the current scores.');
+                await interaction.editReply('An error occurred while trying to fetch the current scores.');
             }
         }
         
@@ -495,7 +494,7 @@ export function startDiscordBot() {
 
             } catch (error) {
                 console.error(error);
-                await interaction.editReply('❌ An error occurred while trying to fetch the table list.');
+                await interaction.editReply('An error occurred while trying to fetch the table list.');
             }
         }
         
@@ -547,7 +546,7 @@ export function startDiscordBot() {
                 // Check if the provided iScored username is already mapped to a different Discord user
                 const existingDiscordId = getIscoredNameByDiscordId(iScoredUsername);
                 if (existingDiscordId && existingDiscordId !== interaction.user.id) {
-                    await interaction.editReply(`❌ The iScored username '${iScoredUsername}' is already linked to another Discord user.`);
+                    await interaction.editReply(`The iScored username '${iScoredUsername}' is already linked to another Discord user.`);
                     return;
                 }
 
@@ -556,7 +555,7 @@ export function startDiscordBot() {
                 const activeGameName = activeGame ? activeGame.name : "Unknown (Check /list-active)";
 
                 if (!activeGame) {
-                    await interaction.editReply(`⚠️ I couldn't find an active game for **${gameType}** in my database. Please check if the tournament is active.`);
+                    await interaction.editReply(`I couldn't find an active game for **${gameType}** in my database. Please check if the tournament is active.`);
                     return;
                 }
 
@@ -574,7 +573,7 @@ export function startDiscordBot() {
                 const row = new ActionRowBuilder<ButtonBuilder>().addComponents(confirmBtn, cancelBtn);
 
                 const response = await interaction.editReply({
-                    content: `📝 **Score Submission Review**\n\n**Tournament:** ${gameType}\n**Active Table:** ${activeGameName}\n**Score:** ${score}\n**Player:** ${iScoredUsername}\n\nIs this correct?`,
+                    content: `**Score Submission Review**\n\n**Tournament:** ${gameType}\n**Active Table:** ${activeGameName}\n**Score:** ${score}\n**Player:** ${iScoredUsername}\n\nIs this correct?`,
                     components: [row]
                 });
 
@@ -585,21 +584,21 @@ export function startDiscordBot() {
                     });
 
                     if (confirmation.customId === 'cancel_score') {
-                        await confirmation.update({ content: '❌ Submission cancelled.', components: [] });
+                        await confirmation.update({ content: 'Submission cancelled.', components: [] });
                         return;
                     }
 
-                    await confirmation.update({ content: `✅ Confirmed! Submitting score to iScored...`, components: [] });
+                    await confirmation.update({ content: `Confirmed! Submitting score to iScored...`, components: [] });
 
                     await submitScoreToIscored(iScoredUsername, interaction.user.id, score, photoAttachment.url, activeGame.iscored_game_id, activeGameName);
-                    await interaction.editReply(`✅ **Success!** Score of ${score} posted for ${activeGameName}.`);
+                    await interaction.editReply(`**Success!** Score of ${score} posted for ${activeGameName}.`);
 
                 } catch (e) {
-                    await interaction.editReply({ content: '❌ Confirmation timed out. Submission cancelled.', components: [] });
+                    await interaction.editReply({ content: 'Confirmation timed out. Submission cancelled.', components: [] });
                 }
             } catch (error) {
                 console.error(error);
-                await interaction.editReply(`❌ An error occurred while trying to submit your score.`);
+                await interaction.editReply(`An error occurred while trying to submit your score.`);
             }
         }
     });

@@ -14,7 +14,7 @@ We are working on "TableFlipper", a Discord bot for managing pinball tournaments
 *   `npm run sync-state` is available to fix database/site mismatches.
 
 **Next Actions:**
-1.  **VPXS Integration (Item 4 in TODO):** This is BLOCKED. The user was supposed to provide API info in `iScored_API.md` but it contained unrelated info. You need to ask the user for the correct VPXS API JSON/URL.
+1.  **VPXS Integration (Item 4 in TODO):** This is BLOCKED. The user was supposed to provide API info in `iScored_API.md` but it contained unrelated info. The user has since updated @TODO.md to reflect the api info is actually here @virtualpinballspreadsheet_API
 2.  **Tags Integration (Item 3 in TODO):** Use the provided `Tags_outerHTML` file to implement tagging games with their grind type ID on creation.
 3.  **Community Styles (Future):** Investigate applying styles to games.
 

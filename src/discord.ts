@@ -30,15 +30,15 @@ export async function sendDiscordNotification(params: NotificationParams) {
         const winnerMention = winnerId ? `<@${winnerId}>` : `\`${winner}\``;
 
         const messageLines = [
-            `**🛑 The Daily Grind is Closed! 🛑**`,
+            `**The Daily Grind is Closed!**`,
             `**Game:** \`${activeGame}\``,
-            `👑 **Winner:** ${winnerMention} with a score of \`${score}\``,
-            `✅ **Open Now:** \`${nextGame}\` is ready for play!`,
+            `**Winner:** ${winnerMention} with a score of \`${score}\``,
+            `**Open Now:** \`${nextGame}\` is ready for play!`,
         ];
 
         if (isRepeatWinner) {
             messageLines.push(
-                `\n⚠️ **Dynasty Rule Alert!** As a repeat winner, you must nominate another player to choose the next table.`,
+                `\n**Dynasty Rule Alert!** As a repeat winner, you must nominate another player to choose the next table.`,
                 `Use the \`/nominate-picker grind-type:<grind-type> user:<@user>\` command.`
             );
         } else if (winnerId) {
