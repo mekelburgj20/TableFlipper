@@ -699,15 +699,17 @@ export async function deleteGame(page: Page, gameName: string): Promise<void> {
         logInfo('   -> Delete confirmation modal visible.');
 
         // Find and click the confirm button inside the modal.
-        // Usually in the footer, likely "Delete" or "Yes".
-        // We'll try to find a button with 'btn-danger' inside the modal, or text "Delete".
-        const confirmButton = modal.locator('button.btn-danger').first();
+        // HTML: <button type="button" class="btn btn-default btn-danger" data-dismiss="modal" onclick="deleteConfirmed()">Yes I'm definitely sure.</button>
+        // We look for the button with class 'btn-danger' inside the modal footer.
+        const confirmButton = modal.locator('.modal-footer button.btn-danger').first();
+        
         if (await confirmButton.isVisible()) {
             await confirmButton.click();
-            logInfo('   -> Clicked confirmation button in modal.');
+            logInfo('   -> Clicked "Yes I\'m definitely sure." button in modal.');
         } else {
-            // Fallback: try finding button by text
-            await modal.getByRole('button', { name: 'Delete', exact: false }).first().click();
+            // Fallback: try finding button by exact text
+            logInfo('   -> Primary button selector failed, trying text match...');
+            await modal.getByRole('button', { name: "Yes I'm definitely sure.", exact: false }).click();
             logInfo('   -> Clicked confirmation button (by text) in modal.');
         }
 
