@@ -654,69 +654,67 @@ export async function deleteGame(page: Page, gameName: string): Promise<void> {
         // Navigate to Settings -> Games tab
         await navigateToSettingsPage(page);
         
-        // Robust tab switching: Retry clicking the tab until the table is visible
+        // Robust tab switching: Retry clicking the tab until the dropdown is visible
         const gamesTab = mainFrame.locator('a[href="#games"]');
-        const stylesTable = mainFrame.locator('#stylesTable');
+        const selectGameDropdown = mainFrame.locator('#selectGame');
         
-        let tableVisible = false;
+        let tabActive = false;
         for (let i = 0; i < 3; i++) {
-            if (await stylesTable.isVisible()) {
-                tableVisible = true;
+            if (await selectGameDropdown.isVisible()) {
+                tabActive = true;
                 break;
             }
-            
             logInfo(`   -> Attempt ${i + 1} to switch to Games tab...`);
             await gamesTab.click();
             try {
-                await stylesTable.waitFor({ state: 'visible', timeout: 3000 });
-                tableVisible = true;
+                await selectGameDropdown.waitFor({ state: 'visible', timeout: 3000 });
+                tabActive = true;
                 break;
             } catch (e) {
                 logWarn(`   -> Tab switch attempt ${i + 1} timed out.`);
             }
         }
 
-        if (!tableVisible) {
-            throw new Error('Failed to switch to Games tab (stylesTable hidden) after 3 attempts.');
+        if (!tabActive) {
+            throw new Error('Failed to switch to Games tab (dropdown hidden) after 3 attempts.');
         }
-        
         logInfo('   -> Games tab active.');
 
-        // Search for the game
-        const searchInput = mainFrame.locator('input[type="search"][aria-controls="stylesTable"]');
-        await searchInput.fill(gameName);
-        await page.waitForTimeout(1000); // Wait for filter to apply
+        // Select the game from the dropdown by label
+        // The dropdown has structure: <option value="ID">Game Name</option>
+        await selectGameDropdown.selectOption({ label: gameName });
+        logInfo(`   -> Selected '${gameName}' in dropdown.`);
 
-        // Locate the delete button for the specific game row
-        // Assuming the table contains the game name and a delete button in the same row.
-        // We look for a row (`tr`) that contains the text `gameName`.
-        const gameRow = mainFrame.locator('#stylesTable tbody tr', { hasText: gameName }).first();
-        
-        if (await gameRow.isVisible()) {
-            // Find the delete button within this row.
-            // It might be a button with a trash icon or class.
-            // Common pattern: `button.btn-danger` or `a.btn-danger` or `i.fa-trash`.
-            // Let's try finding a button/link that looks like delete.
-            const deleteBtn = gameRow.locator('a.btn-danger, button.btn-danger, .fa-trash').first();
-            
-            if (await deleteBtn.isVisible()) {
-                // Setup dialog handler for confirmation
-                page.once('dialog', async dialog => {
-                    logInfo(`   -> Dialog message: ${dialog.message()}`);
-                    await dialog.accept();
-                });
+        // Wait for the "Delete Game" button to appear (it's inside #gameCustomizations which becomes visible)
+        const deleteButton = mainFrame.locator('#deleteSelectedGameButton');
+        await deleteButton.waitFor({ state: 'visible', timeout: 5000 });
 
-                await deleteBtn.click();
-                logInfo(`✅ Clicked delete for '${gameName}'.`);
-                
-                // Wait a bit for deletion to process
-                await page.waitForTimeout(2000);
-            } else {
-                throw new Error(`Delete button not found for game '${gameName}'.`);
-            }
+        // Click Delete Game to open the modal
+        await deleteButton.click();
+        logInfo('   -> Clicked "Delete Game" button.');
+
+        // Wait for the modal to appear
+        const modal = mainFrame.locator('#deleteGameModal');
+        await modal.waitFor({ state: 'visible', timeout: 5000 });
+        logInfo('   -> Delete confirmation modal visible.');
+
+        // Find and click the confirm button inside the modal.
+        // Usually in the footer, likely "Delete" or "Yes".
+        // We'll try to find a button with 'btn-danger' inside the modal, or text "Delete".
+        const confirmButton = modal.locator('button.btn-danger').first();
+        if (await confirmButton.isVisible()) {
+            await confirmButton.click();
+            logInfo('   -> Clicked confirmation button in modal.');
         } else {
-            logWarn(`⚠️ Game '${gameName}' not found in Games list for deletion. It might have been already deleted.`);
+            // Fallback: try finding button by text
+            await modal.getByRole('button', { name: 'Delete', exact: false }).first().click();
+            logInfo('   -> Clicked confirmation button (by text) in modal.');
         }
+
+        // Wait for modal to disappear or some confirmation? 
+        // Typically the page refreshes or the modal closes.
+        await modal.waitFor({ state: 'hidden', timeout: 10000 });
+        logInfo(`✅ Game '${gameName}' successfully deleted.`);
 
     } catch (error) {
         logError(`❌ Failed to delete game '${gameName}':`, error);
