@@ -145,3 +145,9 @@ All primary interaction with the bot is through its Discord slash commands. Refe
     *   `deploy-commands.ts`: Script for registering slash commands with Discord.*   `.env`: Stores confidential environment variables (ignored by git).
 *   `package.json`: Defines project dependencies and scripts.
 *   `tsconfig.json`: TypeScript compiler configuration.
+*   `data/`: Contains the SQLite database (`tableflipper.db`) and persistent logs (`bot.log`).
+
+## 6. Logs
+
+The bot maintains persistent logs in `data/bot.log`. Check this file for detailed error traces and activity history.
+

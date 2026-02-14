@@ -1,3 +1,30 @@
+<!-- AI HANDOVER PROMPT -->
+**Project Status:** 
+We are working on "TableFlipper", a Discord bot for managing pinball tournaments. The codebase is currently on the `main` branch, fully up-to-date with recent feature merges.
+
+**Recent Work:**
+1.  **Refactoring:** Renamed `/submitscore-dg` to `/submit-score` and parameter `game-type` to `grind-type` globally.
+2.  **Reliability:** Fixed critical bugs in score submission (handling disabled inputs via JS) and maintenance navigation (session persistence).
+3.  **Features:** Added `/list-active` command, persistent logging (`src/logger.ts`), score submission confirmation UI, "Surprise Me" random picker, and "Manual Override" for game injection.
+4.  **Testing:** Created a comprehensive test suite (`src/tests/`) and `TEST_PLAN.md`.
+
+**Current Context:**
+*   The bot is running stably in "Headless" mode.
+*   Database schema is synced and includes `tables`, `games`, `winners`.
+*   `npm run sync-state` is available to fix database/site mismatches.
+
+**Next Actions:**
+1.  **VPXS Integration (Item 4 in TODO):** This is BLOCKED. The user was supposed to provide API info in `iScored_API.md` but it contained unrelated info. You need to ask the user for the correct VPXS API JSON/URL.
+2.  **Tags Integration (Item 3 in TODO):** Use the provided `Tags_outerHTML` file to implement tagging games with their grind type ID on creation.
+3.  **Community Styles (Future):** Investigate applying styles to games.
+
+**Files to Watch:**
+*   `src/discordBot.ts` (Command handling)
+*   `src/iscored.ts` (Playwright automation)
+*   `src/database.ts` (SQLite logic)
+*   `TODO.md` (Task list)
+<!-- END PROMPT -->
+
 # Checkpoint for TableFlipper Project
 
 **Date:** February 10, 2026
