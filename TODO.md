@@ -13,6 +13,7 @@
    - Includes `cleanupOldGames` routine to find and remove any other "Locked" but visible games (cleaning up backlog).
    - Ensures data integrity by confirming scores exist in DB before deletion.
    - **Refined Cleanup:** Daily and Weekly tables now remain visible (locked) until Wednesday at 11:00 PM Central, at which point a separate scheduled task clears them out.
+   - **Manual Cleanup:** Added `/trigger-cleanup [grind-type]` command for moderators to manually run the cleanup routine if needed.
 2. [COMPLETED] **Persistent Logging:** We need persistent logging for troubleshooting inspection in case issues arise. Currently logs are ephemeral console outputs.
 2. [COMPLETED] **Show active game when posting score:** When a user uses /submit-score grind-type , we should display the active game for each grind-type so they can validate which game they are in fact submitting a score for. This functionality exists in the /list-active command already, however this needs to be added to /submit-score for additional quick confirmation during score submission.
 3. [COMPLETED] **Use Tags for Grind-Type ID** The iscored Lineup has an optional 'Tags' for each Game. I'd like to consider switching the grind-type identifier from the current text string in the Game Name (example "DG" = Daily Grind) to a Tag we can apply during each game creation. I would like to add the appropriate Tag that identifies the grind-type for each game created rather than put the ID text in the Game Name. See @Tags_outerHTML for the outerHTML for this capability.
