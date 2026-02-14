@@ -684,13 +684,36 @@ export async function deleteGame(page: Page, gameName: string): Promise<void> {
         // The dropdown has structure: <option value="ID">Game Name</option>
         await selectGameDropdown.selectOption({ label: gameName });
         
-        // Manually dispatch change event to ensure editGame() triggers
+        // 1. Manually dispatch change event
         await selectGameDropdown.dispatchEvent('change');
-        logInfo(`   -> Selected '${gameName}' in dropdown and dispatched change event.`);
+        
+        // 2. Try calling the global editGame() function directly within the iframe context
+        try {
+            await mainFrame.locator(':root').evaluate(() => {
+                if (typeof (window as any).editGame === 'function') {
+                    (window as any).editGame();
+                }
+            });
+            logInfo('   -> Invoked editGame() directly.');
+        } catch (e) {
+            logWarn('   -> Could not call editGame() directly.');
+        }
+
+        logInfo(`   -> Selected '${gameName}' in dropdown.`);
 
         // Wait for the "Delete Game" button to appear (it's inside #gameCustomizations which becomes visible)
         const deleteButton = mainFrame.locator('#deleteSelectedGameButton');
-        await deleteButton.waitFor({ state: 'visible', timeout: 10000 });
+        
+        try {
+            await deleteButton.waitFor({ state: 'visible', timeout: 5000 });
+        } catch (e) {
+            logWarn('   -> Delete button not visible yet. Forcing #gameCustomizations to show...');
+            // 3. Fallback: Force the parent container to be visible
+            await mainFrame.locator('#gameCustomizations').evaluate((el) => {
+                el.style.display = 'block';
+            });
+            await deleteButton.waitFor({ state: 'visible', timeout: 5000 });
+        }
 
         // Click Delete Game to open the modal
         await deleteButton.click();
