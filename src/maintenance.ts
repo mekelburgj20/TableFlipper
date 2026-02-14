@@ -66,7 +66,7 @@ async function cleanupOldGames(page: Page, gameType: string) {
                 }
 
                 // Delete the game from iScored
-                await deleteGame(page, game.name);
+                await deleteGame(page, game.name, game.id);
                 
                 // We need to re-navigate to Lineup page because deleteGame goes to Games tab
                 await navigateToLineupPage(page);
@@ -176,7 +176,7 @@ export async function runMaintenanceForGameType(gameType: string) {
             // 7. Delete the game from iScored (Cleanup) - ONLY for Monthly Grind (MG)
             if (gameType === 'MG') {
                 try {
-                    await deleteGame(page, activeGame.name);
+                    await deleteGame(page, activeGame.name, activeGame.iscored_game_id);
                     logInfo(`🗑️ Deleted active game from iScored: ${activeGame.name}`);
                     // Re-navigate to lineup for next steps
                     await navigateToLineupPage(page);

@@ -353,25 +353,37 @@ export async function showGame(page: Page, game: Game): Promise<void> {
 }
 
 export async function navigateToSettingsPage(page: Page) {
-    logInfo('Navigating to Settings page via UI...');
+    logInfo('Navigating to Settings page via User Dropdown...');
     const mainFrame = page.frameLocator('#main');
     
-    // Try to find the settings link
-    const settingsLink = mainFrame.locator('a[href="/settings.php"]');
-    
-    if (await settingsLink.isVisible()) {
-        await settingsLink.click();
-    } else {
-        // Try toggling nav
-        logInfo('   -> Settings link hidden, toggling nav...');
-        await mainFrame.locator('a.dropdown-toggle[onclick="toggleNav()"]').click();
-        await settingsLink.waitFor({ state: 'visible', timeout: 5000 });
-        await settingsLink.click();
+    // Check if we are already on the settings page (look for the tabs)
+    if (await mainFrame.locator('ul.nav.nav-tabs.settingsTabs').isVisible()) {
+        logInfo('   -> Already on Settings page.');
+        return;
     }
 
-    // Wait for the settings page to load (look for the tabs)
-    await mainFrame.locator('a[href="#order"]').waitFor({ state: 'visible', timeout: 10000 });
-    logInfo('✅ On Settings page.');
+    try {
+        // Click User Dropdown
+        const userDropdown = mainFrame.locator('#userDropdown').getByRole('link');
+        await userDropdown.waitFor({ state: 'visible', timeout: 5000 });
+        await userDropdown.click();
+        
+        // Click Settings Link in Dropdown
+        const settingsLink = mainFrame.getByRole('link', { name: ' Settings' }); // Using font-awesome icon name
+        // Or robust regex match for 'Settings'
+        const settingsLinkRobust = mainFrame.locator('a[href="/settings.php"]').filter({ hasText: 'Settings' });
+        
+        await settingsLinkRobust.waitFor({ state: 'visible', timeout: 5000 });
+        await settingsLinkRobust.click();
+
+        // Wait for the settings page to load (look for the tabs)
+        await mainFrame.locator('ul.nav.nav-tabs.settingsTabs').waitFor({ state: 'visible', timeout: 10000 });
+        logInfo('✅ On Settings page.');
+
+    } catch (e) {
+        logError('❌ Navigation to Settings page failed:', e);
+        throw e;
+    }
 }
 
 export async function navigateToLineupPage(page: Page) {
@@ -646,8 +658,8 @@ export async function submitScoreToIscored(iScoredUsername: string, discordUserI
     }
 }
 
-export async function deleteGame(page: Page, gameName: string): Promise<void> {
-    logInfo(`🗑️ Deleting game: ${gameName}`);
+export async function deleteGame(page: Page, gameName: string, gameId?: string): Promise<void> {
+    logInfo(`🗑️ Deleting game: ${gameName} (ID: ${gameId || 'Unknown'})`);
     try {
         const mainFrame = page.frameLocator('#main');
 
@@ -680,10 +692,14 @@ export async function deleteGame(page: Page, gameName: string): Promise<void> {
         }
         logInfo('   -> Games tab active.');
 
-        // Select the game from the dropdown by label
-        // The dropdown has structure: <option value="ID">Game Name</option>
-        await selectGameDropdown.selectOption({ label: gameName });
-        
+        // Select the game from the dropdown by value (ID) or label (name)
+        if (gameId) {
+            await selectGameDropdown.selectOption({ value: gameId });
+            logInfo(`   -> Selected game ID '${gameId}' in dropdown.`);
+        } else {
+            await selectGameDropdown.selectOption({ label: gameName });
+            logInfo(`   -> Selected game name '${gameName}' in dropdown.`);
+        }
         // 1. Manually dispatch change event
         await selectGameDropdown.dispatchEvent('change');
         
