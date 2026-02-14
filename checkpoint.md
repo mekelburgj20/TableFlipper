@@ -80,3 +80,30 @@ This update focuses on integrating a verified list of tables for the Daily Grind
 
 ### Current State
 The bot now has a fully populated database of ~260 verified tables. Autocomplete works for Daily Grind selections with strict validation, while other modes remain flexible. The system runs silently in the background and is more fault-tolerant.
+
+# Checkpoint for TableFlipper Project (Update 3)
+
+**Date:** February 13, 2026
+
+## Project Summary: Critical Bug Fixes & Reliability Hardening
+
+This update addresses several critical issues discovered during live testing, specifically regarding score submission, maintenance routine reliability, and navigation stability on the iScored platform.
+
+### Key Changes Implemented:
+
+#### 1. Score Submission Overhaul
+*   **Disabled Input Workaround:** Implemented a robust workaround for iScored's virtual keyboard that was disabling input fields. The bot now forcefully sets values via JavaScript execution.
+*   **Confirmation UI:** The `/submit-score` command now presents an interactive confirmation buttons (Yes/Cancel) *before* attempting submission, showing the active table name to prevent errors.
+*   **Unambiguous Targeting:** Score submission now targets the specific Game ID from the local database, preventing the bot from accidentally trying to submit to a locked (but still visible) game.
+
+#### 2. Maintenance & Navigation Stability
+*   **Session Persistence:** Fixed a timeout issue where the maintenance routine opened a blank tab (losing session state). It now correctly reuses the logged-in browser context.
+*   **Robust Navigation:** Switched navigation strategy to use UI interaction (clicking links) rather than direct URL jumps, which ensures the Single Page Application (SPA) loads correctly.
+*   **Empty List Handling:** Relaxed the "wait for game list" check to prevent timeouts if the iScored lineup is momentarily empty or slow to render.
+
+#### 3. Infrastructure & Logging
+*   **Persistent Logging:** Added a `src/logger.ts` module. The bot now writes logs to `data/bot.log` in addition to the console, aiding in post-mortem debugging.
+*   **Manual Sync Fix:** Updated `npm run sync-state` to correctly import "Queued" (Hidden) games, which was previously causing the maintenance routine to skip activation.
+
+### Current State
+The bot is now fully functional in a live environment. It can correctly identify active vs. queued games, submit scores reliably using a confirmed ID, and perform daily maintenance without timing out.

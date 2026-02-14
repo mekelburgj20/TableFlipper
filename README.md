@@ -15,7 +15,7 @@ TableFlipper is a Node.js Discord bot designed to automate and manage pinball to
     *   **Dynasty Rule Enforcement:** Prevents consecutive wins from giving picking rights to the same player. Repeat winners must `/nominate-picker` another user.
     *   **Picker Timeout:** If a designated picker or nominee fails to select a table within 12 hours, the bot automatically selects a random table from a predefined list.
 *   **Comprehensive Discord Slash Commands:**
-    *   **`/submit-score [grind-type] [score] [photo] [iscored_username]`**: Submit your score and a photo for validation for a specific tournament.
+    *   **`/submit-score [grind-type] [score] [photo] [iscored_username]`**: Submit your score and a photo for validation. The bot will ask for confirmation before posting.
     *   **`/picktable [grind-type] [table-name]`**: Allows the designated winner to choose the next table for a tournament. Includes strict platform filtering (e.g., only shows VPXS-compatible tables for WG-VPXS).
     *   **`/nominate-picker [grind-type] [user]`**: Allows a repeat winner to nominate another player to pick the table.
     *   **`/list-winners [grind-type] (period)`**: Lists past winners for a specified tournament and period (e.g., last 7 days, 30 days, 90 days, all time).
