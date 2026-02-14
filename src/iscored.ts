@@ -653,10 +653,34 @@ export async function deleteGame(page: Page, gameName: string): Promise<void> {
 
         // Navigate to Settings -> Games tab
         await navigateToSettingsPage(page);
-        await mainFrame.locator('a[href="#games"]').click();
         
-        // Wait for the games table to be visible
-        await mainFrame.locator('#stylesTable').waitFor({ state: 'visible', timeout: 10000 });
+        // Robust tab switching: Retry clicking the tab until the table is visible
+        const gamesTab = mainFrame.locator('a[href="#games"]');
+        const stylesTable = mainFrame.locator('#stylesTable');
+        
+        let tableVisible = false;
+        for (let i = 0; i < 3; i++) {
+            if (await stylesTable.isVisible()) {
+                tableVisible = true;
+                break;
+            }
+            
+            logInfo(`   -> Attempt ${i + 1} to switch to Games tab...`);
+            await gamesTab.click();
+            try {
+                await stylesTable.waitFor({ state: 'visible', timeout: 3000 });
+                tableVisible = true;
+                break;
+            } catch (e) {
+                logWarn(`   -> Tab switch attempt ${i + 1} timed out.`);
+            }
+        }
+
+        if (!tableVisible) {
+            throw new Error('Failed to switch to Games tab (stylesTable hidden) after 3 attempts.');
+        }
+        
+        logInfo('   -> Games tab active.');
 
         // Search for the game
         const searchInput = mainFrame.locator('input[type="search"][aria-controls="stylesTable"]');
