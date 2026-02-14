@@ -498,10 +498,22 @@ export async function submitScoreToIscored(iScoredUsername: string, discordUserI
              throw new Error('Failed to open score entry modal after 3 attempts.');
         }
 
-        // 4. Wait for the score entry modal to be visible and fill in the details.
-        // (Already waited in the loop, but good to ensure element reference is fresh if needed, though locator is lazy)
-        await mainFrame.locator('#newInitials').fill(iScoredUsername);
-        await mainFrame.locator('#newScore').fill(score.toString());
+        // 4. Fill in details via JS to bypass potential disabled state (virtual keyboard)
+        await mainFrame.locator('#newInitials').evaluate((el, val) => {
+            const input = el as HTMLInputElement;
+            input.removeAttribute('disabled');
+            input.value = val;
+            input.dispatchEvent(new Event('input', { bubbles: true }));
+            input.dispatchEvent(new Event('change', { bubbles: true }));
+        }, iScoredUsername);
+
+        await mainFrame.locator('#newScore').evaluate((el, val) => {
+            const input = el as HTMLInputElement;
+            input.removeAttribute('disabled');
+            input.value = val;
+            input.dispatchEvent(new Event('input', { bubbles: true }));
+            input.dispatchEvent(new Event('change', { bubbles: true }));
+        }, score.toString());
 
         // 5. Handle photo upload
         console.log(`📷 Downloading photo from ${photoUrl}`);
