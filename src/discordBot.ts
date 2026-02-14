@@ -187,17 +187,56 @@ export function startDiscordBot() {
 
             // 3. Validate Table Selection (Skip if Surprise Me was used, as it came from DB)
             if (!surpriseMe && tableName) {
-                // Manual selection validation
-                if (gameType === 'DG') {
-                    const tableData = await getTable(tableName);
-                    
-                    if (!tableData) {
-                        await interaction.editReply(`The table '**${tableName}**' is not recognized in our database. Please select a valid table from the list for Daily Grind.`);
-                        return;
-                    }
+                // Check if table exists and is valid for the mode
+                const tableData = await getTable(tableName);
+                let isVerified = false;
 
-                    if (!tableData.is_atgames) {
-                        await interaction.editReply(`The table '**${tableName}**' is not marked as available on **AtGames**. Please select an AtGames-compatible table for Daily Grind.`);
+                if (tableData) {
+                    if (gameType === 'DG' && tableData.is_atgames) isVerified = true;
+                    else if (gameType === 'WG-VR' && tableData.is_wg_vr) isVerified = true;
+                    else if (gameType === 'WG-VPXS' && tableData.is_wg_vpxs) isVerified = true;
+                    else if (gameType === 'MG') isVerified = true; // No restriction for MG
+                } else {
+                    // Table not in DB at all.
+                    // For MG, we accept unknown tables. For others, it's unverified.
+                    if (gameType === 'MG') isVerified = true;
+                }
+
+                if (!isVerified) {
+                    const confirmBtn = new ButtonBuilder()
+                        .setCustomId('confirm_warning')
+                        .setLabel('Yes, proceed anyway')
+                        .setStyle(ButtonStyle.Danger); // Red button for warning
+                    
+                    const cancelBtn = new ButtonBuilder()
+                        .setCustomId('cancel_warning')
+                        .setLabel('Cancel')
+                        .setStyle(ButtonStyle.Secondary);
+
+                    const row = new ActionRowBuilder<ButtonBuilder>().addComponents(confirmBtn, cancelBtn);
+
+                    const response = await interaction.editReply({
+                        content: `**Warning:** The table "**${tableName}**" is not verified for the **${gameType}** tournament in our database.\n\nAre you sure you want to proceed?`,
+                        components: [row]
+                    });
+
+                    try {
+                        const confirmation = await response.awaitMessageComponent({ 
+                            filter: i => i.user.id === interaction.user.id, 
+                            time: 60000 
+                        });
+
+                        if (confirmation.customId === 'cancel_warning') {
+                            await confirmation.update({ content: 'Selection cancelled.', components: [] });
+                            return;
+                        }
+
+                        // Update the message to remove buttons and show confirmation
+                        await confirmation.update({ content: `Proceeding with **${tableName}**...`, components: [] });
+                        // Flow continues to creation below...
+
+                    } catch (e) {
+                        await interaction.editReply({ content: 'Confirmation timed out. Selection cancelled.', components: [] });
                         return;
                     }
                 }
