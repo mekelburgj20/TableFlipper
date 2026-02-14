@@ -354,23 +354,25 @@ export async function showGame(page: Page, game: Game): Promise<void> {
 
 export async function navigateToSettingsPage(page: Page) {
     logInfo('Navigating to Settings page via User Dropdown...');
-    const mainFrame = page.frameLocator('#main');
     
-    // Check if we are already on the settings page (look for the tabs)
+    // Check if we are already on the settings page by looking for the tabs.
+    // We need to re-acquire mainFrame each time, as a deletion might have caused a full iframe reload.
+    let mainFrame = page.frameLocator('#main');
     if (await mainFrame.locator('ul.nav.nav-tabs.settingsTabs').isVisible()) {
         logInfo('   -> Already on Settings page.');
         return;
     }
 
     try {
+        // Re-acquire mainFrame as it might have detached/reloaded
+        mainFrame = page.frameLocator('#main');
+
         // Click User Dropdown
         const userDropdown = mainFrame.locator('#userDropdown').getByRole('link');
         await userDropdown.waitFor({ state: 'visible', timeout: 5000 });
         await userDropdown.click();
         
         // Click Settings Link in Dropdown
-        const settingsLink = mainFrame.getByRole('link', { name: ' Settings' }); // Using font-awesome icon name
-        // Or robust regex match for 'Settings'
         const settingsLinkRobust = mainFrame.locator('a[href="/settings.php"]').filter({ hasText: 'Settings' });
         
         await settingsLinkRobust.waitFor({ state: 'visible', timeout: 5000 });
