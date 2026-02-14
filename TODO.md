@@ -1,5 +1,5 @@
 # Active Tasks
-1. The weekly maintenance routines need to also clear out all the old DGs and Weekly tables. Monthly tables to be cleared out on monthly maintenance so only one Monthly is ever displayed (the active one). It needs to keep the queued up tables for DG and Weekly, but the ones that have been played and are now locked need to be cleared.And by cleared I mean deleted. Before we delete them though, we need to confirm that the database has recorded the scores from those tables. I want to keep historical data on player's scores for each grind for a period of 365 days (unless you think that's too much data to store). So anyone can ask what their scores have been for a particular table.
+(None)
 
 # Future Considerations
 1. **Community Styles:** Investigate associating tables with iScored 'Community Styles' (e.g., `loadStylePreview(2924)`). Load these into the database so the bot can automatically apply the correct style when creating a game.
@@ -7,7 +7,13 @@
 3. **Channel-Specific Context:** Restrict/default `/picktable` and other commands based on the Discord channel (e.g., `/picktable` in `#wg-vpxs` defaults to `WG-VPXS`).
 
 # Completed History
-1. [COMPLETED] **Persistent Logging:** We need persistent logging for troubleshooting inspection in case issues arise. Currently logs are ephemeral console outputs.
+1. [COMPLETED] **Maintenance Cleanup:** Implemented logic to clear out (delete) old locked games from iScored during maintenance.
+   - Updates `maintenance.ts` to scrape and save *all* standings/scores to the DB before deletion.
+   - Deletes the active game after processing.
+   - Includes `cleanupOldGames` routine to find and remove any other "Locked" but visible games (cleaning up backlog).
+   - Ensures data integrity by confirming scores exist in DB before deletion.
+   - **Refined Cleanup:** Daily and Weekly tables now remain visible (locked) until Wednesday at 11:00 PM Central, at which point a separate scheduled task clears them out.
+2. [COMPLETED] **Persistent Logging:** We need persistent logging for troubleshooting inspection in case issues arise. Currently logs are ephemeral console outputs.
 2. [COMPLETED] **Show active game when posting score:** When a user uses /submit-score grind-type , we should display the active game for each grind-type so they can validate which game they are in fact submitting a score for. This functionality exists in the /list-active command already, however this needs to be added to /submit-score for additional quick confirmation during score submission.
 3. [COMPLETED] **Use Tags for Grind-Type ID** The iscored Lineup has an optional 'Tags' for each Game. I'd like to consider switching the grind-type identifier from the current text string in the Game Name (example "DG" = Daily Grind) to a Tag we can apply during each game creation. I would like to add the appropriate Tag that identifies the grind-type for each game created rather than put the ID text in the Game Name. See @Tags_outerHTML for the outerHTML for this capability.
 4. [COMPLETED] For the game selection database (games available to choose from for each grind-type) there are a lot of additional games available on VPXS. These are contained and maintained in a .json database and is accessible via API. If the game is available in this database, it can be selected for wg-vpxs. When choosing a wg-vpxs table, autocomplete and table list should pull from this database to show users their options. The API instructions are here @virtualpinballspreadsheet_API

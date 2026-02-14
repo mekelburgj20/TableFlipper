@@ -1,10 +1,10 @@
 import { Browser, Page } from 'playwright';
-import { loginToIScored, lockGame, showGame, navigateToLineupPage, Game as IscoredGame } from './iscored.js';
-import { getWinnerAndScoreFromPage } from './api.js';
+import { loginToIScored, lockGame, showGame, navigateToLineupPage, deleteGame, findGames, Game as IscoredGame } from './iscored.js';
+import { getWinnerAndScoreFromPage, getStandingsFromPage } from './api.js';
 import { checkWinnerHistory, updateWinnerHistory } from './history.js';
 import { sendDiscordNotification } from './discord.js';
 import { getDiscordIdByIscoredName } from './userMapping.js';
-import { getActiveGame, getNextQueuedGame, updateGameStatus, setPicker, createGameEntry, GameRow } from './database.js';
+import { getActiveGame, getNextQueuedGame, updateGameStatus, setPicker, createGameEntry, GameRow, hasScores, saveScores, getGameByIscoredId } from './database.js';
 
 const ALL_GAME_TYPES = ['DG', 'WG-VPXS', 'WG-VR', 'MG'];
 
@@ -19,6 +19,82 @@ export async function triggerAllMaintenanceRoutines() {
         }
     }
     console.log('Manual trigger: All maintenance routines completed.');
+}
+
+async function cleanupOldGames(page: Page, gameType: string) {
+    console.log(`🧹 Running cleanup for old ${gameType} games...`);
+    try {
+        // Navigate to Lineup page to find games
+        await navigateToLineupPage(page);
+        
+        const { activeGames } = await findGames(page, gameType);
+        
+        // Filter for games that are SHOWN (activeGames list) but LOCKED
+        const lockedVisibleGames = activeGames.filter(g => g.isLocked);
+        
+        console.log(`   -> Found ${lockedVisibleGames.length} visible locked games to clean up.`);
+
+        for (const game of lockedVisibleGames) {
+            console.log(`   Processing cleanup for '${game.name}' (ID: ${game.id})...`);
+            
+            // Check if we have this game in DB
+            let dbGame = await getGameByIscoredId(game.id);
+            
+            if (dbGame) {
+                // Check if scores are saved
+                const scoresExist = await hasScores(dbGame.id);
+                if (!scoresExist) {
+                    console.log(`   -> No scores found in DB. Fetching standings...`);
+                    const standings = await getStandingsFromPage(page, game.id, game.name);
+                    if (standings.length > 0) {
+                        await saveScores(dbGame.id, standings.map(s => ({
+                            iscored_username: s.name,
+                            score: s.score,
+                            rank: s.rank
+                        })));
+                    }
+                    // Re-navigate to Lineup page as getStandings went to public page
+                    await navigateToLineupPage(page);
+                } else {
+                    console.log(`   -> Scores already exist in DB.`);
+                }
+                
+                // Mark as COMPLETED if not already
+                if (dbGame.status !== 'COMPLETED') {
+                    await updateGameStatus(dbGame.id, 'COMPLETED');
+                }
+
+                // Delete the game from iScored
+                await deleteGame(page, game.name);
+                
+                // We need to re-navigate to Lineup page because deleteGame goes to Games tab
+                await navigateToLineupPage(page);
+
+            } else {
+                console.warn(`⚠️ Game '${game.name}' (ID: ${game.id}) found on iScored but not in DB. Skipping deletion for safety.`);
+            }
+        }
+        
+    } catch (error) {
+        console.error(`❌ Error during cleanupOldGames for ${gameType}:`, error);
+    }
+}
+
+export async function runCleanupForGameType(gameType: string) {
+    console.log(`🧹 Starting scheduled cleanup for ${gameType}...`);
+    let browser: Browser | null = null;
+    try {
+        const { browser: b, page } = await loginToIScored();
+        browser = b;
+        await cleanupOldGames(page, gameType);
+        console.log(`✅ Scheduled cleanup for ${gameType} completed.`);
+    } catch (error) {
+        console.error(`🚨 Error during scheduled cleanup for ${gameType}:`, error);
+    } finally {
+        if (browser) {
+            await browser.close();
+        }
+    }
 }
 
 export async function runMaintenanceForGameType(gameType: string) {
@@ -37,15 +113,25 @@ export async function runMaintenanceForGameType(gameType: string) {
         if (activeGame) {
             console.log(`Found active game in DB: ${activeGame.name} (ID: ${activeGame.iscored_game_id})`);
             
-            // 1. Get winner from iScored (using scraper via existing page to handle Tags/ID correctly)
+            // 1. Get winner from iScored (using scraper via existing page)
             const { winner, score } = await getWinnerAndScoreFromPage(page, activeGame.iscored_game_id, activeGame.name);
+
+            // 1b. Get ALL standings and save to DB
+            const standings = await getStandingsFromPage(page, activeGame.iscored_game_id, activeGame.name);
+            if (standings.length > 0) {
+                await saveScores(activeGame.id, standings.map(s => ({
+                    iscored_username: s.name,
+                    score: s.score,
+                    rank: s.rank
+                })));
+            }
 
             // Re-navigate to lineup page to perform admin actions (locking, etc.)
             // getWinnerAndScoreFromPage navigates to the public page, so we must go back to settings.
             await navigateToLineupPage(page);
 
             // 2. Lock game on iScored
-            const iscoredGame: IscoredGame = { id: activeGame.iscored_game_id, name: activeGame.name, isHidden: false };
+            const iscoredGame: IscoredGame = { id: activeGame.iscored_game_id, name: activeGame.name, isHidden: false, isLocked: false };
             await lockGame(page, iscoredGame);
             console.log(`🔒 Locked game on iScored: ${activeGame.name}`);
 
@@ -86,16 +172,34 @@ export async function runMaintenanceForGameType(gameType: string) {
             });
             console.log(`This cycle's winner for ${gameType} is ${winner} with a score of ${score}. Announcement sent.`);
 
+            // 7. Delete the game from iScored (Cleanup) - ONLY for Monthly Grind (MG)
+            if (gameType === 'MG') {
+                try {
+                    await deleteGame(page, activeGame.name);
+                    console.log(`🗑️ Deleted active game from iScored: ${activeGame.name}`);
+                    // Re-navigate to lineup for next steps
+                    await navigateToLineupPage(page);
+                } catch (e) {
+                    console.error(`⚠️ Failed to delete active game ${activeGame.name}:`, e);
+                }
+            } else {
+                console.log(`ℹ️ Skipping deletion for ${gameType}. Game will remain visible/locked until scheduled cleanup.`);
+            }
+
         } else {
             console.log(`⚠️ No active game found for ${gameType}. Skipping winner determination and locking.`);
             // Ensure we are on lineup page for next steps if we didn't go there yet
             await navigateToLineupPage(page);
         }
 
+        // --- Phase 2.5: Cleanup Old Games ---
+        // REMOVED from daily maintenance. Now handled by separate scheduled task via runCleanupForGameType.
+        // await cleanupOldGames(page, gameType);
+
         // --- Phase 3: Activate Next Queued Game ---
         if (nextGame) {
             console.log(`Found next queued game in DB: ${nextGame.name}`);
-            const iscoredGame: IscoredGame = { id: nextGame.iscored_game_id, name: nextGame.name, isHidden: true };
+            const iscoredGame: IscoredGame = { id: nextGame.iscored_game_id, name: nextGame.name, isHidden: true, isLocked: true };
             
             // 1. Show game on iScored
             await showGame(page, iscoredGame);
@@ -108,6 +212,7 @@ export async function runMaintenanceForGameType(gameType: string) {
         } else {
             console.log(`⚠️ No game to show for ${gameType}.`);
         }
+
 
         console.log(`✅ ${gameType} maintenance routine completed successfully.`);
 

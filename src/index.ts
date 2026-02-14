@@ -1,5 +1,5 @@
 import 'dotenv/config';
-import { runMaintenanceForGameType, triggerAllMaintenanceRoutines } from './maintenance.js';
+import { runMaintenanceForGameType, triggerAllMaintenanceRoutines, runCleanupForGameType } from './maintenance.js';
 import { startDiscordBot } from './discordBot.js';
 import { loadUserMapping } from './userMapping.js';
 import { initializeDatabase } from './database.js';
@@ -60,6 +60,29 @@ async function main() {
             });
             runMaintenanceForGameType('WG-VR').catch((error: any) => {
                 logError('🚨 WG-VR maintenance task failed:', error);
+            });
+        }, {
+            scheduled: true,
+            timezone: "America/Chicago"
+        });
+
+        // Schedule the Cleanup Routine for DG and WG to run at 11:00 PM on Wednesdays
+        cron.schedule('0 23 * * 3', () => {
+            logInfo('🧹 Kicking off scheduled cleanup for DG and WG...');
+            
+            // Cleanup DG
+            runCleanupForGameType('DG').catch((error: any) => {
+                logError('🚨 DG cleanup task failed:', error);
+            });
+
+            // Cleanup WG-VPXS
+            runCleanupForGameType('WG-VPXS').catch((error: any) => {
+                logError('🚨 WG-VPXS cleanup task failed:', error);
+            });
+
+            // Cleanup WG-VR
+            runCleanupForGameType('WG-VR').catch((error: any) => {
+                logError('🚨 WG-VR cleanup task failed:', error);
             });
         }, {
             scheduled: true,

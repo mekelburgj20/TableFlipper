@@ -15,7 +15,8 @@ const ISCORED_GAMES_URL = 'https://iscored.info/settings.php#games'; // Direct U
 export interface Game {
     id: string;
     name: string;
-    isHidden: boolean; // Changed from isLocked to isHidden
+    isHidden: boolean; 
+    isLocked: boolean;
 }
 
 export async function loginToIScored(): Promise<{ browser: Browser, page: Page }> {
@@ -117,7 +118,10 @@ export async function findGames(page: Page, gameType: string): Promise<{ activeG
                 const hideCheckbox = gameRow.locator('input[id^="hide"]'); // Target the specific hide checkbox
                 const isHidden = await hideCheckbox.isChecked();
                 
-                const game: Game = { id, name, isHidden }; 
+                const lockCheckbox = gameRow.locator('input[id^="lock"]');
+                const isLocked = await lockCheckbox.isChecked();
+
+                const game: Game = { id, name, isHidden, isLocked }; 
 
                 if (!isHidden) {
                     activeGames.push(game);
@@ -181,7 +185,10 @@ export async function findGameByName(page: Page, gameName: string, mustBeUntagge
                 const hideCheckbox = row.locator(`input[id="hide${id}"]`); // Find the hide checkbox by ID
                 const isHidden = await hideCheckbox.isChecked();
                 
-                return { id, name, isHidden }; 
+                const lockCheckbox = row.locator(`input[id="lock${id}"]`);
+                const isLocked = await lockCheckbox.isChecked();
+
+                return { id, name, isHidden, isLocked }; 
             }
         }
         return null; // Game not found
@@ -190,6 +197,7 @@ export async function findGameByName(page: Page, gameName: string, mustBeUntagge
         throw error;
     }
 }
+
 
 export async function findGameRow(page: Page, gameName: string): Promise<Locator | null> {
     try {
@@ -634,5 +642,59 @@ export async function submitScoreToIscored(iScoredUsername: string, discordUserI
         if (browser) {
             await browser.close();
         }
+    }
+}
+
+export async function deleteGame(page: Page, gameName: string): Promise<void> {
+    console.log(`🗑️ Deleting game: ${gameName}`);
+    try {
+        const mainFrame = page.frameLocator('#main');
+
+        // Navigate to Settings -> Games tab
+        await navigateToSettingsPage(page);
+        await mainFrame.locator('a[href="#games"]').click();
+        
+        // Wait for the games table to be visible
+        await mainFrame.locator('#stylesTable').waitFor({ state: 'visible', timeout: 10000 });
+
+        // Search for the game
+        const searchInput = mainFrame.locator('input[type="search"][aria-controls="stylesTable"]');
+        await searchInput.fill(gameName);
+        await page.waitForTimeout(1000); // Wait for filter to apply
+
+        // Locate the delete button for the specific game row
+        // Assuming the table contains the game name and a delete button in the same row.
+        // We look for a row (`tr`) that contains the text `gameName`.
+        const gameRow = mainFrame.locator('#stylesTable tbody tr', { hasText: gameName }).first();
+        
+        if (await gameRow.isVisible()) {
+            // Find the delete button within this row.
+            // It might be a button with a trash icon or class.
+            // Common pattern: `button.btn-danger` or `a.btn-danger` or `i.fa-trash`.
+            // Let's try finding a button/link that looks like delete.
+            const deleteBtn = gameRow.locator('a.btn-danger, button.btn-danger, .fa-trash').first();
+            
+            if (await deleteBtn.isVisible()) {
+                // Setup dialog handler for confirmation
+                page.once('dialog', async dialog => {
+                    console.log(`   -> Dialog message: ${dialog.message()}`);
+                    await dialog.accept();
+                });
+
+                await deleteBtn.click();
+                console.log(`✅ Clicked delete for '${gameName}'.`);
+                
+                // Wait a bit for deletion to process
+                await page.waitForTimeout(2000);
+            } else {
+                throw new Error(`Delete button not found for game '${gameName}'.`);
+            }
+        } else {
+            console.warn(`⚠️ Game '${gameName}' not found in Games list for deletion. It might have been already deleted.`);
+        }
+
+    } catch (error) {
+        console.error(`❌ Failed to delete game '${gameName}':`, error);
+        throw error;
     }
 }

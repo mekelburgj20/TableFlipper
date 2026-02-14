@@ -40,7 +40,7 @@ export async function getStandingsFromApi(gameName: string): Promise<Standing[]>
         throw new Error('GAMEROOM_NAME environment variable is not set.');
     }
     const encodedGameName = encodeURIComponent(gameName);
-    const url = `https://www.iscored.info/api/${gameroomName}/${encodedGameName}?max=10`; // Get top 10
+    const url = `https://www.iscored.info/api/${gameroomName}/${encodedGameName}`; // Removed ?max=10
 
     console.log(`🔎 Calling iScored API for standings of '${gameName}'...`);
     
@@ -118,6 +118,72 @@ export async function getWinnerAndScoreFromPage(page: Page, gameId: string, game
     } catch (error) {
         console.error(`Error scraping public page for winner of '${gameName}' (ID: ${gameId}):`, error);
         return { winner: 'N/A', score: 'N/A' };
+    }
+}
+
+/**
+ * Scrapes all standings (rank, name, score) for a game from the public page using an existing Page instance.
+ */
+export async function getStandingsFromPage(page: Page, gameId: string, gameName: string): Promise<Standing[]> {
+    console.log(`🔎 Scraping public page for standings of '${gameName}' (ID: ${gameId})...`);
+
+    try {
+        const publicUrl = process.env.ISCORED_PUBLIC_URL;
+        if (!publicUrl) {
+            console.error('❌ ISCORED_PUBLIC_URL is not defined in environment variables.');
+            return [];
+        }
+        
+        // Navigate if not already there
+        if (page.url() !== publicUrl) {
+            await page.goto(publicUrl);
+        }
+
+        const mainFrame = page.frameLocator('#main');
+        
+        // Directly locate the target game card using its ID
+        const targetGameCard = mainFrame.locator(`div.game#a${gameId}`);
+        
+        // Wait briefly for the element to appear
+        try {
+            await targetGameCard.waitFor({ state: 'visible', timeout: 5000 });
+        } catch (e) {
+            console.log(`⚠️ Could not find visible game card for '${gameName}' (ID: ${gameId}) on public page.`);
+            return [];
+        }
+
+        // Find all visible scoreboxes within this game card
+        // Note: The structure is usually .game > .scorebox
+        const allScoreboxes = await targetGameCard.locator('.scorebox').all();
+        
+        const standings: Standing[] = [];
+        let rank = 1;
+
+        for (const scorebox of allScoreboxes) {
+            if (await scorebox.isVisible()) {
+                const nameEl = scorebox.locator('.name');
+                const scoreEl = scorebox.locator('.score:not([id])'); // Score is usually in a div without ID, rank/initials have IDs?
+                // Actually, looking at previous code: .score:not([id]) seems to be the pattern.
+                
+                if (await nameEl.isVisible() && await scoreEl.isVisible()) {
+                     const name = await nameEl.innerText();
+                     const score = await scoreEl.innerText();
+                     
+                     standings.push({
+                         rank: (rank++).toString(),
+                         name: name.trim(),
+                         score: score.trim()
+                     });
+                }
+            }
+        }
+
+        console.log(`✅ Found ${standings.length} standings for '${gameName}'.`);
+        return standings;
+
+    } catch (error) {
+        console.error(`Error scraping standings for '${gameName}' (ID: ${gameId}):`, error);
+        return [];
     }
 }
 
