@@ -454,33 +454,27 @@ export async function createGame(page: Page, gameName: string): Promise<string> 
     }
 }
 
-export async function submitScoreToIscored(iScoredUsername: string, discordUserId: string, score: number, photoUrl: string, gameType: string) {
-    console.log(`🚀 Submitting score to iScored: User '${iScoredUsername}', Score: ${score}, Game Type: ${gameType}`);
+export async function submitScoreToIscored(iScoredUsername: string, discordUserId: string, score: number, photoUrl: string, gameId: string, gameName: string) {
+    console.log(`🚀 Submitting score to iScored: User '${iScoredUsername}', Score: ${score}, Game: ${gameName} (${gameId})`);
     let browser: Browser | null = null;
     try {
         const { browser: newBrowser, page } = await loginToIScored();
         browser = newBrowser;
 
-        // Navigate to the Lineup page to find the active game
-        await navigateToLineupPage(page);
-
-        // 1. Find the active game from the settings page.
-        const { activeGames } = await findGames(page, gameType);
-
-        if (activeGames.length === 0) {
-            throw new Error(`Could not find an active ${gameType} game to submit score to.`);
-        }
-        
-        const activeGame = activeGames[0]; // Select the first active game
+        // Note: We don't need to navigate to Lineup page anymore since we have the ID directly.
+        // But loginToIScored leaves us at dashboard (which is where we submit scores).
         
         // 2. Navigate back to the main page to click the score entry element.
-        console.log(`   -> Navigating to main page to submit score for ${activeGame.name}`);
-        await page.goto(ISCORED_LOGIN_URL, { waitUntil: 'domcontentloaded' });
+        // (We are already there if login just happened, but good to be safe)
+        if (page.url() !== ISCORED_LOGIN_URL) {
+             console.log(`   -> Navigating to main page...`);
+             await page.goto(ISCORED_LOGIN_URL, { waitUntil: 'domcontentloaded' });
+        }
         const mainFrame = page.frameLocator('#main');
 
         // 3. Click the correct element to open the score modal.
         // The element ID on the main page is in the format 'a<gameId>Scores'.
-        const scoreEntryActivator = mainFrame.locator(`#a${activeGame.id}Scores`);
+        const scoreEntryActivator = mainFrame.locator(`#a${gameId}Scores`);
         
         // Retry logic for opening the modal
         let modalVisible = false;
@@ -554,7 +548,7 @@ export async function submitScoreToIscored(iScoredUsername: string, discordUserI
 
         // Wait for the modal to disappear as a final confirmation of success.
         await mainFrame.locator('#scoreEntryDiv').waitFor({ state: 'hidden' });
-        console.log(`✅ Score ${score} submitted successfully to iScored for game '${activeGame.name}' by ${iScoredUsername}.`);
+        console.log(`✅ Score ${score} submitted successfully to iScored for game '${gameName}' by ${iScoredUsername}.`);
 
         // Add/Update user mapping after successful score submission
         await addUserMapping(iScoredUsername, discordUserId);

@@ -591,7 +591,7 @@ export function startDiscordBot() {
 
                     await confirmation.update({ content: `✅ Confirmed! Submitting score to iScored...`, components: [] });
 
-                    await submitScoreToIscored(iScoredUsername, interaction.user.id, score, photoAttachment.url, gameType);
+                    await submitScoreToIscored(iScoredUsername, interaction.user.id, score, photoAttachment.url, activeGame.iscored_game_id, activeGameName);
                     await interaction.editReply(`✅ **Success!** Score of ${score} posted for ${activeGameName}.`);
 
                 } catch (e) {
