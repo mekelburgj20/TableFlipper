@@ -683,11 +683,14 @@ export async function deleteGame(page: Page, gameName: string): Promise<void> {
         // Select the game from the dropdown by label
         // The dropdown has structure: <option value="ID">Game Name</option>
         await selectGameDropdown.selectOption({ label: gameName });
-        logInfo(`   -> Selected '${gameName}' in dropdown.`);
+        
+        // Manually dispatch change event to ensure editGame() triggers
+        await selectGameDropdown.dispatchEvent('change');
+        logInfo(`   -> Selected '${gameName}' in dropdown and dispatched change event.`);
 
         // Wait for the "Delete Game" button to appear (it's inside #gameCustomizations which becomes visible)
         const deleteButton = mainFrame.locator('#deleteSelectedGameButton');
-        await deleteButton.waitFor({ state: 'visible', timeout: 5000 });
+        await deleteButton.waitFor({ state: 'visible', timeout: 10000 });
 
         // Click Delete Game to open the modal
         await deleteButton.click();
