@@ -1,10 +1,10 @@
 import { Browser, Page } from 'playwright';
-import { loginToIScored, lockGame, showGame, navigateToLineupPage, deleteGame, findGames, Game as IscoredGame } from './iscored.js';
+import { loginToIScored, lockGame, showGame, navigateToLineupPage, deleteGame, findGames, syncStyleFromIScored, Game as IscoredGame } from './iscored.js';
 import { getWinnerAndScoreFromPage, getStandingsFromPage } from './api.js';
 import { checkWinnerHistory, updateWinnerHistory } from './history.js';
 import { sendDiscordNotification } from './discord.js';
 import { getDiscordIdByIscoredName } from './userMapping.js';
-import { getActiveGame, getNextQueuedGame, updateGameStatus, setPicker, createGameEntry, GameRow, hasScores, saveScores, getGameByIscoredId, syncCompletedGame } from './database.js';
+import { getActiveGame, getNextQueuedGame, updateGameStatus, setPicker, createGameEntry, GameRow, hasScores, saveScores, getGameByIscoredId, syncCompletedGame, upsertTable, getTable } from './database.js';
 import { logInfo, logError, logWarn } from './logger.js';
 
 const ALL_GAME_TYPES = ['DG', 'WG-VPXS', 'WG-VR', 'MG'];
@@ -131,6 +131,16 @@ export async function runMaintenanceForGameType(gameType: string) {
         if (activeGame) {
             logInfo(`Found active game in DB: ${activeGame.name} (ID: ${activeGame.iscored_game_id})`);
             
+            // 0. Sync style details for future use (Legacy name fallback supported)
+            const cleanName = activeGame.name.replace(/ (DG|WG-VPXS|WG-VR|MG)$/, '');
+            const capturedStyle = await syncStyleFromIScored(page, cleanName, activeGame.iscored_game_id);
+            if (Object.keys(capturedStyle).length > 0) {
+                const table = await getTable(cleanName);
+                if (table) {
+                    await upsertTable({ ...table, ...capturedStyle });
+                }
+            }
+
             // 1. Get winner from iScored (using scraper via existing page to handle Tags/ID correctly)
             const { winner, score } = await getWinnerAndScoreFromPage(page, activeGame.iscored_game_id, activeGame.name);
 

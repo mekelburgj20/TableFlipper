@@ -97,7 +97,14 @@ export async function initializeDatabase() {
                 is_atgames INTEGER DEFAULT 0,
                 is_wg_vr INTEGER DEFAULT 0,
                 is_wg_vpxs INTEGER DEFAULT 0,
-                style_id TEXT
+                style_id TEXT,
+                css_title TEXT,
+                css_initials TEXT,
+                css_scores TEXT,
+                css_box TEXT,
+                bg_color TEXT,
+                score_type TEXT,
+                sort_ascending INTEGER DEFAULT 0
             );
         `);
         console.log('✅ Database tables initialized successfully.');
@@ -118,21 +125,37 @@ export interface TableRow {
     is_wg_vr: number; // 0 or 1
     is_wg_vpxs: number; // 0 or 1
     style_id?: string | null;
+    css_title?: string | null;
+    css_initials?: string | null;
+    css_scores?: string | null;
+    css_box?: string | null;
+    bg_color?: string | null;
+    score_type?: string | null;
+    sort_ascending?: number; // 0 or 1
 }
 
 export async function upsertTable(table: TableRow): Promise<void> {
     const db = await openDb();
     try {
         await db.run(
-            `INSERT INTO tables (name, aliases, is_atgames, is_wg_vr, is_wg_vpxs, style_id)
-             VALUES (?, ?, ?, ?, ?, ?)
+            `INSERT INTO tables (name, aliases, is_atgames, is_wg_vr, is_wg_vpxs, style_id, css_title, css_initials, css_scores, css_box, bg_color, score_type, sort_ascending)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
              ON CONFLICT(name) DO UPDATE SET
                 is_atgames = excluded.is_atgames,
                 is_wg_vr = excluded.is_wg_vr,
                 is_wg_vpxs = excluded.is_wg_vpxs,
                 aliases = COALESCE(excluded.aliases, tables.aliases),
-                style_id = COALESCE(excluded.style_id, tables.style_id)`,
-            table.name, table.aliases, table.is_atgames, table.is_wg_vr, table.is_wg_vpxs, table.style_id
+                style_id = COALESCE(excluded.style_id, tables.style_id),
+                css_title = COALESCE(excluded.css_title, tables.css_title),
+                css_initials = COALESCE(excluded.css_initials, tables.css_initials),
+                css_scores = COALESCE(excluded.css_scores, tables.css_scores),
+                css_box = COALESCE(excluded.css_box, tables.css_box),
+                bg_color = COALESCE(excluded.bg_color, tables.bg_color),
+                score_type = COALESCE(excluded.score_type, tables.score_type),
+                sort_ascending = COALESCE(excluded.sort_ascending, tables.sort_ascending)`,
+            table.name, table.aliases, table.is_atgames, table.is_wg_vr, table.is_wg_vpxs, 
+            table.style_id, table.css_title, table.css_initials, table.css_scores, table.css_box, 
+            table.bg_color, table.score_type, table.sort_ascending
         );
     } finally {
         await db.close();

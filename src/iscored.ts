@@ -444,29 +444,29 @@ export async function navigateToLineupPage(page: Page) {
         await navigateToSettingsPage(page);
         
         const mainFrame = page.frameLocator('#main');
-        
-        // Explicitly click the Lineup tab
         const lineupTab = mainFrame.locator('a[href="#order"]');
-        await waitForBusyModal(mainFrame);
-        await lineupTab.click();
-        
-        logInfo('   -> Clicked Lineup tab. Waiting for list...');
-        // Sometimes the list is present but hidden via CSS during transitions.
-        // We'll wait for the ul to be attached and then use a small timeout to let iScored's JS run.
         const list = mainFrame.locator('ul#orderGameUL');
-        await list.waitFor({ state: 'attached', timeout: 30000 });
-        await page.waitForTimeout(2000); 
+
+        // Retry tab click if list doesn't appear
+        for (let i = 0; i < 3; i++) {
+            await waitForBusyModal(mainFrame);
+            await lineupTab.click();
+            logInfo(`   -> Clicked Lineup tab (Attempt ${i+1}). Waiting for list...`);
+            
+            try {
+                await list.waitFor({ state: 'visible', timeout: 10000 });
+                // Additional check to ensure it has children
+                const count = await list.locator('li').count();
+                if (count > 0) {
+                    logInfo(`✅ On Lineup page. Found ${count} games.`);
+                    return;
+                }
+            } catch (e) {
+                logWarn(`   -> List not visible or empty after attempt ${i+1}.`);
+            }
+        }
         
-        // Additional check to ensure it has children and is actually displayed
-        await page.waitForFunction(() => {
-            const iframe = document.querySelector('#main') as HTMLIFrameElement;
-            const list = iframe?.contentDocument?.querySelector('ul#orderGameUL') as HTMLElement;
-            if (!list) return false;
-            const style = window.getComputedStyle(list);
-            return style.display !== 'none' && list.children.length > 0;
-        }, { timeout: 15000 });
-        
-        logInfo('✅ On Lineup page.');
+        throw new Error('Failed to load Lineup list after 3 attempts.');
 
     } catch (e) {
         logError('❌ Timeout or error in navigateToLineupPage. Taking a screenshot.');
@@ -512,6 +512,65 @@ export async function addTagToGame(page: Page, gameId: string, tag: string) {
         logError(`❌ Error adding tag to game ${gameId}:`, e);
         // Don't throw, as the game is created. Just log error.
     }
+}
+
+export async function syncStyleFromIScored(page: Page, tableName: string, gameId: string): Promise<Partial<TableRow>> {
+    logInfo(`🎨 Syncing style details for '${tableName}' (ID: ${gameId})...`);
+    try {
+        const mainFrame = page.frameLocator('#main');
+        await navigateToSettingsPage(page);
+        
+        const selectGame = mainFrame.locator('#selectGame');
+        await selectGame.waitFor({ state: 'visible' });
+        await selectGame.selectOption(gameId);
+        await selectGame.dispatchEvent('change');
+        await page.waitForTimeout(2000); // Wait for fields to populate
+
+        const cssTitle = await mainFrame.locator('#CSSTitle').inputValue();
+        const cssInitials = await mainFrame.locator('#CSSInitials').inputValue();
+        const cssScores = await mainFrame.locator('#CSSScores').inputValue();
+        const cssBox = await mainFrame.locator('#CSSBox').inputValue();
+        const bgColor = await mainFrame.locator('#gameBackgroundColor').inputValue();
+        const scoreType = await mainFrame.locator('#ScoreType').inputValue();
+        const sortAsc = await mainFrame.locator('#SortAscending').isChecked();
+
+        logInfo(`✅ Style captured for ${tableName}.`);
+        
+        return {
+            css_title: cssTitle,
+            css_initials: cssInitials,
+            css_scores: cssScores,
+            css_box: cssBox,
+            bg_color: bgColor,
+            score_type: scoreType,
+            sort_ascending: sortAsc ? 1 : 0
+        };
+    } catch (e) {
+        logError(`❌ Failed to sync style for ${tableName}:`, e);
+        return {};
+    }
+}
+
+async function applyStyleToGame(page: Page, style: Partial<TableRow>) {
+    logInfo('   -> Applying custom CSS and styling fields...');
+    const mainFrame = page.frameLocator('#main');
+    
+    if (style.css_title) await mainFrame.locator('#CSSTitle').fill(style.css_title);
+    if (style.css_initials) await mainFrame.locator('#CSSInitials').fill(style.css_initials);
+    if (style.css_scores) await mainFrame.locator('#CSSScores').fill(style.css_scores);
+    if (style.css_box) await mainFrame.locator('#CSSBox').fill(style.css_box);
+    if (style.bg_color) await mainFrame.locator('#gameBackgroundColor').fill(style.bg_color);
+    if (style.score_type) await mainFrame.locator('#ScoreType').selectOption(style.score_type);
+    
+    if (style.sort_ascending !== undefined) {
+        const checkbox = mainFrame.locator('#SortAscending');
+        if (style.sort_ascending === 1) await checkbox.check();
+        else await checkbox.uncheck();
+    }
+
+    // Trigger change events
+    await mainFrame.locator('#CSSTitle').dispatchEvent('change');
+    await page.waitForTimeout(1000);
 }
 
 export async function createGame(page: Page, gameName: string, grindType: string, styleId?: string | null): Promise<string> {
@@ -750,15 +809,35 @@ export async function createGame(page: Page, gameName: string, grindType: string
 
         
 
-                                    await selectGame.selectOption(lastOptionValue);
+                                                await selectGame.selectOption(lastOptionValue);
 
         
 
-                                    await selectGame.dispatchEvent('change');
+                                                await selectGame.dispatchEvent('change');
 
         
 
-                                    await page.waitForTimeout(1000);
+                                                await page.waitForTimeout(1000);
+
+        
+
+                                                
+
+        
+
+                                                const nameInput = mainFrame.locator('#GameName');
+
+        
+
+                                                await nameInput.fill(fullGameName);
+
+        
+
+                                                await nameInput.dispatchEvent('change');
+
+        
+
+                                                await page.waitForTimeout(1000);
 
         
 
@@ -766,23 +845,19 @@ export async function createGame(page: Page, gameName: string, grindType: string
 
         
 
-                                    const nameInput = mainFrame.locator('#GameName');
+                                                // 4. APPLY DATABASE STYLES (OVERRIDE COMMUNITY STYLE WITH OUR SAVED ONES)
 
         
 
-                                                    await nameInput.fill(fullGameName);
+                                                const tableData = await getTable(gameName);
 
         
 
-                                                    await nameInput.dispatchEvent('change');
+                                                if (tableData) {
 
         
 
-                                                    await page.waitForTimeout(1000);
-
-        
-
-                                                    logInfo(`✅ Renamed to '${fullGameName}'.`);
+                                                    await applyStyleToGame(page, tableData);
 
         
 
@@ -790,23 +865,99 @@ export async function createGame(page: Page, gameName: string, grindType: string
 
         
 
-                                            } else {
+                                    
 
         
 
-                                                await searchInput.fill(fullGameName);
-
-        
-
-                                                await mainFrame.locator('button:has-text("Create Blank Game")').click();
-
-        
-
-                                                logInfo(`✅ Created blank game '${fullGameName}'.`);
+                                                logInfo(`✅ Renamed to '${fullGameName}' and applied DB styles.`);
 
         
 
                                             }
+
+        
+
+                                        } else {
+
+        
+
+                                            await searchInput.fill(fullGameName);
+
+        
+
+                                            await mainFrame.locator('button:has-text("Create Blank Game")').click();
+
+        
+
+                                            logInfo(`✅ Created blank game '${fullGameName}'.`);
+
+        
+
+                                            
+
+        
+
+                                            await page.waitForTimeout(2000);
+
+        
+
+                                            const selectGame = mainFrame.locator('#selectGame');
+
+        
+
+                                            const options = await selectGame.locator('option').all();
+
+        
+
+                                            const lastOptionValue = await options[options.length - 1].getAttribute('value');
+
+        
+
+                                            if (lastOptionValue && lastOptionValue !== '0') {
+
+        
+
+                                                await selectGame.selectOption(lastOptionValue);
+
+        
+
+                                                await selectGame.dispatchEvent('change');
+
+        
+
+                                                await page.waitForTimeout(1000);
+
+        
+
+                                                
+
+        
+
+                                                const tableData = await getTable(gameName);
+
+        
+
+                                                if (tableData) {
+
+        
+
+                                                    await applyStyleToGame(page, tableData);
+
+        
+
+                                                }
+
+        
+
+                                            }
+
+        
+
+                                        }
+
+        
+
+                                    
 
         
 
