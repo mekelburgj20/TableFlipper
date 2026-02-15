@@ -78,6 +78,9 @@ async function cleanupOldGames(page: Page, gameType: string) {
             } else {
                 logError(`❌ Failed to acquire DB record for '${game.name}' (ID: ${game.id}) even after sync. Skipping.`);
             }
+            
+            // Give the site a moment to "breathe" between deletions to avoid UI lag
+            await page.waitForTimeout(2000);
         }
         
     } catch (error) {

@@ -770,14 +770,14 @@ export async function deleteGame(page: Page, gameName: string, gameId?: string):
             el.style.opacity = '1';
         });
 
-        // Wait for the "Delete Game" button to be attached (might be technically hidden but we can force click)
+        // Wait for the "Delete Game" button to be attached
         const deleteButton = mainFrame.locator('#deleteSelectedGameButton');
         await deleteButton.waitFor({ state: 'attached', timeout: 5000 });
 
-        // Click Delete Game to open the modal
+        // Click Delete Game to open the modal - using evaluate to bypass visibility/interception checks
         await waitForBusyModal(mainFrame);
-        await deleteButton.click({ force: true }); 
-        logInfo('   -> Clicked "Delete Game" button.');
+        await deleteButton.evaluate(el => (el as HTMLElement).click());
+        logInfo('   -> Clicked "Delete Game" button (via evaluate).');
 
         // Wait for the modal to appear
         const modal = mainFrame.locator('#deleteGameModal');
@@ -788,14 +788,16 @@ export async function deleteGame(page: Page, gameName: string, gameId?: string):
         const confirmButton = modal.locator('.modal-footer button.btn-danger').first();
         
         await waitForBusyModal(mainFrame);
-        if (await confirmButton.isVisible()) {
-            await confirmButton.click({ force: true });
-            logInfo('   -> Clicked "Yes I\'m definitely sure." button in modal.');
-        } else {
-            // Fallback: try finding button by exact text
-            logInfo('   -> Primary button selector failed, trying text match...');
-            await modal.getByRole('button', { name: "Yes I'm definitely sure.", exact: false }).click({ force: true });
-            logInfo('   -> Clicked confirmation button (by text) in modal.');
+        
+        // Use evaluate to click the confirmation button as well
+        try {
+            await confirmButton.evaluate(el => (el as HTMLElement).click());
+            logInfo('   -> Clicked "Yes I\'m definitely sure." button in modal (via evaluate).');
+        } catch (e) {
+            logInfo('   -> Primary button evaluate failed, trying text match evaluate...');
+            const confirmBtnByText = modal.getByRole('button', { name: "Yes I'm definitely sure.", exact: false });
+            await confirmBtnByText.evaluate(el => (el as HTMLElement).click());
+            logInfo('   -> Clicked confirmation button (by text evaluate) in modal.');
         }
 
         // Wait for modal to disappear and give the page time to refresh the list
