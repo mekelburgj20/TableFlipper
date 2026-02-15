@@ -24,6 +24,9 @@
     "test:sheets": "node dist/tests/test-sheets.js",
     "presync-state": "tsc",
     "sync-state": "node dist/sync-state.js",
+    "presync-vpxs": "tsc",
+    "sync-vpxs": "node dist/sync-vpxs.js",
+    "test:verify": "tsx src/tests/verify-tasks.ts",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [
@@ -53,6 +56,7 @@
     "@types/node": "^20.10.4",
     "@types/node-cron": "^3.0.11",
     "ts-node": "^10.9.2",
+    "tsx": "^4.21.0",
     "typescript": "^5.3.3"
   }
 }

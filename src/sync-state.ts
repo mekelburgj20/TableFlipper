@@ -1,6 +1,6 @@
 import 'dotenv/config';
 import { loginToIScored, findGames, navigateToLineupPage } from './iscored.js';
-import { syncActiveGame, syncQueuedGame } from './database.js';
+import { syncActiveGame, syncQueuedGame, syncCompletedGame } from './database.js';
 
 const GAME_TYPES = ['DG', 'WG-VPXS', 'WG-VR', 'MG'];
 
@@ -16,7 +16,7 @@ async function main() {
 
         for (const type of GAME_TYPES) {
             console.log(`🔎 Checking state for ${type}...`);
-            const { activeGames, nextGames } = await findGames(page, type);
+            const { activeGames, nextGames, completedGames } = await findGames(page, type);
             
             if (activeGames.length > 0) {
                 const active = activeGames[0];
@@ -35,6 +35,14 @@ async function main() {
                 }
             } else {
                 console.log(`   -> No queued games found on iScored.`);
+            }
+
+            if (completedGames && completedGames.length > 0) {
+                console.log(`   -> Found ${completedGames.length} completed (shown+locked) games on iScored.`);
+                for (const comp of completedGames) {
+                    console.log(`      -> Syncing Completed: ${comp.name} (${comp.id})`);
+                    await syncCompletedGame(type, comp.id, comp.name);
+                }
             }
         }
 

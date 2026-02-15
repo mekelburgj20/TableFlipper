@@ -9,3 +9,6 @@
 
 # Log files
 *.log
+
+# Images
+*.png

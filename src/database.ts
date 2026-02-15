@@ -76,6 +76,17 @@ export async function initializeDatabase() {
                 created_at DATETIME DEFAULT CURRENT_TIMESTAMP
             );
         `);
+        await db.exec(`
+            CREATE TABLE IF NOT EXISTS scores (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                game_id TEXT NOT NULL,
+                iscored_username TEXT NOT NULL,
+                score TEXT NOT NULL,
+                rank TEXT NOT NULL,
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY(game_id) REFERENCES games(id)
+            );
+        `);
         
         // Re-create tables table with new schema
         // await db.exec(`DROP TABLE IF EXISTS tables;`); // Removed to persist data
@@ -119,6 +130,21 @@ export async function upsertTable(table: TableRow): Promise<void> {
                 is_wg_vpxs = excluded.is_wg_vpxs,
                 aliases = COALESCE(excluded.aliases, tables.aliases)`,
             table.name, table.aliases, table.is_atgames, table.is_wg_vr, table.is_wg_vpxs
+        );
+    } finally {
+        await db.close();
+    }
+}
+
+export async function upsertVpxsTable(name: string): Promise<void> {
+    const db = await openDb();
+    try {
+        await db.run(
+            `INSERT INTO tables (name, is_wg_vpxs)
+             VALUES (?, 1)
+             ON CONFLICT(name) DO UPDATE SET
+                is_wg_vpxs = 1`,
+            name
         );
     } finally {
         await db.close();
@@ -332,6 +358,30 @@ export async function syncQueuedGame(gameType: string, iscoredGameId: string, ga
     }
 }
 
+export async function syncCompletedGame(gameType: string, iscoredGameId: string, gameName: string): Promise<void> {
+    const db = await openDb();
+    try {
+        const existingGame = await db.get<GameRow>("SELECT * FROM games WHERE iscored_game_id = ?", iscoredGameId);
+
+        if (existingGame) {
+            if (existingGame.status !== 'COMPLETED') {
+                await db.run("UPDATE games SET status = 'COMPLETED', completed_at = ? WHERE id = ?", new Date().toISOString(), existingGame.id);
+                console.log(`🔄 Synced DB: Set existing game '${gameName}' to COMPLETED.`);
+            }
+        } else {
+            const newId = uuidv4();
+            await db.run(
+                `INSERT INTO games (id, iscored_game_id, name, type, status, created_at, completed_at)
+                 VALUES (?, ?, ?, ?, 'COMPLETED', ?, ?)`,
+                newId, iscoredGameId, gameName, gameType, new Date().toISOString(), new Date().toISOString()
+            );
+            console.log(`🔄 Synced DB: Created new COMPLETED entry for '${gameName}'.`);
+        }
+    } finally {
+        await db.close();
+    }
+}
+
 // --- Game Table Functions ---
 
 export async function createGameEntry(game: Omit<GameRow, 'id' | 'created_at' | 'status' | 'name' | 'iscored_game_id'> & { name?: string, iscored_game_id?: string }): Promise<GameRow> {
@@ -366,6 +416,15 @@ export async function getActiveGame(gameType: string): Promise<GameRow | null> {
     const db = await openDb();
     try {
         return await db.get<GameRow>("SELECT * FROM games WHERE type = ? AND status = 'ACTIVE'", gameType) ?? null;
+    } finally {
+        await db.close();
+    }
+}
+
+export async function getGameByIscoredId(iscoredId: string): Promise<GameRow | null> {
+    const db = await openDb();
+    try {
+        return await db.get<GameRow>("SELECT * FROM games WHERE iscored_game_id = ?", iscoredId) ?? null;
     } finally {
         await db.close();
     }
@@ -430,6 +489,36 @@ export async function getPicker(gameType: string): Promise<GameRow | null> {
     const db = await openDb();
     try {
         return await db.get<GameRow>(`SELECT * FROM games WHERE type = ? AND status = 'QUEUED' AND picker_discord_id IS NOT NULL ORDER BY scheduled_to_be_active_at ASC LIMIT 1`, gameType) ?? null;
+    } finally {
+        await db.close();
+    }
+}
+
+export interface ScoreRow {
+    iscored_username: string;
+    score: string;
+    rank: string;
+}
+
+export async function saveScores(gameId: string, scores: ScoreRow[]): Promise<void> {
+    const db = await openDb();
+    try {
+        const stmt = await db.prepare(`INSERT INTO scores (game_id, iscored_username, score, rank) VALUES (?, ?, ?, ?)`);
+        for (const score of scores) {
+            await stmt.run(gameId, score.iscored_username, score.score, score.rank);
+        }
+        await stmt.finalize();
+        console.log(`✅ Saved ${scores.length} scores for game ID ${gameId}.`);
+    } finally {
+        await db.close();
+    }
+}
+
+export async function hasScores(gameId: string): Promise<boolean> {
+    const db = await openDb();
+    try {
+        const result = await db.get<{ count: number }>(`SELECT COUNT(*) as count FROM scores WHERE game_id = ?`, gameId);
+        return (result?.count ?? 0) > 0;
     } finally {
         await db.close();
     }

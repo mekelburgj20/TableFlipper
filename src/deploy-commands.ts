@@ -92,6 +92,25 @@ const commands = [
         description: 'Manually triggers the maintenance routine for the Monthly Grind (MG).',
     },
     {
+        name: 'trigger-cleanup',
+        description: 'Manually triggers the cleanup routine (delete old locked games) for tournaments.',
+        options: [
+            {
+                name: 'grind-type',
+                type: 3, // STRING
+                description: 'The tournament to cleanup (leave blank for all).',
+                required: false,
+                choices: [
+                    { name: 'All Tournaments', value: 'ALL' },
+                    { name: 'Daily Grind (DG)', value: 'DG' },
+                    { name: 'Weekly Grind VPXS (WG-VPXS)', value: 'WG-VPXS' },
+                    { name: 'Weekly Grind VR (WG-VR)', value: 'WG-VR' },
+                    { name: 'Monthly Grind (MG)', value: 'MG' },
+                ]
+            }
+        ]
+    },
+    {
         name: 'pause-dg-pick',
         description: 'Pauses the winner pick and sets a special game for the next cycle.',
         options: [
