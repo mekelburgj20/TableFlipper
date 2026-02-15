@@ -48,7 +48,7 @@ export function startDiscordBot() {
 
             if (focusedOption.name === 'table-name') {
                 const gameType = interaction.options.getString('grind-type');
-                // logInfo(`Debug: Autocomplete. GameType: '${gameType}', Search: '${focusedOption.value}'`);
+                logInfo(`Autocomplete debug: gameType='${gameType}', query='${focusedOption.value}'`);
                 
                 let choices: any[] = [];
 
@@ -65,6 +65,7 @@ export function startDiscordBot() {
                 }
 
                 const filtered = choices.map(t => ({ name: t.name, value: t.name }));
+                logInfo(`Autocomplete debug: found ${filtered.length} results for gameType='${gameType}'`);
                 await interaction.respond(filtered);
             }
             return;

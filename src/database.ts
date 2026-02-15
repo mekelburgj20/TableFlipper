@@ -143,7 +143,7 @@ export async function upsertTable(table: TableRow): Promise<void> {
              ON CONFLICT(name) DO UPDATE SET
                 is_atgames = excluded.is_atgames,
                 is_wg_vr = excluded.is_wg_vr,
-                is_wg_vpxs = excluded.is_wg_vpxs,
+                is_wg_vpxs = MAX(tables.is_wg_vpxs, excluded.is_wg_vpxs),
                 aliases = COALESCE(excluded.aliases, tables.aliases),
                 style_id = COALESCE(excluded.style_id, tables.style_id),
                 css_title = COALESCE(excluded.css_title, tables.css_title),
