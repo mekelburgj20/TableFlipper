@@ -1,6 +1,7 @@
 import { chromium, Browser, Page, Locator } from 'playwright';
 import { scheduleGameShow } from './scheduler.js'; // Updated import
 import { addUserMapping } from './userMapping.js';
+import { TableRow, getTable } from './database.js';
 import fs from 'fs';
 import { promises as fsPromises } from 'fs';
 import * as path from 'path';
