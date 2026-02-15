@@ -19,6 +19,8 @@
     "migrate-games-schema": "node dist/migrate-games-schema.js",
     "premigrate-fix-schema": "tsc",
     "migrate-fix-schema": "node dist/migrate-fix-schema.js",
+    "premigrate-tables": "tsc",
+    "migrate-tables": "node dist/migrate-tables-schema.js",
     "test:db": "node dist/tests/test-database.js",
     "test:iscored": "node dist/tests/test-iscored.js",
     "test:sheets": "node dist/tests/test-sheets.js",
@@ -26,7 +28,7 @@
     "sync-state": "node dist/sync-state.js",
     "presync-vpxs": "tsc",
     "sync-vpxs": "node dist/sync-vpxs.js",
-    "sync-all": "npm run sync-tables && npm run sync-vpxs",
+    "sync-all": "npm run migrate-tables && npm run sync-tables && npm run sync-vpxs",
     "test:verify": "tsx src/tests/verify-tasks.ts",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
