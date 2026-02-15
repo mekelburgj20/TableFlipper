@@ -727,6 +727,15 @@ export async function deleteGame(page: Page, gameName: string, gameId?: string):
         }
         logInfo('   -> Games tab active.');
 
+        // Ensure the option exists in the dropdown before selecting
+        const optionExists = await selectGameDropdown.locator(`option[value="${gameId}"]`).count() > 0 || 
+                             await selectGameDropdown.locator(`option:has-text("${gameName}")`).count() > 0;
+        
+        if (!optionExists) {
+            logWarn(`   -> Game '${gameName}' (ID: ${gameId}) not found in dropdown options. Skipping.`);
+            return;
+        }
+
         // Select the game from the dropdown by value (ID) or label (name)
         if (gameId) {
             await selectGameDropdown.selectOption({ value: gameId });
@@ -752,22 +761,22 @@ export async function deleteGame(page: Page, gameName: string, gameId?: string):
         }
 
         // Give the page a moment to process the selection and update the DOM
-        await page.waitForTimeout(1000);
+        await page.waitForTimeout(2000);
 
-        // Always force #gameCustomizations to be visible, as the automated triggers can be flaky
+        // Always force #gameCustomizations to be visible
         await mainFrame.locator('#gameCustomizations').evaluate((el) => {
             el.style.display = 'block';
             el.style.visibility = 'visible';
             el.style.opacity = '1';
         });
 
-        // Wait for the "Delete Game" button to appear
+        // Wait for the "Delete Game" button to be attached (might be technically hidden but we can force click)
         const deleteButton = mainFrame.locator('#deleteSelectedGameButton');
-        await deleteButton.waitFor({ state: 'visible', timeout: 5000 });
+        await deleteButton.waitFor({ state: 'attached', timeout: 5000 });
 
         // Click Delete Game to open the modal
         await waitForBusyModal(mainFrame);
-        await deleteButton.click({ force: true }); // Use force: true to bypass potential interception
+        await deleteButton.click({ force: true }); 
         logInfo('   -> Clicked "Delete Game" button.');
 
         // Wait for the modal to appear
@@ -776,24 +785,22 @@ export async function deleteGame(page: Page, gameName: string, gameId?: string):
         logInfo('   -> Delete confirmation modal visible.');
 
         // Find and click the confirm button inside the modal.
-        // HTML: <button type="button" class="btn btn-default btn-danger" data-dismiss="modal" onclick="deleteConfirmed()">Yes I'm definitely sure.</button>
-        // We look for the button with class 'btn-danger' inside the modal footer.
         const confirmButton = modal.locator('.modal-footer button.btn-danger').first();
         
         await waitForBusyModal(mainFrame);
         if (await confirmButton.isVisible()) {
-            await confirmButton.click();
+            await confirmButton.click({ force: true });
             logInfo('   -> Clicked "Yes I\'m definitely sure." button in modal.');
         } else {
             // Fallback: try finding button by exact text
             logInfo('   -> Primary button selector failed, trying text match...');
-            await modal.getByRole('button', { name: "Yes I'm definitely sure.", exact: false }).click();
+            await modal.getByRole('button', { name: "Yes I'm definitely sure.", exact: false }).click({ force: true });
             logInfo('   -> Clicked confirmation button (by text) in modal.');
         }
 
-        // Wait for modal to disappear or some confirmation? 
-        // Typically the page refreshes or the modal closes.
+        // Wait for modal to disappear and give the page time to refresh the list
         await modal.waitFor({ state: 'hidden', timeout: 10000 });
+        await page.waitForTimeout(2000); 
         logInfo(`✅ Game '${gameName}' successfully deleted.`);
 
     } catch (error) {
