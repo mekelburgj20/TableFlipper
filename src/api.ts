@@ -50,7 +50,7 @@ export async function getStandingsFromApi(gameName: string): Promise<Standing[]>
 
         if (data && data.scores && Array.isArray(data.scores)) {
             const standings: Standing[] = data.scores.map((s: any) => ({
-                rank: s.rank,
+                rank: s.rank.toString(),
                 name: s.name,
                 score: s.score,
             }));

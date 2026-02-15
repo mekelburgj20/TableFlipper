@@ -129,6 +129,7 @@ export async function findGames(page: Page, gameType: string): Promise<{ activeG
         for (const gameRow of gameElements) {
             const nameElement = gameRow.locator('span.dragHandle');
             const name = (await nameElement.innerText()).trim();
+            logInfo(`   -> Debug: Row Name: "${name}"`);
             
             const idAttr = await gameRow.getAttribute('id');
             if (!idAttr) continue;
@@ -141,10 +142,10 @@ export async function findGames(page: Page, gameType: string): Promise<{ activeG
             
             // Identification Logic:
             // 1. Check for the formal Tag Key (Primary)
-            // 2. Fallback to Name Suffix (Legacy/Human)
+            // 2. Fallback to Name Suffix (Legacy/Human) - only if name ends with it
             const tagKey = TOURNAMENT_TAG_KEYS[gameType] || gameType;
             const tagMatch = tagValue.toUpperCase().includes(tagKey.toUpperCase());
-            const nameMatch = name.toUpperCase().includes(' ' + gameType.toUpperCase());
+            const nameMatch = name.toUpperCase().endsWith(' ' + gameType.toUpperCase());
 
             if (tagMatch || nameMatch) {
                 logInfo(`   -> Found match for ${gameType}: "${name}" (ID: ${id}) [Tags: ${tagValue}]`);
@@ -208,7 +209,11 @@ export async function findGameByName(page: Page, gameName: string, mustBeUntagge
             const nameElement = row.locator('span.dragHandle');
             const name = (await nameElement.innerText()).trim();
             
-            if (name.trim().toUpperCase() === gameName.trim().toUpperCase()) {
+            const targetName = gameName.trim().toUpperCase();
+            const rowName = name.trim().toUpperCase();
+
+            // Match if exact OR if the row name is just the clean name (handling transition)
+            if (rowName === targetName) {
                 const idAttr = await row.getAttribute('id');
                 if (!idAttr) continue;
                 const id = idAttr; // The ID is directly on the <li> element, e.g., id="90658"
@@ -438,25 +443,28 @@ export async function navigateToLineupPage(page: Page) {
     try {
         await navigateToSettingsPage(page);
         
+        const mainFrame = page.frameLocator('#main');
+        
         // Explicitly click the Lineup tab
-        const lineupTab = page.frameLocator('#main').locator('a[href="#order"]');
-        await waitForBusyModal(page.frameLocator('#main'));
+        const lineupTab = mainFrame.locator('a[href="#order"]');
+        await waitForBusyModal(mainFrame);
         await lineupTab.click();
         
         logInfo('   -> Clicked Lineup tab. Waiting for list...');
+        // Sometimes the list is present but hidden via CSS during transitions.
+        // We'll wait for the ul to be attached and then use a small timeout to let iScored's JS run.
+        const list = mainFrame.locator('ul#orderGameUL');
+        await list.waitFor({ state: 'attached', timeout: 30000 });
+        await page.waitForTimeout(2000); 
+        
+        // Additional check to ensure it has children and is actually displayed
         await page.waitForFunction(() => {
-            const iframe = document.querySelector('#main');
-            if (!iframe) return false;
-            const iframeDoc = (iframe as HTMLIFrameElement).contentDocument;
-            if (!iframeDoc) return false;
-            const list = iframeDoc.querySelector('ul#orderGameUL');
+            const iframe = document.querySelector('#main') as HTMLIFrameElement;
+            const list = iframe?.contentDocument?.querySelector('ul#orderGameUL') as HTMLElement;
             if (!list) return false;
             const style = window.getComputedStyle(list);
-            if (style.display === 'none' || style.visibility === 'hidden') {
-                return false;
-            }
-            return list.children.length > 0;
-        }, { timeout: 30000 });
+            return style.display !== 'none' && list.children.length > 0;
+        }, { timeout: 15000 });
         
         logInfo('✅ On Lineup page.');
 
@@ -477,17 +485,18 @@ export async function addTagToGame(page: Page, gameId: string, tag: string) {
     try {
         const mainFrame = page.frameLocator('#main');
         
-        // The tag input area is likely inside the row.
-        // Based on outerHTML: <tags class="tagify ..."> <span contenteditable ...>
-        
-        // Find the row first to be safe
-        const gameRow = mainFrame.locator(`li#${gameId}`);
+        // Find the row first. IDs starting with numbers need special handling in some CSS selectors,
+        // using attribute selector is safest.
+        const gameRow = mainFrame.locator(`li[id="${gameId}"]`);
         
         // Locate the tagify component (the contenteditable span)
         // Adjust selector based on provided HTML: <tags ...><span contenteditable ... class="tagify__input">
-        const tagifyInput = gameRow.locator('tags.tagify span.tagify__input');
+        const tagifyInput = gameRow.locator('.tagify__input').first();
         
-        if (await tagifyInput.isVisible()) {
+        const isVisible = await tagifyInput.isVisible();
+        logInfo(`   -> Tag input visible: ${isVisible}`);
+
+        if (isVisible) {
             await tagifyInput.click();
             await page.keyboard.type(tag);
             await page.keyboard.press('Enter');
@@ -506,75 +515,331 @@ export async function addTagToGame(page: Page, gameId: string, tag: string) {
 }
 
 export async function createGame(page: Page, gameName: string, grindType: string, styleId?: string | null): Promise<string> {
-    const fullGameName = `${gameName} ${grindType}`;
+
+    const fullGameName = gameName; // No longer appending suffix, Tags handle the type
+
     logInfo(`✨ Creating new game: ${fullGameName}${styleId ? ` (Style ID: ${styleId})` : ''}`);
+
     
+
     try {
+
         const mainFrame = page.frameLocator('#main');
 
+
+
         // Ensure we are on the settings page, then go to Games tab
-        await navigateToSettingsPage(page); // Navigates to settings page
-        await mainFrame.locator('a[href="#games"]').click(); // Clicks games tab
+
+        await navigateToSettingsPage(page);
+
+        await mainFrame.locator('a[href="#games"]').click();
+
         await mainFrame.locator('button:has-text("Add New Game")').waitFor({ state: 'visible' });
 
-        // 2. Click "Add New Game".
+
+
         await mainFrame.locator('button:has-text("Add New Game")').click();
+
         
-        // 3. Handle Style vs Blank Game
-        if (styleId) {
-            logInfo(`   -> Attempting to use Community Style ID: ${styleId}`);
-            
-            // Fill the name first so iScored knows what to call it
-            await mainFrame.locator('input[type="search"][aria-controls="stylesTable"]').fill(fullGameName);
 
-            // Use evaluate to call the internal iScored function loadStylePreview(id)
-            await mainFrame.locator(':root').evaluate((el, id) => {
-                if (typeof (window as any).loadStylePreview === 'function') {
-                    (window as any).loadStylePreview(id);
-                }
-            }, styleId);
-            
-            // Wait for the preview to load
-            await page.waitForTimeout(2000);
-            
-            // Click "Create Game Using Selected Style"
-            await mainFrame.locator('button:has-text("Create Game Using Selected Style")').click();
-            
-            // Now we need to RENAME it because style-based creation might use the style's default name
-            // Wait, usually iScored asks for a name or uses the style's name.
-            // Let's assume we need to update the name after creation if it's wrong.
-            // Actually, looking at the UI, createGame(currentStyleID) is called.
-            
-            logInfo(`✅ Created game using style ${styleId}.`);
-        } else {
-            // Fill in the game name into the search input and click "Create Blank Game"
-            await mainFrame.locator('input[type="search"][aria-controls="stylesTable"]').fill(fullGameName);
-            await mainFrame.locator('button:has-text("Create Blank Game")').click();
-            logInfo(`✅ Created blank game '${fullGameName}'.`);
-        }
+                const searchInput = mainFrame.locator('input[type="search"][aria-controls="stylesTable"]');
 
-        // Now, switch to the Lineup tab to get the game ID and then hide/lock it.
-        await mainFrame.locator('a[href="#order"]').click(); // Click on Lineup tab
-        // Re-wait for the lineup content to ensure it's loaded after tab switch
-        await page.waitForFunction(() => {
-            const iframe = document.querySelector('#main');
-            if (!iframe) return false;
-            const iframeDoc = (iframe as HTMLIFrameElement).contentDocument;
-            if (!iframeDoc) return false;
-            const list = iframeDoc.querySelector('ul#orderGameUL');
-            if (!list) return false;
-            const style = window.getComputedStyle(list);
-            if (style.display === 'none' || style.visibility === 'hidden') {
-                return false;
-            }
-            return true;
-        }, { timeout: 15000 });
+        
 
-        // Find the newly created game. MUST be untagged to avoid confusion with existing games of same name.
-        const newlyCreatedGame = await findGameByName(page, fullGameName, true);
+        
+
+        
+
+                if (styleId) {
+
+        
+
+                    logInfo(`   -> Applying Community Style ID: ${styleId}`);
+
+        
+
+                    
+
+        
+
+                    // 1. Load the preview FIRST using evaluate
+
+        
+
+                    await mainFrame.locator(':root').evaluate((el, id) => {
+
+        
+
+                        if (typeof (window as any).loadStylePreview === 'function') {
+
+        
+
+                            (window as any).loadStylePreview(id);
+
+        
+
+                        }
+
+        
+
+                    }, styleId);
+
+        
+
+                    await page.waitForTimeout(2000);
+
+        
+
+                    
+
+        
+
+                    // 2. Set the game name directly on the hidden internal GameName field if it exists,
+
+        
+
+                    // or just use the search input but ensure it's triggered.
+
+        
+
+                    // Based on iScored's JS, createGame() uses the search box value if style is -1,
+
+        
+
+                    // but if style is set, it might use the style's name.
+
+        
+
+                    // Let's try to FORCE the search box value using direct JS to be sure.
+
+        
+
+                    await searchInput.evaluate((el, val) => {
+
+        
+
+                        const input = el as HTMLInputElement;
+
+        
+
+                        input.value = val;
+
+        
+
+                        input.dispatchEvent(new Event('input', { bubbles: true }));
+
+        
+
+                        input.dispatchEvent(new Event('change', { bubbles: true }));
+
+        
+
+                    }, fullGameName);
+
+        
+
+                    await page.waitForTimeout(1000);
+
+        
+
+        
+
+        
+
+                    // 3. Click the button. 
+
+        
+
+                    // We use evaluate here too to be safe from overlays.
+
+        
+
+                                const createBtn = mainFrame.locator('button:has-text("Create Game Using Selected Style")');
+
+        
+
+                                await createBtn.evaluate(el => (el as HTMLElement).click());
+
+        
+
+                                
+
+        
+
+                                logInfo(`✅ Created game using style ${styleId}. Waiting for redirect...`);
+
+        
+
+                                await page.waitForTimeout(3000); // Wait for iScored to finish creation and potentially redirect
+
+        
+
+                    
+
+        
+
+                                // Re-select the game in the dropdown (it should be the new one)
+
+        
+
+                                // Or better: Find it by Tag if we just created it? No, tags aren't added yet.
+
+        
+
+                                // Find it by Style ID in the dropdown if we can, but let's try finding the "latest" game.
+
+        
+
+                                
+
+        
+
+                                // Actually, we can just search the lineup for WHATEVER was just created if we knew the name iScored gave it.
+
+        
+
+                                // But we don't. So let's look for any game that DOES NOT have our desired name.
+
+        
+
+                                
+
+        
+
+                                // Strategy: Go to Games tab, select the LAST game in the dropdown (often the newest),
+
+        
+
+                                // and RENAME it to our desired name.
+
+        
+
+                                const selectGame = mainFrame.locator('#selectGame');
+
+        
+
+                                await selectGame.waitFor({ state: 'visible' });
+
+        
+
+                                
+
+        
+
+                                // Get all options
+
+        
+
+                                const options = await selectGame.locator('option').all();
+
+        
+
+                                const lastOptionValue = await options[options.length - 1].getAttribute('value');
+
+        
+
+                                
+
+        
+
+                                if (lastOptionValue && lastOptionValue !== '0') {
+
+        
+
+                                    logInfo(`   -> Renaming the newly created game (ID: ${lastOptionValue}) to '${fullGameName}'`);
+
+        
+
+                                    await selectGame.selectOption(lastOptionValue);
+
+        
+
+                                    await selectGame.dispatchEvent('change');
+
+        
+
+                                    await page.waitForTimeout(1000);
+
+        
+
+                                    
+
+        
+
+                                    const nameInput = mainFrame.locator('#GameName');
+
+        
+
+                                                    await nameInput.fill(fullGameName);
+
+        
+
+                                                    await nameInput.dispatchEvent('change');
+
+        
+
+                                                    await page.waitForTimeout(1000);
+
+        
+
+                                                    logInfo(`✅ Renamed to '${fullGameName}'.`);
+
+        
+
+                                                }
+
+        
+
+                                            } else {
+
+        
+
+                                                await searchInput.fill(fullGameName);
+
+        
+
+                                                await mainFrame.locator('button:has-text("Create Blank Game")').click();
+
+        
+
+                                                logInfo(`✅ Created blank game '${fullGameName}'.`);
+
+        
+
+                                            }
+
+        
+
+                                    
+
+        
+
+                                            // Now, switch to the Lineup tab to get the game ID and then hide/lock it.
+
+        
+
+                                            await navigateToLineupPage(page);
+
+        
+
+                                    
+
+        
+
+                                            // Find the newly created game. MUST be untagged to avoid confusion with existing games of same name.
+
+        
+
+                                            let newlyCreatedGame = await findGameByName(page, fullGameName, true);
+
+        
+
+                                    
 
         if (!newlyCreatedGame) {
-            throw new Error(`Could not find newly created (untagged) game '${fullGameName}' on the Lineup page.`);
+            logWarn(`⚠️ Could not find '${fullGameName}' in lineup. Fetching all game names for debug...`);
+            const allGames = await findGames(page, 'ALL'); // This will log all games to console
+            throw new Error(`Could not find newly created (untagged) game '${fullGameName}' on the Lineup page. Available games logged above.`);
         }
 
         // Apply the formal tournament tag
