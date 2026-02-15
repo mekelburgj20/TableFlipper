@@ -20,6 +20,26 @@ export interface Game {
     isLocked: boolean;
 }
 
+/**
+ * Helper to wait for the iScored "busy" loading modal to disappear.
+ * This modal often intercepts clicks during Single Page Application transitions.
+ */
+async function waitForBusyModal(mainFrame: Locator | Page | any) {
+    try {
+        // If mainFrame is a FrameLocator, we use locator()
+        const busyModal = typeof mainFrame.locator === 'function' ? mainFrame.locator('#busyModal') : null;
+        if (busyModal) {
+            // Check if it's currently visible
+            if (await busyModal.isVisible()) {
+                logInfo('   -> Waiting for busyModal to disappear...');
+                await busyModal.waitFor({ state: 'hidden', timeout: 15000 });
+            }
+        }
+    } catch (e) {
+        logWarn('   -> busyModal did not hide within timeout, proceeding anyway...');
+    }
+}
+
 export async function loginToIScored(): Promise<{ browser: Browser, page: Page }> {
     logInfo('🚀 Launching browser and logging into iScored...');
     const browser = await chromium.launch({ headless: true });
@@ -367,11 +387,15 @@ export async function navigateToSettingsPage(page: Page) {
         // Re-acquire mainFrame as it might have detached/reloaded
         mainFrame = page.frameLocator('#main');
 
+        await waitForBusyModal(mainFrame);
+
         // Click User Dropdown
         const userDropdown = mainFrame.locator('#userDropdown').getByRole('link');
         await userDropdown.waitFor({ state: 'visible', timeout: 5000 });
         await userDropdown.click();
         
+        await waitForBusyModal(mainFrame);
+
         // Click Settings Link in Dropdown
         const settingsLinkRobust = mainFrame.locator('a[href="/settings.php"]').filter({ hasText: 'Settings' });
         
@@ -396,6 +420,7 @@ export async function navigateToLineupPage(page: Page) {
         
         // Explicitly click the Lineup tab
         const lineupTab = page.frameLocator('#main').locator('a[href="#order"]');
+        await waitForBusyModal(page.frameLocator('#main'));
         await lineupTab.click();
         
         logInfo('   -> Clicked Lineup tab. Waiting for list...');
@@ -734,6 +759,7 @@ export async function deleteGame(page: Page, gameName: string, gameId?: string):
         }
 
         // Click Delete Game to open the modal
+        await waitForBusyModal(mainFrame);
         await deleteButton.click();
         logInfo('   -> Clicked "Delete Game" button.');
 
@@ -747,6 +773,7 @@ export async function deleteGame(page: Page, gameName: string, gameId?: string):
         // We look for the button with class 'btn-danger' inside the modal footer.
         const confirmButton = modal.locator('.modal-footer button.btn-danger').first();
         
+        await waitForBusyModal(mainFrame);
         if (await confirmButton.isVisible()) {
             await confirmButton.click();
             logInfo('   -> Clicked "Yes I\'m definitely sure." button in modal.');
