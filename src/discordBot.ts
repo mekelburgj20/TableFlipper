@@ -258,7 +258,7 @@ export function startDiscordBot() {
                 const iscoredGameId = await createGame(page, newGameName, gameType); 
                 
                 // 5. Update the game entry in our database
-                await updateQueuedGame(nextGame.id, newGameName, iscoredGameId);
+                await updateQueuedGame(nextGame.id, tableName!, iscoredGameId);
 
                 // Format the activation time
                 let formattedTime = 'Unknown Time';
@@ -271,7 +271,7 @@ export function startDiscordBot() {
                      }).toLowerCase() + ' Central';
                 }
 
-                const confirmationMessage = `Thank you, ${interaction.user.toString()}! The table **${newGameName}** has been selected and created. It will be the table for the tournament beginning ${formattedTime}.`;
+                const confirmationMessage = `Thank you, ${interaction.user.toString()}! The table **${tableName} ${gameType}** has been selected and created. It will be the table for the tournament beginning ${formattedTime}.`;
                 
                 await interaction.editReply({ content: confirmationMessage, components: [] });
 

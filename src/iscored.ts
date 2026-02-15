@@ -494,7 +494,8 @@ export async function addTagToGame(page: Page, gameId: string, tag: string) {
 }
 
 export async function createGame(page: Page, gameName: string, grindType: string): Promise<string> {
-    logInfo(`✨ Creating new game: ${gameName} [Type: ${grindType}]`);
+    const fullGameName = `${gameName} ${grindType}`;
+    logInfo(`✨ Creating new game: ${fullGameName}`);
     
     try {
         const mainFrame = page.frameLocator('#main');
@@ -508,10 +509,10 @@ export async function createGame(page: Page, gameName: string, grindType: string
         await mainFrame.locator('button:has-text("Add New Game")').click();
         
         // 3. Fill in the game name into the search input and click "Create Blank Game"
-        await mainFrame.locator('input[type="search"][aria-controls="stylesTable"]').fill(gameName);
+        await mainFrame.locator('input[type="search"][aria-controls="stylesTable"]').fill(fullGameName);
         await mainFrame.locator('button:has-text("Create Blank Game")').click();
         
-        logInfo(`✅ Created blank game '${gameName}'.`);
+        logInfo(`✅ Created blank game '${fullGameName}'.`);
 
         // Now, switch to the Lineup tab to get the game ID and then hide/lock it.
         await mainFrame.locator('a[href="#order"]').click(); // Click on Lineup tab
@@ -531,10 +532,10 @@ export async function createGame(page: Page, gameName: string, grindType: string
         }, { timeout: 15000 });
 
         // Find the newly created game. MUST be untagged to avoid confusion with existing games of same name.
-        const newlyCreatedGame = await findGameByName(page, gameName, true);
+        const newlyCreatedGame = await findGameByName(page, fullGameName, true);
 
         if (!newlyCreatedGame) {
-            throw new Error(`Could not find newly created (untagged) game '${gameName}' on the Lineup page.`);
+            throw new Error(`Could not find newly created (untagged) game '${fullGameName}' on the Lineup page.`);
         }
 
         // Apply the Tag
@@ -542,11 +543,11 @@ export async function createGame(page: Page, gameName: string, grindType: string
 
         // Hide the newly created game.
         await hideGame(page, newlyCreatedGame);
-        logInfo(`✅ Game '${gameName}' created and hidden successfully.`);
+        logInfo(`✅ Game '${fullGameName}' created and hidden successfully.`);
 
         // Lock the newly created game as well to prevent premature scores
         await lockGame(page, newlyCreatedGame);
-        logInfo(`✅ Game '${gameName}' also locked to prevent premature scores.`);
+        logInfo(`✅ Game '${fullGameName}' also locked to prevent premature scores.`);
 
         // Schedule the show for 24 hours from now.
         const now = new Date();
@@ -556,7 +557,7 @@ export async function createGame(page: Page, gameName: string, grindType: string
         return newlyCreatedGame.id;
 
     } catch (error) {
-        logError(`❌ Failed to create game '${gameName}'.`, error);
+        logError(`❌ Failed to create game '${fullGameName}'.`, error);
         await page.screenshot({ path: 'create_game_error.png', fullPage: true });
         logInfo(`📷 Screenshot saved to create_game_error.png.`);
         throw error;
