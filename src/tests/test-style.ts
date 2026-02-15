@@ -14,9 +14,10 @@ async function testStyle() {
 
         const testGameName = 'Style Test Game';
         const testGameType = 'DG';
-        const testStyleId = '2924'; // Using the ID from your TODO notes
+        // Use command line arg or default to 2924
+        const testStyleId = process.argv[2] || '2924'; 
 
-        logInfo(`🚀 Attempting to create "${testGameName} ${testGameType}" with Style ID: ${testStyleId}`);
+        logInfo(`🚀 Attempting to create "${testGameName}" with Style ID: ${testStyleId}`);
         
         const gameId = await createGame(page, testGameName, testGameType, testStyleId);
         
