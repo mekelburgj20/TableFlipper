@@ -83,3 +83,16 @@ npm run deploy-commands
 ## 5. Logs
 
 The bot maintains detailed logs in `data/bot.log`. Check this file for troubleshooting browser automation steps or maintenance failures.
+
+## 6. Release Notes
+
+### v1.1.0 (Current)
+*   **Community Styles Support:** The bot now automatically applies iScored "Community Styles" during game creation if a `style_id` is present in the table database.
+*   **Formalized Tournament Tagging:** Transitioned to using iScored tags as the primary "key" for identifying tournament games (DG, WG, MG), improving reliability and allowing for better organization.
+*   **VPXS API Integration:** Expanded the table catalog for `WG-VPXS` by integrating the Virtual Pinball Spreadsheet API.
+*   **Robust iScored UI Engine:** Implemented `waitForBusyModal` and direct JavaScript execution (`evaluate`) for more reliable browser automation.
+*   **Advanced Cleanup Logic:** Automated the removal of old locked or stray visible games while protecting active tournaments.
+*   **Automated Naming & Suffixes:** `createGame` automatically appends tournament suffixes (e.g., " DG") for consistency.
+*   **Enhanced Persistent Logging:** Refactored all maintenance and automation steps to log to `data/bot.log`.
+*   **Confirmation UI:** Added interactive confirmation steps for score submissions and table picking.
+*   **Dynasty Rule Enforcement:** Prevents consecutive wins from granting picking rights to the same player.

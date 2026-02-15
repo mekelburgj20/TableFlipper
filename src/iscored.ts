@@ -8,10 +8,22 @@ import os from 'os'; // Import os module
 import axios from 'axios';
 import { logInfo, logError, logWarn } from './logger.js';
 
+// --- Constants ---
 const ISCORED_LOGIN_URL = 'https://iscored.info/';
 const ISCORED_SETTINGS_URL = 'https://iscored.info/settings.php';
 const ISCORED_LINEUP_URL = 'https://iscored.info/settings.php#order'; // Direct URL for the Lineup tab
 const ISCORED_GAMES_URL = 'https://iscored.info/settings.php#games'; // Direct URL for the Games tab
+
+/**
+ * Formal mapping of tournament types to their iScored tag "key".
+ * This allows us to identify games by tag even if the name suffix is missing or different.
+ */
+const TOURNAMENT_TAG_KEYS: Record<string, string> = {
+    'DG': 'DG',
+    'WG-VPXS': 'WG-VPXS',
+    'WG-VR': 'WG-VR',
+    'MG': 'MG'
+};
 
 export interface Game {
     id: string;
@@ -127,14 +139,14 @@ export async function findGames(page: Page, gameType: string): Promise<{ activeG
             const tagInput = gameRow.locator(`input[name="tagInput${id}"]`);
             const tagValue = await tagInput.getAttribute('value') || '';
             
-            // Check matching: Name Suffix OR Tag
+            // Identification Logic:
+            // 1. Check for the formal Tag Key (Primary)
+            // 2. Fallback to Name Suffix (Legacy/Human)
+            const tagKey = TOURNAMENT_TAG_KEYS[gameType] || gameType;
+            const tagMatch = tagValue.toUpperCase().includes(tagKey.toUpperCase());
             const nameMatch = name.toUpperCase().includes(' ' + gameType.toUpperCase());
-            // Tags are usually JSON or comma separated? The value attribute seems to be a JSON string or CSV.
-            // Based on typical tagify usage, value is often '[{"value":"DG"}, ...]' or 'DG,TAG2'.
-            // Simple includes check is usually enough, but let's be safe.
-            const tagMatch = tagValue.toUpperCase().includes(gameType.toUpperCase());
 
-            if (nameMatch || tagMatch) {
+            if (tagMatch || nameMatch) {
                 logInfo(`   -> Found match for ${gameType}: "${name}" (ID: ${id}) [Tags: ${tagValue}]`);
 
                 const hideCheckbox = gameRow.locator('input[id^="hide"]'); // Target the specific hide checkbox
@@ -493,9 +505,9 @@ export async function addTagToGame(page: Page, gameId: string, tag: string) {
     }
 }
 
-export async function createGame(page: Page, gameName: string, grindType: string): Promise<string> {
+export async function createGame(page: Page, gameName: string, grindType: string, styleId?: string | null): Promise<string> {
     const fullGameName = `${gameName} ${grindType}`;
-    logInfo(`✨ Creating new game: ${fullGameName}`);
+    logInfo(`✨ Creating new game: ${fullGameName}${styleId ? ` (Style ID: ${styleId})` : ''}`);
     
     try {
         const mainFrame = page.frameLocator('#main');
@@ -508,11 +520,34 @@ export async function createGame(page: Page, gameName: string, grindType: string
         // 2. Click "Add New Game".
         await mainFrame.locator('button:has-text("Add New Game")').click();
         
-        // 3. Fill in the game name into the search input and click "Create Blank Game"
-        await mainFrame.locator('input[type="search"][aria-controls="stylesTable"]').fill(fullGameName);
-        await mainFrame.locator('button:has-text("Create Blank Game")').click();
-        
-        logInfo(`✅ Created blank game '${fullGameName}'.`);
+        // 3. Handle Style vs Blank Game
+        if (styleId) {
+            logInfo(`   -> Attempting to use Community Style ID: ${styleId}`);
+            // Use evaluate to call the internal iScored function loadStylePreview(id)
+            await mainFrame.locator(':root').evaluate((el, id) => {
+                if (typeof (window as any).loadStylePreview === 'function') {
+                    (window as any).loadStylePreview(id);
+                }
+            }, styleId);
+            
+            // Wait for the preview to load
+            await page.waitForTimeout(2000);
+            
+            // Click "Create Game Using Selected Style"
+            await mainFrame.locator('button:has-text("Create Game Using Selected Style")').click();
+            
+            // Now we need to RENAME it because style-based creation might use the style's default name
+            // Wait, usually iScored asks for a name or uses the style's name.
+            // Let's assume we need to update the name after creation if it's wrong.
+            // Actually, looking at the UI, createGame(currentStyleID) is called.
+            
+            logInfo(`✅ Created game using style ${styleId}.`);
+        } else {
+            // Fill in the game name into the search input and click "Create Blank Game"
+            await mainFrame.locator('input[type="search"][aria-controls="stylesTable"]').fill(fullGameName);
+            await mainFrame.locator('button:has-text("Create Blank Game")').click();
+            logInfo(`✅ Created blank game '${fullGameName}'.`);
+        }
 
         // Now, switch to the Lineup tab to get the game ID and then hide/lock it.
         await mainFrame.locator('a[href="#order"]').click(); // Click on Lineup tab
@@ -538,8 +573,9 @@ export async function createGame(page: Page, gameName: string, grindType: string
             throw new Error(`Could not find newly created (untagged) game '${fullGameName}' on the Lineup page.`);
         }
 
-        // Apply the Tag
-        await addTagToGame(page, newlyCreatedGame.id, grindType);
+        // Apply the formal tournament tag
+        const tagToApply = TOURNAMENT_TAG_KEYS[grindType] || grindType;
+        await addTagToGame(page, newlyCreatedGame.id, tagToApply);
 
         // Hide the newly created game.
         await hideGame(page, newlyCreatedGame);

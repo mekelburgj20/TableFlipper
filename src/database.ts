@@ -96,7 +96,8 @@ export async function initializeDatabase() {
                 aliases TEXT,
                 is_atgames INTEGER DEFAULT 0,
                 is_wg_vr INTEGER DEFAULT 0,
-                is_wg_vpxs INTEGER DEFAULT 0
+                is_wg_vpxs INTEGER DEFAULT 0,
+                style_id TEXT
             );
         `);
         console.log('✅ Database tables initialized successfully.');
@@ -116,20 +117,22 @@ export interface TableRow {
     is_atgames: number; // 0 or 1
     is_wg_vr: number; // 0 or 1
     is_wg_vpxs: number; // 0 or 1
+    style_id?: string | null;
 }
 
 export async function upsertTable(table: TableRow): Promise<void> {
     const db = await openDb();
     try {
         await db.run(
-            `INSERT INTO tables (name, aliases, is_atgames, is_wg_vr, is_wg_vpxs)
-             VALUES (?, ?, ?, ?, ?)
+            `INSERT INTO tables (name, aliases, is_atgames, is_wg_vr, is_wg_vpxs, style_id)
+             VALUES (?, ?, ?, ?, ?, ?)
              ON CONFLICT(name) DO UPDATE SET
                 is_atgames = excluded.is_atgames,
                 is_wg_vr = excluded.is_wg_vr,
                 is_wg_vpxs = excluded.is_wg_vpxs,
-                aliases = COALESCE(excluded.aliases, tables.aliases)`,
-            table.name, table.aliases, table.is_atgames, table.is_wg_vr, table.is_wg_vpxs
+                aliases = COALESCE(excluded.aliases, tables.aliases),
+                style_id = COALESCE(excluded.style_id, tables.style_id)`,
+            table.name, table.aliases, table.is_atgames, table.is_wg_vr, table.is_wg_vpxs, table.style_id
         );
     } finally {
         await db.close();

@@ -250,12 +250,17 @@ export function startDiscordBot() {
             let browser: Browser | null = null;
             try {
                 logInfo(`🚀 Handling /picktable for ${gameType} with table: ${tableName}`);
+                
+                // Fetch styleId if available
+                const tableData = await getTable(tableName!);
+                const styleId = tableData?.style_id;
+
                 const { browser: newBrowser, page } = await loginToIScored();
                 browser = newBrowser;
                 
                 // This function now creates the game and returns the iScored ID
                 // We pass the grind-type as the second argument to be added as a Tag
-                const iscoredGameId = await createGame(page, newGameName, gameType); 
+                const iscoredGameId = await createGame(page, newGameName, gameType, styleId); 
                 
                 // 5. Update the game entry in our database
                 await updateQueuedGame(nextGame.id, tableName!, iscoredGameId);
@@ -478,12 +483,17 @@ export function startDiscordBot() {
             let browser: Browser | null = null;
             try {
                 logInfo(`🚀 Manual Override: Creating/Finding special game '${fullGameName}'...`);
+                
+                // Fetch styleId if available
+                const tableData = await getTable(fullGameName);
+                const styleId = tableData?.style_id;
+
                 const { browser: newBrowser, page } = await loginToIScored();
                 browser = newBrowser;
                 
                 // Create (or find) the game and get its ID
                 // Apply 'DG' tag
-                const iscoredGameId = await createGame(page, fullGameName, 'DG');
+                const iscoredGameId = await createGame(page, fullGameName, 'DG', styleId);
                 
                 // 3. Inject into Database
                 await injectSpecialGame('DG', fullGameName, iscoredGameId);

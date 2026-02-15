@@ -14,6 +14,7 @@ interface SheetItem {
     'wg-vpxs'?: string;
     'atgames'?: string;
     'aliases'?: string;
+    'style_id'?: string;
 }
 
 function parseBoolean(value: string | undefined): number {
@@ -82,7 +83,8 @@ export async function syncTablesFromSheet(gid: string): Promise<void> {
                 aliases: item['aliases'] || null,
                 is_atgames: parseBoolean(item['atgames']),
                 is_wg_vr: parseBoolean(item['wg-vr']),
-                is_wg_vpxs: parseBoolean(item['wg-vpxs'])
+                is_wg_vpxs: parseBoolean(item['wg-vpxs']),
+                style_id: item['style_id'] ? item['style_id'].toString() : null
             };
             
             await upsertTable(tableRow);
