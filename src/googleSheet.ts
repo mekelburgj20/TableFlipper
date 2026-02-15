@@ -1,5 +1,5 @@
 import PublicGoogleSheetsParser from 'public-google-sheets-parser';
-import { upsertTable, TableRow } from './database.js';
+import { upsertTable, TableRow, getTable } from './database.js';
 
 /**
  * Fetches a list of tables from the configured Google Sheet.
@@ -78,13 +78,24 @@ export async function syncTablesFromSheet(gid: string): Promise<void> {
             const tableName = item['Table Name'];
             if (!tableName) continue;
 
+            const existingTable = await getTable(tableName);
+
             const tableRow: TableRow = {
                 name: tableName,
                 aliases: item['aliases'] || null,
                 is_atgames: parseBoolean(item['atgames']),
                 is_wg_vr: parseBoolean(item['wg-vr']),
                 is_wg_vpxs: parseBoolean(item['wg-vpxs']),
-                style_id: item['style_id'] ? item['style_id'].toString() : null
+                // Only overwrite style_id if it's in the sheet, otherwise keep existing/learned one
+                style_id: item['style_id'] ? item['style_id'].toString() : (existingTable?.style_id || null),
+                // Preserve other learned styles if they already exist
+                css_title: existingTable?.css_title || null,
+                css_initials: existingTable?.css_initials || null,
+                css_scores: existingTable?.css_scores || null,
+                css_box: existingTable?.css_box || null,
+                bg_color: existingTable?.bg_color || null,
+                score_type: existingTable?.score_type || null,
+                sort_ascending: existingTable?.sort_ascending || 0
             };
             
             await upsertTable(tableRow);

@@ -1,5 +1,5 @@
 import 'dotenv/config';
-import { runMaintenanceForGameType, triggerAllMaintenanceRoutines, runCleanupForGameType } from './maintenance.js';
+import { runMaintenanceForGameType, triggerAllMaintenanceRoutines, runCleanupForGameType, syncAllActiveStyles } from './maintenance.js';
 import { startDiscordBot } from './discordBot.js';
 import { loadUserMapping } from './userMapping.js';
 import { initializeDatabase } from './database.js';
@@ -42,11 +42,14 @@ async function main() {
         startDiscordBot();
 
         // Schedule the Daily Grind maintenance to run at 12:00 AM Central Time
-        cron.schedule('0 0 * * *', () => {
-            logInfo('⏰ Kicking off scheduled maintenance for DG...');
-            runMaintenanceForGameType('DG').catch((error: any) => {
-                logError('🚨 DG maintenance task failed:', error);
-            });
+        cron.schedule('0 0 * * *', async () => {
+            logInfo('⏰ Kicking off scheduled maintenance for DG + Global Style Sync...');
+            try {
+                await syncAllActiveStyles(); // Learned styles for all active tables
+                await runMaintenanceForGameType('DG');
+            } catch (error) {
+                logError('🚨 Daily maintenance task failed:', error);
+            }
         }, {
             scheduled: true,
             timezone: "America/Chicago"

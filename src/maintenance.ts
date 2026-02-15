@@ -115,6 +115,36 @@ export async function runCleanupForGameType(gameType: string) {
     }
 }
 
+export async function syncAllActiveStyles() {
+    logInfo('🎨 Starting automated style sync for all active tournament tables...');
+    let browser: Browser | null = null;
+    try {
+        const { browser: b, page } = await loginToIScored();
+        browser = b;
+
+        for (const type of ALL_GAME_TYPES) {
+            const activeGame = await getActiveGame(type);
+            if (activeGame && activeGame.iscored_game_id) {
+                const cleanName = activeGame.name.replace(/ (DG|WG-VPXS|WG-VR|MG)$/, '');
+                logInfo(`   -> Syncing style for ${type}: ${cleanName}`);
+                const capturedStyle = await syncStyleFromIScored(page, cleanName, activeGame.iscored_game_id);
+                
+                if (Object.keys(capturedStyle).length > 0) {
+                    const table = await getTable(cleanName);
+                    if (table) {
+                        await upsertTable({ ...table, ...capturedStyle });
+                        logInfo(`   ✅ Successfully learned style for '${cleanName}'.`);
+                    }
+                }
+            }
+        }
+    } catch (error) {
+        logError('❌ Error during syncAllActiveStyles:', error);
+    } finally {
+        if (browser) await browser.close();
+    }
+}
+
 export async function runMaintenanceForGameType(gameType: string) {
     logInfo(`Running database-driven maintenance routine for ${gameType}...`);
     let browser: Browser | null = null;
@@ -131,16 +161,6 @@ export async function runMaintenanceForGameType(gameType: string) {
         if (activeGame) {
             logInfo(`Found active game in DB: ${activeGame.name} (ID: ${activeGame.iscored_game_id})`);
             
-            // 0. Sync style details for future use (Legacy name fallback supported)
-            const cleanName = activeGame.name.replace(/ (DG|WG-VPXS|WG-VR|MG)$/, '');
-            const capturedStyle = await syncStyleFromIScored(page, cleanName, activeGame.iscored_game_id);
-            if (Object.keys(capturedStyle).length > 0) {
-                const table = await getTable(cleanName);
-                if (table) {
-                    await upsertTable({ ...table, ...capturedStyle });
-                }
-            }
-
             // 1. Get winner from iScored (using scraper via existing page to handle Tags/ID correctly)
             const { winner, score } = await getWinnerAndScoreFromPage(page, activeGame.iscored_game_id, activeGame.name);
 
