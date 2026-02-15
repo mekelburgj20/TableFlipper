@@ -454,7 +454,17 @@ export async function navigateToLineupPage(page: Page) {
             logInfo(`   -> Clicked Lineup tab (Attempt ${i+1}). Waiting for list...`);
             
             try {
-                await list.waitFor({ state: 'visible', timeout: 10000 });
+                await list.waitFor({ state: 'attached', timeout: 10000 });
+                
+                // FORCE visibility via JS to bypass iScored's transition lag
+                await list.evaluate((el) => {
+                    (el as HTMLElement).style.display = 'block';
+                    (el as HTMLElement).style.visibility = 'visible';
+                    (el as HTMLElement).style.opacity = '1';
+                });
+
+                await list.waitFor({ state: 'visible', timeout: 5000 });
+                
                 // Additional check to ensure it has children
                 const count = await list.locator('li').count();
                 if (count > 0) {
@@ -497,7 +507,7 @@ export async function addTagToGame(page: Page, gameId: string, tag: string) {
         logInfo(`   -> Tag input visible: ${isVisible}`);
 
         if (isVisible) {
-            await tagifyInput.click();
+            await tagifyInput.click({ force: true });
             await page.keyboard.type(tag);
             await page.keyboard.press('Enter');
             
