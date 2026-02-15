@@ -4,7 +4,7 @@ import { getWinnerAndScoreFromPage, getStandingsFromPage } from './api.js';
 import { checkWinnerHistory, updateWinnerHistory } from './history.js';
 import { sendDiscordNotification } from './discord.js';
 import { getDiscordIdByIscoredName } from './userMapping.js';
-import { getActiveGame, getNextQueuedGame, updateGameStatus, setPicker, createGameEntry, GameRow, hasScores, saveScores, getGameByIscoredId } from './database.js';
+import { getActiveGame, getNextQueuedGame, updateGameStatus, setPicker, createGameEntry, GameRow, hasScores, saveScores, getGameByIscoredId, syncCompletedGame } from './database.js';
 import { logInfo, logError, logWarn } from './logger.js';
 
 const ALL_GAME_TYPES = ['DG', 'WG-VPXS', 'WG-VR', 'MG'];
@@ -23,23 +23,27 @@ export async function triggerAllMaintenanceRoutines() {
 }
 
 async function cleanupOldGames(page: Page, gameType: string) {
-    logInfo(`🧹 Running cleanup for old ${gameType} games...`);
+    logInfo(`🧹 Running cleanup sweep for old ${gameType} games...`);
     try {
         // Navigate to Lineup page to find games
         await navigateToLineupPage(page);
         
-        const { activeGames } = await findGames(page, gameType);
+        const { completedGames } = await findGames(page, gameType);
         
-        // Filter for games that are SHOWN (activeGames list) but LOCKED
-        const lockedVisibleGames = activeGames.filter(g => g.isLocked);
-        
-        logInfo(`   -> Found ${lockedVisibleGames.length} visible locked games to clean up.`);
+        logInfo(`   -> Found ${completedGames.length} visible locked games to clean up.`);
 
-        for (const game of lockedVisibleGames) {
+        for (const game of completedGames) {
             logInfo(`   Processing cleanup for '${game.name}' (ID: ${game.id})...`);
             
             // Check if we have this game in DB
             let dbGame = await getGameByIscoredId(game.id);
+            
+            // If the game isn't in our DB, we should create a record for it so we can track and delete it.
+            if (!dbGame) {
+                logInfo(`   -> Game not found in local DB. Importing as COMPLETED to allow cleanup.`);
+                await syncCompletedGame(gameType, game.id, game.name);
+                dbGame = await getGameByIscoredId(game.id);
+            }
             
             if (dbGame) {
                 // Check if scores are saved
@@ -72,7 +76,7 @@ async function cleanupOldGames(page: Page, gameType: string) {
                 await navigateToLineupPage(page);
 
             } else {
-                logWarn(`⚠️ Game '${game.name}' (ID: ${game.id}) found on iScored but not in DB. Skipping deletion for safety.`);
+                logError(`❌ Failed to acquire DB record for '${game.name}' (ID: ${game.id}) even after sync. Skipping.`);
             }
         }
         
