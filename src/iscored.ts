@@ -98,8 +98,8 @@ export async function loginToIScored(): Promise<{ browser: Browser, page: Page }
     }
 }
 
-export async function findGames(page: Page, gameType: string): Promise<{ activeGames: Game[], nextGames: Game[] }> {
-    logInfo(`🔎 Finding active and next '${gameType}' games on the Settings -> Lineup page...`);
+export async function findGames(page: Page, gameType: string): Promise<{ activeGames: Game[], nextGames: Game[], completedGames: Game[] }> {
+    logInfo(`🔎 Finding active, next, and completed '${gameType}' games on the Settings -> Lineup page...`);
 
     try {
         const mainFrame = page.frameLocator('#main');
@@ -112,6 +112,7 @@ export async function findGames(page: Page, gameType: string): Promise<{ activeG
 
         let activeGames: Game[] = [];
         let nextGames: Game[] = [];
+        let completedGames: Game[] = [];
 
         for (const gameRow of gameElements) {
             const nameElement = gameRow.locator('span.dragHandle');
@@ -144,10 +145,12 @@ export async function findGames(page: Page, gameType: string): Promise<{ activeG
 
                 const game: Game = { id, name, isHidden, isLocked }; 
 
-                if (!isHidden) {
-                    activeGames.push(game);
-                } else {
+                if (isHidden) {
                     nextGames.push(game);
+                } else if (!isHidden && !isLocked) {
+                    activeGames.push(game);
+                } else if (!isHidden && isLocked) {
+                    completedGames.push(game);
                 }
             }
         }
@@ -166,7 +169,12 @@ export async function findGames(page: Page, gameType: string): Promise<{ activeG
             logInfo(`⚠️ Could not find any next (hidden) ${gameType} game(s).`);
         }
 
-        return { activeGames, nextGames };
+        if (completedGames.length > 0) {
+            logInfo(`✅ Found ${completedGames.length} completed (shown+locked) ${gameType} game(s):`);
+            completedGames.forEach(g => logInfo(`   - ${g.name} (ID: ${g.id})`));
+        }
+
+        return { activeGames, nextGames, completedGames };
 
     } catch (error) {
         logError('❌ Failed to find games on the Lineup page.');

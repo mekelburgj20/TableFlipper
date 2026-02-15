@@ -358,6 +358,30 @@ export async function syncQueuedGame(gameType: string, iscoredGameId: string, ga
     }
 }
 
+export async function syncCompletedGame(gameType: string, iscoredGameId: string, gameName: string): Promise<void> {
+    const db = await openDb();
+    try {
+        const existingGame = await db.get<GameRow>("SELECT * FROM games WHERE iscored_game_id = ?", iscoredGameId);
+
+        if (existingGame) {
+            if (existingGame.status !== 'COMPLETED') {
+                await db.run("UPDATE games SET status = 'COMPLETED', completed_at = ? WHERE id = ?", new Date().toISOString(), existingGame.id);
+                console.log(`🔄 Synced DB: Set existing game '${gameName}' to COMPLETED.`);
+            }
+        } else {
+            const newId = uuidv4();
+            await db.run(
+                `INSERT INTO games (id, iscored_game_id, name, type, status, created_at, completed_at)
+                 VALUES (?, ?, ?, ?, 'COMPLETED', ?, ?)`,
+                newId, iscoredGameId, gameName, gameType, new Date().toISOString(), new Date().toISOString()
+            );
+            console.log(`🔄 Synced DB: Created new COMPLETED entry for '${gameName}'.`);
+        }
+    } finally {
+        await db.close();
+    }
+}
+
 // --- Game Table Functions ---
 
 export async function createGameEntry(game: Omit<GameRow, 'id' | 'created_at' | 'status' | 'name' | 'iscored_game_id'> & { name?: string, iscored_game_id?: string }): Promise<GameRow> {
