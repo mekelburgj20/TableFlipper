@@ -93,14 +93,15 @@ const commands = [
     },
     {
         name: 'trigger-cleanup',
-        description: 'Manually triggers the cleanup routine (delete old locked games) for a specific tournament.',
+        description: 'Manually triggers the cleanup routine (delete old locked games) for tournaments.',
         options: [
             {
                 name: 'grind-type',
                 type: 3, // STRING
-                description: 'The tournament to cleanup.',
-                required: true,
+                description: 'The tournament to cleanup (leave blank for all).',
+                required: false,
                 choices: [
+                    { name: 'All Tournaments', value: 'ALL' },
                     { name: 'Daily Grind (DG)', value: 'DG' },
                     { name: 'Weekly Grind VPXS (WG-VPXS)', value: 'WG-VPXS' },
                     { name: 'Weekly Grind VR (WG-VR)', value: 'WG-VR' },

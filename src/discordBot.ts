@@ -418,7 +418,7 @@ export function startDiscordBot() {
         }
 
         else if (commandName === 'trigger-cleanup') {
-            const gameType = interaction.options.getString('grind-type', true);
+            const gameType = interaction.options.getString('grind-type') ?? 'ALL';
             await interaction.deferReply({ ephemeral: true });
             
             const modRoleId = process.env.MOD_ROLE_ID;
@@ -433,8 +433,17 @@ export function startDiscordBot() {
             }
 
             try {
-                await runCleanupForGameType(gameType);
-                await interaction.editReply(`Cleanup routine for **${gameType}** has been manually triggered and completed.`);
+                if (gameType === 'ALL') {
+                    const types = ['DG', 'WG-VPXS', 'WG-VR', 'MG'];
+                    for (const type of types) {
+                        logInfo(`🚀 Manually triggering cleanup for ${type}...`);
+                        await runCleanupForGameType(type);
+                    }
+                    await interaction.editReply(`Cleanup routine for **all tournaments** has been manually triggered and completed.`);
+                } else {
+                    await runCleanupForGameType(gameType);
+                    await interaction.editReply(`Cleanup routine for **${gameType}** has been manually triggered and completed.`);
+                }
             } catch (error) {
                 logError(`❌ Error manually triggering cleanup for ${gameType}:`, error);
                 await interaction.editReply(`An error occurred while trying to manually trigger the cleanup routine for ${gameType}.`);

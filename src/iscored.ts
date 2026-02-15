@@ -727,6 +727,7 @@ export async function deleteGame(page: Page, gameName: string, gameId?: string):
             await selectGameDropdown.selectOption({ label: gameName });
             logInfo(`   -> Selected game name '${gameName}' in dropdown.`);
         }
+
         // 1. Manually dispatch change event
         await selectGameDropdown.dispatchEvent('change');
         
@@ -742,25 +743,23 @@ export async function deleteGame(page: Page, gameName: string, gameId?: string):
             logWarn('   -> Could not call editGame() directly.');
         }
 
-        logInfo(`   -> Selected '${gameName}' in dropdown.`);
+        // Give the page a moment to process the selection and update the DOM
+        await page.waitForTimeout(1000);
 
-        // Wait for the "Delete Game" button to appear (it's inside #gameCustomizations which becomes visible)
+        // Always force #gameCustomizations to be visible, as the automated triggers can be flaky
+        await mainFrame.locator('#gameCustomizations').evaluate((el) => {
+            el.style.display = 'block';
+            el.style.visibility = 'visible';
+            el.style.opacity = '1';
+        });
+
+        // Wait for the "Delete Game" button to appear
         const deleteButton = mainFrame.locator('#deleteSelectedGameButton');
-        
-        try {
-            await deleteButton.waitFor({ state: 'visible', timeout: 5000 });
-        } catch (e) {
-            logWarn('   -> Delete button not visible yet. Forcing #gameCustomizations to show...');
-            // 3. Fallback: Force the parent container to be visible
-            await mainFrame.locator('#gameCustomizations').evaluate((el) => {
-                el.style.display = 'block';
-            });
-            await deleteButton.waitFor({ state: 'visible', timeout: 5000 });
-        }
+        await deleteButton.waitFor({ state: 'visible', timeout: 5000 });
 
         // Click Delete Game to open the modal
         await waitForBusyModal(mainFrame);
-        await deleteButton.click();
+        await deleteButton.click({ force: true }); // Use force: true to bypass potential interception
         logInfo('   -> Clicked "Delete Game" button.');
 
         // Wait for the modal to appear
