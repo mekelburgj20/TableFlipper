@@ -28,11 +28,21 @@ async function cleanupOldGames(page: Page, gameType: string) {
         // Navigate to Lineup page to find games
         await navigateToLineupPage(page);
         
-        const { completedGames } = await findGames(page, gameType);
+        const { activeGames, completedGames } = await findGames(page, gameType);
+        const officialActiveGame = await getActiveGame(gameType);
         
-        logInfo(`   -> Found ${completedGames.length} visible locked games to clean up.`);
+        // Any game that is SHOWN (active or completed list) is a candidate
+        const visibleGames = [...activeGames, ...completedGames];
+        
+        logInfo(`   -> Found ${visibleGames.length} visible ${gameType} games to evaluate.`);
 
-        for (const game of completedGames) {
+        for (const game of visibleGames) {
+            // If this is the official active game in our DB, we MUST skip it.
+            if (officialActiveGame && game.id === officialActiveGame.iscored_game_id) {
+                logInfo(`   -> Skipping official active game: '${game.name}' (ID: ${game.id})`);
+                continue;
+            }
+
             logInfo(`   Processing cleanup for '${game.name}' (ID: ${game.id})...`);
             
             // Check if we have this game in DB
@@ -65,7 +75,7 @@ async function cleanupOldGames(page: Page, gameType: string) {
                 }
                 
                 // Mark as COMPLETED if not already
-                if (dbGame.status !== 'COMPLETED') {
+                if (dbGame.status !== 'COMPLETED' && (!officialActiveGame || dbGame.id !== officialActiveGame.id)) {
                     await updateGameStatus(dbGame.id, 'COMPLETED');
                 }
 

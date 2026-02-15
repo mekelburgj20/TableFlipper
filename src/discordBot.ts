@@ -435,11 +435,13 @@ export function startDiscordBot() {
             try {
                 if (gameType === 'ALL') {
                     const types = ['DG', 'WG-VPXS', 'WG-VR', 'MG'];
+                    let summary = 'Cleanup sweep triggered for:\n';
                     for (const type of types) {
                         logInfo(`🚀 Manually triggering cleanup for ${type}...`);
                         await runCleanupForGameType(type);
+                        summary += `✅ **${type}**\n`;
                     }
-                    await interaction.editReply(`Cleanup routine for **all tournaments** has been manually triggered and completed.`);
+                    await interaction.editReply(`**Cleanup Complete!**\n\n${summary}\nAll old locked or stray visible tables have been cleared from iScored.`);
                 } else {
                     await runCleanupForGameType(gameType);
                     await interaction.editReply(`Cleanup routine for **${gameType}** has been manually triggered and completed.`);
