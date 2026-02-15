@@ -523,6 +523,10 @@ export async function createGame(page: Page, gameName: string, grindType: string
         // 3. Handle Style vs Blank Game
         if (styleId) {
             logInfo(`   -> Attempting to use Community Style ID: ${styleId}`);
+            
+            // Fill the name first so iScored knows what to call it
+            await mainFrame.locator('input[type="search"][aria-controls="stylesTable"]').fill(fullGameName);
+
             // Use evaluate to call the internal iScored function loadStylePreview(id)
             await mainFrame.locator(':root').evaluate((el, id) => {
                 if (typeof (window as any).loadStylePreview === 'function') {
