@@ -31,6 +31,7 @@ async function testRepositionDom() {
             logInfo(`🚀 Physically moving "${lastGame.name}" (ID: ${lastGame.id}) to the top of the list...`);
 
             const result = await mainFrame.locator(':root').evaluate((el, targetId) => {
+                if (!targetId) return { success: false, error: 'targetId is null' };
                 const lineupUl = document.getElementById('orderGameUL');
                 const targetLi = document.getElementById(targetId);
                 const saveFn = (window as any).saveSetting;
