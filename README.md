@@ -8,6 +8,7 @@ TableFlipper is a Node.js Discord bot designed to automate and manage pinball to
 
 *   **Automated Tournament Management:**
     *   **Multi-Format Support:** Manages Daily Grind (`DG`), Weekly Grinds (`WG-VPXS`, `WG-VR`), and Monthly Grind (`MG`) tournaments.
+    *   **Channel-Specific Announcements:** Supports dedicated Discord webhooks for each tournament type, allowing winners and status updates to be routed to specific channels (e.g., `#daily-grind`, `#monthly-grind`) with a general fallback.
     *   **Lineup Repositioning:** Automatically reorders games on the iScored scoreboard so that active grinds are always farthest left (top of the list), followed by chronological history. Uses physical DOM manipulation for maximum reliability. Configurable via `.env`.
     *   **Scheduled Maintenance:** Automatically and reliably locks completed games, accurately determines winners, unlocks new games, and sends Discord announcements based on predefined schedules (Daily at 12 AM Central, Weekly on Wednesdays, Monthly on the 1st).
     *   **Delayed Cleanup:** Daily and Weekly tables remain visible (locked) until Wednesday night at 11 PM Central, allowing players to view the week's history.
@@ -90,6 +91,8 @@ The bot maintains detailed logs in `data/bot.log`. Check this file for troublesh
 ## 6. Release Notes
 
 ### v1.1.0 (Current)
+*   **Multi-Channel Webhooks:** Implemented support for tournament-specific Discord webhooks (`DISCORD_WEBHOOK_URL_DG`, etc.), enabling targeted announcements for different grind types.
+*   **Dynamic Notification Headers:** Refactored Discord announcements to dynamically identify the tournament type in the message header (e.g., "The Monthly Grind is Closed!").
 *   **Lineup Repositioning (DOM-based):** Added automated reordering of tournament games using physical DOM injection. The active Daily Grind is now always pushed to the farthest left position on the scoreboard, with historical grinds following in chronological order.
 *   **Style Learning & Sync:** The bot now automatically "learns" your manual styling changes (CSS, fonts, backgrounds) from active games every night and reapplies them to future rotations.
 *   **Tag-Based Identification:** Transitioned to using iScored tags as the primary "key" for tournament games. Mandatory name suffixes (e.g., " DG") are no longer required for new games.

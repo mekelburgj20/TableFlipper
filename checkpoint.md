@@ -1,18 +1,19 @@
 <!-- AI HANDOVER PROMPT -->
 **Project Status:** 
-"TableFlipper" is a fully functional Discord bot for managing pinball tournaments. The codebase is on the `feature/tasks-update` branch, featuring robust iScored automation and state-of-the-art cleanup logic.
+"TableFlipper" is a fully functional Discord bot for managing pinball tournaments. The codebase features robust iScored automation, state-of-the-art cleanup logic, and multi-channel notification support.
 
 **Recent Work:**
-1.  **Cleanup Overhaul:** Implemented a reliable cleanup sweep that deletes old locked tables while preserving active games. Combined into a single `/trigger-cleanup` command.
-2.  **Robust Automation:** Rewrote iScored UI interactions to use direct JavaScript execution (`evaluate`) and `busyModal` detection, significantly improving stability during SPA transitions.
-3.  **Automated Suffixes:** `createGame` now automatically appends tournament suffixes (e.g., " DG") to game names on iScored.
-4.  **State Management:** Enhanced `sync-state` and cleanup logic to automatically handle manually created or untracked games by importing them as `COMPLETED` records.
-5.  **Logging:** Consolidated all maintenance and automation logs into the persistent `data/bot.log` file.
+1.  **Multi-Channel Webhooks:** Implemented support for tournament-specific Discord webhooks (`DISCORD_WEBHOOK_URL_DG`, etc.) in `src/discord.ts`, allowing announcements to be routed to dedicated channels.
+2.  **Dynamic Notification Headers:** Updated `src/discord.ts` and `src/maintenance.ts` to use dynamic message headers based on the tournament type (e.g., "The Monthly Grind is Closed!").
+3.  **Timeout Notification Routing:** Updated `src/timeout.ts` to ensure picker timeout announcements are also correctly routed to tournament-specific channels.
+4.  **Emoji Cleanliness:** Verified and enforced project standards regarding the removal of emojis from user-facing Discord messages.
+5.  **Cleanup Overhaul:** Implemented a reliable cleanup sweep that deletes old locked tables while preserving active games. Combined into a single `/trigger-cleanup` command.
 
 **Current Context:**
 *   The bot handles DG, WG, and MG cycles autonomously.
 *   Cleanup is scheduled for Wednesdays at 11 PM Central.
 *   Database schema is mature and synchronized.
+*   Multi-channel routing is fully operational and tested.
 
 **Next Actions:**
 1.  **Community Styles:** Investigate applying styles to games via the DB.
@@ -20,36 +21,35 @@
 3.  **VPXS API:** Integrate the Virtual Pinball Spreadsheet API for expanded table lists.
 
 **Files to Watch:**
+*   `src/discord.ts` (Webhook routing & message formatting)
+*   `src/maintenance.ts` (Maintenance logic)
+*   `src/timeout.ts` (Picker timeout handling)
 *   `src/iscored.ts` (Core automation)
-*   `src/maintenance.ts` (Maintenance & Cleanup logic)
-*   `src/discordBot.ts` (Interaction handling)
 <!-- END PROMPT -->
 
-# Checkpoint for TableFlipper Project (Update 4)
+# Checkpoint for TableFlipper Project (Update 5)
 
-**Date:** February 15, 2026
+**Date:** February 16, 2026
 
-## Project Summary: Advanced Automation & Reliable Cleanup Sweep
+## Project Summary: Multi-Channel Routing & UI Polish
 
-This update represents a major stabilization of the bot's core automation engine. It addresses timing issues inherent in Single Page Applications (SPA) and implements a sophisticated, safe cleanup routine for tournament history.
+This update introduces intelligent notification routing and refines the user-facing Discord experience. It addresses the need for dedicated tournament channels and ensures that announcements are accurately labeled and formatted.
 
 ### Key Changes Implemented:
 
-#### 1. Robust iScored UI Engine
-*   **Bypassing UI Interception:** Implemented `waitForBusyModal` to detect and wait for iScored's "Processing..." overlay, preventing click failures during transitions.
-*   **Direct Execution:** Switched critical actions (like clicking "Delete" or "Confirm") from Playwright's `click()` to direct JavaScript `evaluate(() => el.click())`. This ensures actions are performed even if the UI is slow to respond or covered by transparent elements.
-*   **Dropdown Resilience:** Rewrote game selection to use internal iScored IDs rather than names, providing 100% accurate targeting in the dropdown menus.
+#### 1. Multi-Channel Webhook System
+*   **Targeted Routing:** Implemented a granular webhook selection system in `src/discord.ts`. The bot now looks for environment variables like `DISCORD_WEBHOOK_URL_DG`, `DISCORD_WEBHOOK_URL_MG`, etc., to route messages to the correct Discord channels.
+*   **Robust Fallback:** Maintained `DISCORD_WEBHOOK_URL` as a global fallback for any tournament type without a dedicated URL, ensuring no messages are lost.
+*   **Comprehensive Coverage:** Updated both standard maintenance routines and automatic picker timeout handlers to use the new routing logic.
 
-#### 2. Advanced Cleanup & Rotation Logic
-*   **Delayed Deletion:** Refined the logic so Daily and Weekly tables remain visible (but locked) until a separate reset event on Wednesday night (11 PM Central).
-*   **Consolidated Cleanup:** Added a new `/trigger-cleanup` command that moderator can use to sweep any or all tournament types.
-*   **Intelligent Sweep:** The cleanup routine now cross-references every visible game against the DB's `ACTIVE` record. It intelligently deletes stray games or old completed ones while protecting the current tournament.
-*   **Auto-Import Fallback:** If the bot finds a game on iScored that isn't in its DB, it now automatically imports it as a `COMPLETED` record so it can be cleaned up safely.
+#### 2. Dynamic Notification & UI Polish
+*   **Accurate Headers:** Message headers are no longer hardcoded as "Daily Grind". They now dynamically reflect the tournament type (e.g., "The Weekly Grind (VPXS) is Closed!").
+*   **Emoji Standard Enforcement:** Conducted a sweep of user-facing strings to remove emojis, aligning with project visual standards. Internal logs maintain their emojis for developer readability.
+*   **Verification Tooling:** Updated `src/tests/verify-tasks.ts` to automatically check for forbidden emojis in user-facing code while ignoring developer logs.
 
-#### 3. UX & Consistency Polish
-*   **Automated Naming:** The bot now automatically appends the correct suffix (e.g., " DG") to game names during creation, ensuring consistency across manual and random picks.
-*   **Enhanced Logging:** Refactored the entire automation and maintenance suite to use a persistent file logger (`data/bot.log`), providing a detailed audit trail for every browser step.
-*   **Interaction Refinement:** Updated `/trigger-cleanup` to provide a summary of all swept tournaments in Discord.
+#### 3. Maintenance Logic Stability
+*   **Tournament Identification:** Verified that the system correctly distinguishes between different tournament types (DG vs MG) even when game names are similar, relying on iScored tags as the primary key.
+*   **State Consistency:** Confirmed that the database accurately reflects active and completed games across all tournament formats.
 
 ## Final Status
-The bot is now highly resilient to website lag and navigation flakiness. The cleanup process is safe, thorough, and can be manually overridden. State synchronization between the site and the database is now handled automatically during the cleanup sweep.
+The bot now supports a professional, multi-channel Discord setup. Notifications are accurately routed and labeled, and the codebase adheres to strict UI standards. The core automation and maintenance cycles are stable and verified.

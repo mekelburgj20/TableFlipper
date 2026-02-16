@@ -242,6 +242,7 @@ export async function runMaintenanceForGameType(gameType: string) {
                 score,
                 activeGame: activeGame.name,
                 nextGame: nextGame?.name ?? 'None',
+                gameType,
                 isRepeatWinner,
             });
             logInfo(`This cycle's winner for ${gameType} is ${winner} with a score of ${score}. Announcement sent.`);

@@ -4,6 +4,7 @@ interface NotificationParams {
     score: string;
     activeGame: string;
     nextGame: string;
+    gameType: string;
     isRepeatWinner: boolean;
     customMessage?: string;
 }
@@ -14,7 +15,19 @@ interface NotificationParams {
  */
 export async function sendDiscordNotification(params: NotificationParams) {
     console.log('📢 Sending Discord notification...');
-    const webhookUrl = process.env.DISCORD_WEBHOOK_URL;
+    
+    // Determine which webhook to use based on gameType
+    let webhookUrl = process.env.DISCORD_WEBHOOK_URL; // Default fallback
+
+    if (params.gameType === 'DG' && process.env.DISCORD_WEBHOOK_URL_DG) {
+        webhookUrl = process.env.DISCORD_WEBHOOK_URL_DG;
+    } else if (params.gameType === 'WG-VPXS' && process.env.DISCORD_WEBHOOK_URL_WG_VPXS) {
+        webhookUrl = process.env.DISCORD_WEBHOOK_URL_WG_VPXS;
+    } else if (params.gameType === 'WG-VR' && process.env.DISCORD_WEBHOOK_URL_WG_VR) {
+        webhookUrl = process.env.DISCORD_WEBHOOK_URL_WG_VR;
+    } else if (params.gameType === 'MG' && process.env.DISCORD_WEBHOOK_URL_MG) {
+        webhookUrl = process.env.DISCORD_WEBHOOK_URL_MG;
+    }
 
     if (!webhookUrl || webhookUrl === 'your_discord_webhook_url') {
         console.error('⚠️ Discord webhook URL not configured. Skipping notification.');
@@ -26,11 +39,19 @@ export async function sendDiscordNotification(params: NotificationParams) {
     if (params.customMessage) {
         message = params.customMessage;
     } else {
-        const { winner, winnerId, score, activeGame, nextGame, isRepeatWinner } = params;
+        const { winner, winnerId, score, activeGame, nextGame, gameType, isRepeatWinner } = params;
         const winnerMention = winnerId ? `<@${winnerId}>` : `\`${winner}\``;
 
+        const typeNames: Record<string, string> = {
+            'DG': 'Daily Grind',
+            'WG-VPXS': 'Weekly Grind (VPXS)',
+            'WG-VR': 'Weekly Grind (VR)',
+            'MG': 'Monthly Grind'
+        };
+        const typeName = typeNames[gameType] || gameType;
+
         const messageLines = [
-            `**The Daily Grind is Closed!**`,
+            `**The ${typeName} is Closed!**`,
             `**Game:** \`${activeGame}\``,
             `**Winner:** ${winnerMention} with a score of \`${score}\``,
             `**Open Now:** \`${nextGame}\` is ready for play!`,

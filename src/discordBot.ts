@@ -445,7 +445,7 @@ export function startDiscordBot() {
                     for (const type of types) {
                         logInfo(`🚀 Manually triggering cleanup for ${type}...`);
                         await runCleanupForGameType(type);
-                        summary += `✅ **${type}**\n`;
+                        summary += `Done: **${type}**\n`;
                     }
                     await interaction.editReply(`**Cleanup Complete!**\n\n${summary}\nAll old locked or stray visible tables have been cleared from iScored.`);
                 } else {

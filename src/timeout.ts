@@ -64,6 +64,7 @@ export async function checkPickerTimeouts() {
                         score: 'N/A',
                         activeGame: 'None',
                         nextGame: fullGameName,
+                        gameType: gameType,
                         isRepeatWinner: false,
                         customMessage: `The picker for **${gameType}** timed out.\nI have randomly selected **${fullGameName}** as the next game.`
                     });

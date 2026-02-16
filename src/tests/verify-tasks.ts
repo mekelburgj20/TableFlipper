@@ -38,13 +38,15 @@ async function runStaticChecks() {
         const content = fs.readFileSync(file, 'utf-8');
         const lines = content.split('\n');
         
-        for (let i = 0; i < lines.length; i++) {
-            const line = lines[i];
-            // Skip console.log lines
-            if (line.trim().startsWith('console.')) continue;
-            
-            for (const emoji of forbiddenEmojis) {
-                if (line.includes(emoji)) {
+                for (let i = 0; i < lines.length; i++) {
+                    const line = lines[i];
+                    // Skip log and console lines
+                    if (line.trim().startsWith('console.') || 
+                        line.trim().startsWith('logInfo(') || 
+                        line.trim().startsWith('logError(') || 
+                        line.trim().startsWith('logWarn(')) continue;
+                    
+                    for (const emoji of forbiddenEmojis) {                if (line.includes(emoji)) {
                     console.warn(`⚠️ Potential Emoji found in ${path.basename(file)}:${i + 1}: ${line.trim()}`);
                     // We just warn because some might be legitimate (e.g. internal logic, though we aimed to remove user-facing ones)
                     // Given the strict instruction "Remove emojis from user-facing messages", verifying strictly is hard via regex 
