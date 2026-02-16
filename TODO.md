@@ -6,7 +6,8 @@
 2. **Channel-Specific Context:** Restrict/default `/picktable` and other commands based on the Discord channel (e.g., `/picktable` in `#wg-vpxs` defaults to `WG-VPXS`).
 
 # Completed History
-1. [COMPLETED] **Community Styles:** Added support for iScored Community Styles. The bot now looks up `style_id` in the database and automatically applies the correct style when creating a game on iScored.
+1. [COMPLETED] **Lineup Repositioning (DOM-based):** Implemented automated reordering of the iScored Lineup using physical DOM manipulation and internal iScored save mechanisms. The bot now ensures that Active tournament games appear farthest left (top of list), followed by recent history, maintaining a logical flow for the scoreboard. Configurable via `LINEUP_TYPE_ORDER`.
+2. [COMPLETED] **Community Styles:** Added support for iScored Community Styles. The bot now looks up `style_id` in the database and automatically applies the correct style when creating a game on iScored.
 2. [COMPLETED] **Tag-Based Identification:** Formalized the use of iScored tags as the primary identifier for tournament types. Removed the requirement for mandatory name suffixes (e.g., " DG") in favor of Tags.
 3. [COMPLETED] **VPXS API Integration:** Integrated the Virtual Pinball Spreadsheet API to allow selection of a wider range of games for WG-VPXS via autocomplete.
 4. [COMPLETED] **Robust Cleanup Sweep:** Implemented a comprehensive cleanup routine that removes old locked or stray visible games while protecting the official active tournament.

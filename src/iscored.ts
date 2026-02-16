@@ -1278,3 +1278,65 @@ export async function deleteGame(page: Page, gameName: string, gameId?: string):
         throw error;
     }
 }
+
+/**
+ * Repositions games in the Lineup tab based on a provided order of iScored game IDs.
+ * Uses physical DOM manipulation followed by iScored's save mechanism.
+ * @param page The Playwright Page instance.
+ * @param orderedIds Array of iScored IDs in the desired order.
+ */
+export async function repositionLineup(page: Page, orderedIds: string[]): Promise<void> {
+    logInfo('🔄 Repositioning Lineup (DOM-based)...');
+    try {
+        const mainFrame = page.frameLocator('#main');
+        await navigateToLineupPage(page);
+
+        const result = await mainFrame.locator(':root').evaluate((el, targetIds) => {
+            const lineupUl = document.getElementById('orderGameUL');
+            const saveFn = (window as any).saveSetting;
+
+            if (!lineupUl || !saveFn) {
+                return { success: false, error: `lineupUl: ${!!lineupUl}, saveFn: ${!!saveFn}` };
+            }
+
+            // 1. Physically move the elements in the DOM
+            // We append them in reverse order to the top, OR just append them in order to a fragment.
+            // Simplest: Iterate through our desired order and append each to the UL.
+            // Appending an existing child moves it to the end.
+            // So if we append in order, they will end up at the end in that order.
+            // To put them at the TOP, we can prepend them in REVERSE order.
+            
+            const currentIds = Array.from(lineupUl.children).map(c => c.getAttribute('id'));
+            
+            // Filter targetIds to only those that exist in the DOM
+            const validTargetIds = targetIds.filter(id => currentIds.includes(id));
+
+            // Move them to the top in the correct order
+            for (let i = validTargetIds.length - 1; i >= 0; i--) {
+                const li = document.getElementById(validTargetIds[i]);
+                if (li) {
+                    lineupUl.prepend(li);
+                }
+            }
+
+            // 2. Calculate the final order from the DOM to ensure we capture everything
+            const finalOrderIds = Array.from(lineupUl.children).map(child => child.getAttribute('id'));
+
+            // 3. Persist via iScored's save mechanism
+            saveFn("gameOrder", finalOrderIds.join(","));
+
+            return { success: true, count: validTargetIds.length };
+        }, orderedIds);
+
+        if (result.success) {
+            logInfo(`✅ Lineup repositioned successfully (${result.count} games moved to top).`);
+            await page.waitForTimeout(2000); 
+        } else {
+            logError(`❌ Failed to reposition lineup: ${result.error}`);
+        }
+
+    } catch (e) {
+        logError('❌ Error during repositionLineup:', e);
+        throw e;
+    }
+}

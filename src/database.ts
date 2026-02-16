@@ -535,3 +535,36 @@ export async function hasScores(gameId: string): Promise<boolean> {
         await db.close();
     }
 }
+
+export async function getLineupOrder(typeOrder: string[]): Promise<string[]> {
+    const db = await openDb();
+    try {
+        const orderedIds: string[] = [];
+
+        for (const type of typeOrder) {
+            // Get Active game for this type first
+            const active = await db.get<GameRow>(
+                "SELECT iscored_game_id FROM games WHERE type = ? AND status = 'ACTIVE' LIMIT 1",
+                type
+            );
+            if (active?.iscored_game_id && active.iscored_game_id !== 'TBD') {
+                orderedIds.push(active.iscored_game_id);
+            }
+
+            // Get Completed games for this type, newest first (by scheduled time or created_at)
+            const completed = await db.all<GameRow[]>(
+                "SELECT iscored_game_id FROM games WHERE type = ? AND status = 'COMPLETED' ORDER BY scheduled_to_be_active_at DESC, created_at DESC",
+                type
+            );
+            for (const c of completed) {
+                if (c.iscored_game_id && c.iscored_game_id !== 'TBD' && !orderedIds.includes(c.iscored_game_id)) {
+                    orderedIds.push(c.iscored_game_id);
+                }
+            }
+        }
+
+        return orderedIds;
+    } finally {
+        await db.close();
+    }
+}

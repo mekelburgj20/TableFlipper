@@ -1,13 +1,39 @@
 import { Browser, Page } from 'playwright';
-import { loginToIScored, lockGame, showGame, navigateToLineupPage, deleteGame, findGames, syncStyleFromIScored, Game as IscoredGame } from './iscored.js';
+import { loginToIScored, lockGame, showGame, navigateToLineupPage, deleteGame, findGames, syncStyleFromIScored, repositionLineup, Game as IscoredGame } from './iscored.js';
 import { getWinnerAndScoreFromPage, getStandingsFromPage } from './api.js';
 import { checkWinnerHistory, updateWinnerHistory } from './history.js';
 import { sendDiscordNotification } from './discord.js';
 import { getDiscordIdByIscoredName } from './userMapping.js';
-import { getActiveGame, getNextQueuedGame, updateGameStatus, setPicker, createGameEntry, GameRow, hasScores, saveScores, getGameByIscoredId, syncCompletedGame, upsertTable, getTable } from './database.js';
+import { getActiveGame, getNextQueuedGame, updateGameStatus, setPicker, createGameEntry, GameRow, hasScores, saveScores, getGameByIscoredId, syncCompletedGame, upsertTable, getTable, getLineupOrder } from './database.js';
 import { logInfo, logError, logWarn } from './logger.js';
 
 const ALL_GAME_TYPES = ['DG', 'WG-VPXS', 'WG-VR', 'MG'];
+
+export async function triggerLineupRepositioning() {
+    logInfo('🔄 Triggering automated lineup repositioning...');
+    const typeOrderEnv = process.env.LINEUP_TYPE_ORDER || "DG,WG-VPXS,WG-VR,MG";
+    const typeOrder = typeOrderEnv.split(',').map(t => t.trim());
+
+    let browser: Browser | null = null;
+    try {
+        const orderedIds = await getLineupOrder(typeOrder);
+        if (orderedIds.length === 0) {
+            logInfo('   -> No games found in DB to order.');
+            return;
+        }
+
+        const { browser: b, page } = await loginToIScored();
+        browser = b;
+
+        await repositionLineup(page, orderedIds);
+        logInfo('✅ Lineup repositioning completed.');
+
+    } catch (error) {
+        logError('❌ Error during triggerLineupRepositioning:', error);
+    } finally {
+        if (browser) await browser.close();
+    }
+}
 
 export async function triggerAllMaintenanceRoutines() {
     logInfo('Manual trigger: Running maintenance for all game types...');

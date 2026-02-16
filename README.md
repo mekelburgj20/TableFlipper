@@ -8,6 +8,7 @@ TableFlipper is a Node.js Discord bot designed to automate and manage pinball to
 
 *   **Automated Tournament Management:**
     *   **Multi-Format Support:** Manages Daily Grind (`DG`), Weekly Grinds (`WG-VPXS`, `WG-VR`), and Monthly Grind (`MG`) tournaments.
+    *   **Lineup Repositioning:** Automatically reorders games on the iScored scoreboard so that active grinds are always farthest left (top of the list), followed by chronological history. Uses physical DOM manipulation for maximum reliability. Configurable via `.env`.
     *   **Scheduled Maintenance:** Automatically and reliably locks completed games, accurately determines winners, unlocks new games, and sends Discord announcements based on predefined schedules (Daily at 12 AM Central, Weekly on Wednesdays, Monthly on the 1st).
     *   **Delayed Cleanup:** Daily and Weekly tables remain visible (locked) until Wednesday night at 11 PM Central, allowing players to view the week's history.
     *   **Manual Trigger:** Maintenance routines and cleanup sweeps can be manually triggered via moderator-restricted Discord slash commands.
@@ -89,6 +90,7 @@ The bot maintains detailed logs in `data/bot.log`. Check this file for troublesh
 ## 6. Release Notes
 
 ### v1.1.0 (Current)
+*   **Lineup Repositioning (DOM-based):** Added automated reordering of tournament games using physical DOM injection. The active Daily Grind is now always pushed to the farthest left position on the scoreboard, with historical grinds following in chronological order.
 *   **Style Learning & Sync:** The bot now automatically "learns" your manual styling changes (CSS, fonts, backgrounds) from active games every night and reapplies them to future rotations.
 *   **Tag-Based Identification:** Transitioned to using iScored tags as the primary "key" for tournament games. Mandatory name suffixes (e.g., " DG") are no longer required for new games.
 *   **Schedule Stability (Pause Fix):** Updated `/pause-dg-pick` to overwrite the next available slot rather than shifting the entire queue, preventing "infinite queue growth" and keeping the tournament buffer stable.
