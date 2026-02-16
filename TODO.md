@@ -4,6 +4,17 @@
 # Future Considerations
 1. **Admin Nomination Override:** Allow Moderators/Admins to use `/nominate-picker` to designate a picker if the winner is unresponsive, preventing a random timeout selection.
 2. **Channel-Specific Context:** Restrict/default `/picktable` and other commands based on the Discord channel (e.g., `/picktable` in `#wg-vpxs` defaults to `WG-VPXS`).
+3. **AI-Powered Score Verification:** Integrate OCR to automatically verify scores from submitted photos.
+4. **Persistent Live Leaderboards:** Maintain a pinned, auto-updating standings message in each tournament channel.
+5. **Player Profiles & Achievements:** Track all-time wins, "Dynasty" triggers, and unique tables per player with a `/profile` command.
+6. **Proactive Picker DMs:** Send friendly DM reminders to winners before their picking window expires.
+7. **iScored Health Dashboard:** Add a moderator command to monitor site sync status and browser automation health.
+8. **Style Previewer:** Show a preview of the learned table style during the `/picktable` flow.
+9. **Global "Hall of Fame":** Track arcade-wide records (e.g., all-time high score across all grinds).
+10. **Tournament Seasons:** Implement quarterly leaderboards to give players fresh starts.
+11. **Table "Heat Map":** Suggest tables that haven't been in rotation for a long time.
+12. **Monthly "Themes":** Allow moderators to restrict `/picktable` choices based on monthly themes (e.g., "90s Bally").
+13. **Multi-Arcade Support:** Refactor config to support managing multiple iScored gamerooms from one instance.
 
 # Completed History
 1. [COMPLETED] **Lineup Repositioning (DOM-based):** Implemented automated reordering of the iScored Lineup using physical DOM manipulation and internal iScored save mechanisms. The bot now ensures that Active tournament games appear farthest left (top of list), followed by recent history, maintaining a logical flow for the scoreboard. Configurable via `LINEUP_TYPE_ORDER`.
