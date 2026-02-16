@@ -498,7 +498,7 @@ export function startDiscordBot() {
                 // 3. Inject into Database
                 await injectSpecialGame('DG', fullGameName, iscoredGameId);
                 
-                await interaction.editReply(`**Manual Override Successful!**\n\nThe game **${fullGameName}** has been injected at the front of the queue.\nThe existing winner's pick (and any other queued games) have been pushed back by 24 hours.`);
+                await interaction.editReply(`**Manual Override Successful!**\n\nThe game **${fullGameName}** has been injected into the next available slot.\nNote: This slot's original picker has been overridden to keep the tournament schedule on track.`);
 
             } catch (error) {
                 logError('Error during manual override:', error);
