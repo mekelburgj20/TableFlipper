@@ -5,7 +5,7 @@ import { getIscoredNameByDiscordId, getDiscordIdByIscoredName } from './userMapp
 import { getPicker, setPicker, updateQueuedGame, getNextQueuedGame, searchTables, getTable, getRecentGameNames, getRandomCompatibleTable, injectSpecialGame, getActiveGame } from './database.js';
 import { getLastWinner, getHistory, getTableStats } from './history.js';
 import { getTablesFromSheet } from './googleSheet.js';
-import { getStandingsFromApi, findActiveGame } from './api.js';
+import { getStandingsFromApi } from './api.js';
 import { triggerAllMaintenanceRoutines, runMaintenanceForGameType, runCleanupForGameType } from './maintenance.js';
 import { logInfo, logError, logWarn } from './logger.js';
 
