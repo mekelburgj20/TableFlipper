@@ -16,7 +16,8 @@ TableFlipper is a Node.js Discord bot designed to automate and manage pinball to
     *   **Dynasty Rule Enforcement:** Prevents consecutive wins from giving picking rights to the same player. Repeat winners must `/nominate-picker` another user.
     *   **Picker Timeout:** If a designated picker or nominee fails to select a table within 18 hours, the bot automatically selects a random compatible table.
 *   **Robust iScored Automation:**
-    *   **Smart Creation:** Automatically appends tournament suffixes (e.g., " DG") and applies grind-type Tags to games on iScored.
+    *   **Tag-Based Management:** Uses iScored Tags (e.g., `DG`, `WG-VPXS`) as the primary key for tournament identification, allowing for clean game names without mandatory suffixes.
+    *   **Style Learning System:** Automatically scrapes and saves CSS, fonts, and background settings from active games every night, ensuring a consistent look for future rotations.
     *   **Reliable Interaction:** Uses direct browser execution and modal handling to navigate complex Single Page Application transitions, bypassing "busy" overlays and UI lag.
     *   **Automatic Sync:** The cleanup routine automatically imports unknown games from iScored into the local database to ensure safe management.
 *   **Comprehensive Discord Slash Commands:**
@@ -25,10 +26,11 @@ TableFlipper is a Node.js Discord bot designed to automate and manage pinball to
     *   **`/nominate-picker`**: Allows a repeat winner to nominate another player to pick the table.
     *   **`/list-active`**: Shows the currently active table for any or all tournament types.
     *   **`/list-winners`**: Lists past winners for a specified tournament and period.
+    *   **`/current-dg-scores`**: High-speed lookup of current standings using the local database and public iScored API.
     *   **`/table-stats`**: Displays play count and high score records for a specific table.
     *   **`/trigger-cleanup`**: Manually sweeps away old locked or stray visible games (All tournaments or specific type).
     *   **`/trigger-maintenance-[dg/weekly/monthly]`**: Manually triggers rotation for specific tournament types.
-    *   **`/pause-dg-pick`**: (Moderator only) Pauses regular picking and schedules a special game.
+    *   **`/pause-dg-pick`**: (Moderator only) Overwrites the next scheduled tournament slot with a special game choice, keeping the overall schedule on track.
 *   **Data Management:** Stores all history and live state in a SQLite database (`data/tableflipper.db`). Persistent logs are maintained in `data/bot.log`.
 
 ## 3. Setup and Installation
@@ -87,11 +89,10 @@ The bot maintains detailed logs in `data/bot.log`. Check this file for troublesh
 ## 6. Release Notes
 
 ### v1.1.0 (Current)
-*   **Tag-Based Identification:** Transitioned to using iScored tags as the primary "key" for identifying tournament games (DG, WG, MG). Mandatory name suffixes (e.g., " DG") are no longer required but are still supported as a fallback.
-*   **Community Styles Support:** The bot now automatically applies iScored "Community Styles" during game creation if a `style_id` is present in the table database.
+*   **Style Learning & Sync:** The bot now automatically "learns" your manual styling changes (CSS, fonts, backgrounds) from active games every night and reapplies them to future rotations.
+*   **Tag-Based Identification:** Transitioned to using iScored tags as the primary "key" for tournament games. Mandatory name suffixes (e.g., " DG") are no longer required for new games.
+*   **Schedule Stability (Pause Fix):** Updated `/pause-dg-pick` to overwrite the next available slot rather than shifting the entire queue, preventing "infinite queue growth" and keeping the tournament buffer stable.
+*   **Optimized Standings Lookup:** Refactored `/current-dg-scores` to use the local database and public iScored API, resulting in near-instant responses and eliminating browser timeouts.
 *   **VPXS API Integration:** Expanded the table catalog for `WG-VPXS` by integrating the Virtual Pinball Spreadsheet API.
-*   **Robust iScored UI Engine:** Implemented `waitForBusyModal` and direct JavaScript execution (`evaluate`) for more reliable browser automation.
-*   **Advanced Cleanup Logic:** Automated the removal of old locked or stray visible games while protecting active tournaments.
-*   **Enhanced Persistent Logging:** Refactored all maintenance and automation steps to log to `data/bot.log`.
-*   **Confirmation UI:** Added interactive confirmation steps for score submissions and table picking.
-*   **Dynasty Rule Enforcement:** Prevents consecutive wins from granting picking rights to the same player.
+*   **Robust iScored UI Engine:** Implemented `waitForBusyModal` and direct JavaScript execution (`evaluate`) for reliable automation.
+*   **Advanced Cleanup Logic:** Automated removal of old locked games on Wednesdays at 11 PM Central.
