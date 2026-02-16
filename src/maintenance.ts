@@ -220,19 +220,8 @@ export async function runMaintenanceForGameType(gameType: string) {
             });
             logInfo(`This cycle's winner for ${gameType} is ${winner} with a score of ${score}. Announcement sent.`);
 
-            // 7. Delete the game from iScored (Cleanup) - ONLY for Monthly Grind (MG)
-            if (gameType === 'MG') {
-                try {
-                    await deleteGame(page, activeGame.name, activeGame.iscored_game_id);
-                    logInfo(`🗑️ Deleted active game from iScored: ${activeGame.name}`);
-                    // Re-navigate to lineup for next steps
-                    await navigateToLineupPage(page);
-                } catch (e) {
-                    logError(`⚠️ Failed to delete active game ${activeGame.name}:`, e);
-                }
-            } else {
-                logInfo(`ℹ️ Skipping deletion for ${gameType}. Game will remain visible/locked until scheduled cleanup.`);
-            }
+            // 7. MG used to be deleted here, but we now keep it visible/locked until Wednesday cleanup
+            logInfo(`ℹ️ Skipping deletion for ${gameType}. Game will remain visible/locked until scheduled cleanup.`);
 
         } else {
             logInfo(`⚠️ No active game found for ${gameType}. Skipping winner determination and locking.`);
@@ -247,6 +236,12 @@ export async function runMaintenanceForGameType(gameType: string) {
         // --- Phase 3: Activate Next Queued Game ---
         if (nextGame) {
             logInfo(`Found next queued game in DB: ${nextGame.name}`);
+            
+            if (nextGame.iscored_game_id === 'TBD') {
+                logInfo(`   -> Next game is still TBD (no pick made yet). Skipping show.`);
+                return;
+            }
+
             const iscoredGame: IscoredGame = { id: nextGame.iscored_game_id, name: nextGame.name, isHidden: true, isLocked: true };
             
             // 1. Show game on iScored
