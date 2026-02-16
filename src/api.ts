@@ -259,43 +259,12 @@ export async function getStandingsFromPublicPage(gameId: string): Promise<Standi
         }
 
         await browser.close();
-        console.log(`✅ Found ${standings.length} standings for game ID ${gameId}.`);
-        return standings;
-
-    } catch (error) {
-        console.error(`Error scraping public page for standings of game ID '${gameId}':`, error);
-        throw new Error('Could not fetch standings.');
-    }
-}
-
-
-export async function findActiveGame(gameType: string): Promise<{id: string, name: string} | null> {
-    console.log(`🔎 Finding active game for type '${gameType}' via admin login...`);
-    let browser: Browser | null = null;
-    let page: Page | null = null;
-    try {
-        ({ browser, page } = await loginToIScored());
-
-        const { activeGames } = await findGames(page, gameType);
-
-        if (activeGames.length > 0) {
-            const activeGame = {
-                id: activeGames[0].id,
-                name: activeGames[0].name
-            };
-            console.log(`✅ Found active game for type '${gameType}': ${activeGame.name} (ID: ${activeGame.id})`);
-            return activeGame;
-        } else {
-            console.log(`⚠️ Could not find an active game for type '${gameType}'.`);
-            return null;
+                console.log(`✅ Found ${standings.length} standings for game ID ${gameId}.`);
+                return standings;
+        
+            } catch (error) {
+                console.error(`Error scraping public page for standings of game ID '${gameId}':`, error);
+                throw new Error('Could not fetch standings.');
+            }
         }
-
-    } catch (error) {
-        console.error(`❌ Error finding active game for type '${gameType}':`, error);
-        return null;
-    } finally {
-        if (browser) {
-            await browser.close();
-        }
-    }
-}
+        

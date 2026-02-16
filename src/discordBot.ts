@@ -516,9 +516,10 @@ export function startDiscordBot() {
             await interaction.deferReply({ ephemeral: true });
 
             try {
-                const activeGame = await findActiveGame(gameType);
+                // Use the database instead of the slow findActiveGame scraper
+                const activeGame = await getActiveGame(gameType);
                 if (!activeGame) {
-                    await interaction.editReply(`Could not find an active tournament for ${gameType}.`);
+                    await interaction.editReply(`Could not find an active tournament for ${gameType} in my database. Try running \`/list-active\` or ask an admin to sync state.`);
                     return;
                 }
 
