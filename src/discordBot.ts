@@ -460,7 +460,6 @@ export function startDiscordBot() {
         
         else if (commandName === 'pause-dg-pick') {
             const specialGameName = interaction.options.getString('special-game-name', true);
-            // duration-hours is ignored as the queue shift logic handles the delay naturally (pushing by 24h)
 
             await interaction.deferReply({ ephemeral: true });
 

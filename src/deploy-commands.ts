@@ -119,12 +119,6 @@ const commands = [
                 type: 3, // STRING
                 description: 'The name of the special game to be played.',
                 required: true,
-            },
-            {
-                name: 'duration-hours',
-                type: 4, // INTEGER
-                description: 'How many hours the pause should last. Default is 24.',
-                required: false,
             }
         ]
     },
