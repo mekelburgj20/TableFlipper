@@ -1016,9 +1016,15 @@ export async function createGame(page: Page, gameName: string, grindType: string
         await lockGame(page, newlyCreatedGame);
         logInfo(`✅ Game '${fullGameName}' also locked to prevent premature scores.`);
 
-        // Schedule the show for 24 hours from now.
+        // Determine scheduling: DG has 1-day buffer (show in 24h). Others show immediately.
         const now = new Date();
-        const showDateTime = new Date(now.getTime() + 24 * 60 * 60 * 1000); // 24 hours from now
+        let showDateTime: Date;
+        if (grindType === 'DG') {
+            showDateTime = new Date(now.getTime() + 24 * 60 * 60 * 1000); // 24 hours from now
+        } else {
+            showDateTime = new Date(now.getTime() + 10000); // 10 seconds from now (near immediate)
+        }
+        
         await scheduleGameShow(newlyCreatedGame.name, showDateTime);
 
         return newlyCreatedGame.id;

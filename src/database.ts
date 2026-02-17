@@ -399,17 +399,26 @@ export async function syncCompletedGame(gameType: string, iscoredGameId: string,
 export async function createGameEntry(game: Omit<GameRow, 'id' | 'created_at' | 'status' | 'name' | 'iscored_game_id'> & { name?: string, iscored_game_id?: string }): Promise<GameRow> {
     const db = await openDb();
     try {
-        const nextGameDate = new Date();
-        nextGameDate.setDate(nextGameDate.getDate() + 2);
+        const now = new Date();
+        let scheduledTime: Date;
+
+        if (game.type === 'DG') {
+            // DG has a 1-day buffer (it's picked 2 days in advance, so it sits in QUEUED for a day)
+            scheduledTime = new Date(now.getTime());
+            scheduledTime.setDate(scheduledTime.getDate() + 2);
+        } else {
+            // Weekly and Monthly grinds are active immediately upon being picked
+            scheduledTime = new Date(now.getTime());
+        }
 
         const newGame: GameRow = {
             id: uuidv4(),
             iscored_game_id: game.iscored_game_id || 'TBD',
-            name: game.name || `TBD ${game.type} ${nextGameDate.toLocaleDateString()}`,
+            name: game.name || `TBD ${game.type} ${scheduledTime.toLocaleDateString()}`,
             type: game.type,
             status: 'QUEUED',
-            scheduled_to_be_active_at: game.scheduled_to_be_active_at || new Date(Date.now() + 48 * 60 * 60 * 1000).toISOString(),
-            created_at: new Date().toISOString(),
+            scheduled_to_be_active_at: game.scheduled_to_be_active_at || scheduledTime.toISOString(),
+            created_at: now.toISOString(),
         };
 
         await db.run(
@@ -417,7 +426,7 @@ export async function createGameEntry(game: Omit<GameRow, 'id' | 'created_at' | 
              VALUES (?, ?, ?, ?, ?, ?)`,
             newGame.id, newGame.iscored_game_id, newGame.name, newGame.type, newGame.status, newGame.scheduled_to_be_active_at
         );
-        console.log(`✅ Created shell game entry for next ${newGame.type}.`);
+        console.log(`✅ Created shell game entry for next ${newGame.type}. Scheduled for: ${newGame.scheduled_to_be_active_at}`);
         return newGame;
     } finally {
         await db.close();
