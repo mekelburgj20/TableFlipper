@@ -215,8 +215,8 @@ export async function runMaintenanceForGameType(gameType: string) {
 
             // 4. Update winner history and check for dynasty
             const winnerDiscordId = getDiscordIdByIscoredName(winner) ?? null;
-            await updateWinnerHistory(gameType, { gameName: activeGame.name, winner, score, winnerId: winnerDiscordId });
             const isRepeatWinner = await checkWinnerHistory(gameType, winner);
+            await updateWinnerHistory(gameType, { gameName: activeGame.name, winner, score, winnerId: winnerDiscordId });
 
             // 5. Handle picker assignment and create next game shell
             let nextGameForPicker: GameRow | null = null;

@@ -3,7 +3,7 @@ import { Browser } from 'playwright';
 import { loginToIScored, createGame, submitScoreToIscored } from './iscored.js';
 import { getIscoredNameByDiscordId, getDiscordIdByIscoredName } from './userMapping.js';
 import { getPicker, setPicker, updateQueuedGame, getNextQueuedGame, searchTables, getTable, getRecentGameNames, getRandomCompatibleTable, injectSpecialGame, getActiveGame } from './database.js';
-import { getLastWinner, getHistory, getTableStats } from './history.js';
+import { getLastWinner, getHistory, getTableStats, getRecentWinners } from './history.js';
 import { getTablesFromSheet } from './googleSheet.js';
 import { getStandingsFromApi } from './api.js';
 import { triggerAllMaintenanceRoutines, runMaintenanceForGameType, runCleanupForGameType } from './maintenance.js';
@@ -110,6 +110,39 @@ export function startDiscordBot() {
             } catch (error) {
                 logError(`Error in /list-active:`, error);
                 await interaction.editReply('An error occurred while fetching the active games.');
+            }
+        }
+
+        else if (commandName === 'list-past-winners') {
+            const gameType = interaction.options.getString('grind-type');
+            const limit = interaction.options.getInteger('limit') ?? 5;
+            await interaction.deferReply();
+
+            try {
+                const winners = await getRecentWinners(gameType, limit);
+
+                if (winners.length === 0) {
+                    await interaction.editReply('No past winners found.');
+                    return;
+                }
+
+                const embed = new EmbedBuilder()
+                    .setTitle(gameType ? `Past Winners: ${gameType}` : 'Past Winners (All Types)')
+                    .setColor(0x00FF00)
+                    .setTimestamp();
+
+                let description = '';
+                winners.forEach((w, i) => {
+                    const date = new Date(w.created_at).toLocaleDateString();
+                    description += `**${i + 1}. ${w.iscored_username}** - \`${w.game_name}\` (${date})\n`;
+                });
+
+                embed.setDescription(description);
+                await interaction.editReply({ embeds: [embed] });
+
+            } catch (error) {
+                logError(`Error in /list-past-winners:`, error);
+                await interaction.editReply('An error occurred while fetching the past winners.');
             }
         }
 

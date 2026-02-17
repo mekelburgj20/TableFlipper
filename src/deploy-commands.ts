@@ -222,6 +222,30 @@ const commands = [
             }
         ]
     },
+    {
+        name: 'list-past-winners',
+        description: 'Shows the winners of past tournaments.',
+        options: [
+            {
+                name: 'grind-type',
+                type: 3, // STRING
+                description: 'The tournament to check (leave blank for all).',
+                required: false,
+                choices: [
+                    { name: 'Daily Grind (DG)', value: 'DG' },
+                    { name: 'Weekly Grind VPXS (WG-VPXS)', value: 'WG-VPXS' },
+                    { name: 'Weekly Grind VR (WG-VR)', value: 'WG-VR' },
+                    { name: 'Monthly Grind (MG)', value: 'MG' },
+                ]
+            },
+            {
+                name: 'limit',
+                type: 4, // INTEGER
+                description: 'The number of past winners to show (default 5).',
+                required: false,
+            }
+        ]
+    },
 ];
 
 const token = process.env.DISCORD_BOT_TOKEN;

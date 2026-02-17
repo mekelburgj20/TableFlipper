@@ -49,6 +49,32 @@ export async function getHistory(gameType: string): Promise<GameResult[]> {
 }
 
 /**
+ * Gets the most recent winners for a given game type or all types.
+ * @param gameType The game type (e.g., 'DG') or null for all.
+ * @param limit The number of winners to retrieve.
+ * @returns A promise that resolves to an array of game results.
+ */
+export async function getRecentWinners(gameType: string | null, limit: number = 5): Promise<GameResult[]> {
+    const db = await openDb();
+    try {
+        let sql = 'SELECT * FROM winners';
+        const params: any[] = [];
+
+        if (gameType) {
+            sql += ' WHERE game_type = ?';
+            params.push(gameType.toUpperCase());
+        }
+
+        sql += ' ORDER BY created_at DESC LIMIT ?';
+        params.push(limit);
+
+        return await db.all<GameResult[]>(sql, ...params);
+    } finally {
+        await db.close();
+    }
+}
+
+/**
  * Gets statistics for a given table name.
  * @param tableName The name of the table to search for.
  * @returns A promise that resolves to an object with stats.
