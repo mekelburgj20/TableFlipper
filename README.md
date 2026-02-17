@@ -33,7 +33,11 @@ TableFlipper is a Node.js Discord bot designed to automate and manage pinball to
     *   **`/trigger-cleanup`**: Manually sweeps away old locked or stray visible games (All tournaments or specific type).
     *   **`/trigger-maintenance-[dg/weekly/monthly]`**: Manually triggers rotation for specific tournament types.
     *   **`/pause-dg-pick`**: (Moderator only) Overwrites the next scheduled tournament slot with a special game choice, keeping the overall schedule on track.
-*   **Data Management:** Stores all history and live state in a SQLite database (`data/tableflipper.db`). Persistent logs are maintained in `data/bot.log`.
+*   **Data Management:**
+    *   **Automatic Initialization:** The SQLite database (`data/tableflipper.db`) is automatically created and initialized with the correct schema the first time the bot starts.
+    *   **Local Persistence:** All tournament history and user mappings are stored locally.
+    *   **Git Ignored:** To prevent bloat and potential data loss during merges, the database file is excluded from version control. **Users should perform regular manual backups of the `data/` folder.**
+    *   **Logs:** Persistent logs are maintained in `data/bot.log`.
 
 ## 3. Setup and Installation
 
