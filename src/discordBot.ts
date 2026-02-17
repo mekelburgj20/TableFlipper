@@ -113,39 +113,6 @@ export function startDiscordBot() {
             }
         }
 
-        else if (commandName === 'list-past-winners') {
-            const gameType = interaction.options.getString('grind-type');
-            const limit = interaction.options.getInteger('limit') ?? 5;
-            await interaction.deferReply({ ephemeral: true });
-
-            try {
-                const winners = await getRecentWinners(gameType, limit);
-
-                if (winners.length === 0) {
-                    await interaction.editReply('No past winners found.');
-                    return;
-                }
-
-                const embed = new EmbedBuilder()
-                    .setTitle(gameType ? `Past Winners: ${gameType}` : 'Past Winners (All Types)')
-                    .setColor(0x00FF00)
-                    .setTimestamp();
-
-                let description = '';
-                winners.forEach((w, i) => {
-                    const date = new Date(w.created_at).toLocaleDateString('en-US', { timeZone: 'America/Chicago' });
-                    description += `**${i + 1}. [${w.game_type}]** ${date}: **${w.iscored_username}** - \`${w.game_name}\`\n`;
-                });
-
-                embed.setDescription(description);
-                await interaction.editReply({ embeds: [embed] });
-
-            } catch (error) {
-                logError(`Error in /list-past-winners:`, error);
-                await interaction.editReply('An error occurred while fetching the past winners.');
-            }
-        }
-
         else if (commandName === 'picktable') {
             const gameType = interaction.options.getString('grind-type', true);
             let tableName = interaction.options.getString('table-name');
@@ -348,48 +315,85 @@ export function startDiscordBot() {
         }
         
         else if (commandName === 'list-winners') {
-            const gameType = interaction.options.getString('grind-type', true);
-            const period = interaction.options.getString('period') ?? '7d'; // Default to last 7 days
+            const view = interaction.options.getString('view') ?? 'recent';
+            const gameType = interaction.options.getString('grind-type');
+            const limit = interaction.options.getInteger('limit') ?? 5;
+            const period = interaction.options.getString('period') ?? '7d';
 
-            await interaction.deferReply();
+            await interaction.deferReply({ ephemeral: true });
 
-            const results = await getHistory(gameType);
-            
-            let filteredResults = results;
-            const now = new Date();
+            try {
+                if (view === 'recent') {
+                    const winners = await getRecentWinners(gameType, limit);
 
-            if (period !== 'all') {
-                const days = period === '7d' ? 7 : period === '30d' ? 30 : 90;
-                const filterDate = new Date(now.getTime() - (days * 24 * 60 * 60 * 1000));
-                filteredResults = results.filter(r => new Date(r.created_at) > filterDate);
+                    if (winners.length === 0) {
+                        await interaction.editReply('No past winners found.');
+                        return;
+                    }
+
+                    const embed = new EmbedBuilder()
+                        .setTitle(gameType ? `Recent Winners: ${gameType}` : 'Recent Winners (All Types)')
+                        .setColor(0x00FF00)
+                        .setTimestamp();
+
+                    let description = '';
+                    winners.forEach((w, i) => {
+                        const date = new Date(w.created_at).toLocaleDateString('en-US', { timeZone: 'America/Chicago' });
+                        description += `**${i + 1}. [${w.game_type}]** ${date}: **${w.iscored_username}** - \`${w.game_name}\`\n`;
+                    });
+
+                    embed.setDescription(description);
+                    await interaction.editReply({ embeds: [embed] });
+
+                } else {
+                    // Leaderboard View
+                    if (!gameType) {
+                        await interaction.editReply('Please specify a **grind-type** when using the **Leaderboard** view.');
+                        return;
+                    }
+
+                    const results = await getHistory(gameType);
+                    
+                    let filteredResults = results;
+                    const now = new Date();
+
+                    if (period !== 'all') {
+                        const days = period === '7d' ? 7 : period === '30d' ? 30 : 90;
+                        const filterDate = new Date(now.getTime() - (days * 24 * 60 * 60 * 1000));
+                        filteredResults = results.filter(r => new Date(r.created_at) > filterDate);
+                    }
+
+                    if (filteredResults.length === 0) {
+                        await interaction.editReply(`No wins recorded for ${gameType} in the selected period.`);
+                        return;
+                    }
+
+                    const winCounts: { [winner: string]: number } = {};
+                    for (const result of filteredResults) {
+                        winCounts[result.iscored_username] = (winCounts[result.iscored_username] || 0) + 1;
+                    }
+
+                    const sortedWinners = Object.entries(winCounts).sort((a, b) => b[1] - a[1]);
+
+                    const periodText = period === '7d' ? 'Last 7 Days' : period === '30d' ? 'Last 30 Days' : period === '90d' ? 'Last 90 Days' : 'All Time';
+                    const embed = new EmbedBuilder()
+                        .setTitle(`Leaderboard for ${gameType} (${periodText})`)
+                        .setColor(0xFFD700)
+                        .setTimestamp();
+                    
+                    let description = '';
+                    sortedWinners.slice(0, 15).forEach(([winner, count], index) => {
+                        description += `**${index + 1}. ${winner}** - ${count} wins\n`;
+                    });
+
+                    embed.setDescription(description);
+                    await interaction.editReply({ embeds: [embed] });
+                }
+
+            } catch (error) {
+                logError(`Error in /list-winners:`, error);
+                await interaction.editReply('An error occurred while fetching the winners.');
             }
-
-            if (filteredResults.length === 0) {
-                await interaction.editReply(`No wins recorded for ${gameType} in the selected period.`);
-                return;
-            }
-
-            const winCounts: { [winner: string]: number } = {};
-            for (const result of filteredResults) {
-                winCounts[result.iscored_username] = (winCounts[result.iscored_username] || 0) + 1;
-            }
-
-            const sortedWinners = Object.entries(winCounts).sort((a, b) => b[1] - a[1]);
-
-            const periodText = period === '7d' ? 'Last 7 Days' : period === '30d' ? 'Last 30 Days' : period === '90d' ? 'Last 90 Days' : 'All Time';
-            const embed = new EmbedBuilder()
-                .setTitle(`Winners for ${gameType} (${periodText})`)
-                .setColor(0xFFD700)
-                .setTimestamp();
-            
-            let description = '';
-            sortedWinners.slice(0, 15).forEach(([winner, count], index) => {
-                description += `**${index + 1}. ${winner}** - ${count} wins\n`;
-            });
-
-            embed.setDescription(description);
-
-            await interaction.editReply({ embeds: [embed] });
         }
         
         else if (commandName === 'trigger-maintenance-dg') {

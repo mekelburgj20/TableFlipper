@@ -51,13 +51,23 @@ const commands = [
     },
     {
         name: 'list-winners',
-        description: 'Lists past winners for a tournament.',
+        description: 'Lists past winners or a leaderboard for tournaments.',
         options: [
+            {
+                name: 'view',
+                type: 3, // STRING
+                description: 'The type of list to show (default: Recent).',
+                required: false,
+                choices: [
+                    { name: 'Recent Results', value: 'recent' },
+                    { name: 'Leaderboard', value: 'leaderboard' },
+                ]
+            },
             {
                 name: 'grind-type',
                 type: 3, // STRING
-                description: 'The tournament to get the winner list for.',
-                required: true,
+                description: 'The tournament to filter by (optional).',
+                required: false,
                 choices: [
                     { name: 'Daily Grind (DG)', value: 'DG' },
                     { name: 'Weekly Grind VPXS (WG-VPXS)', value: 'WG-VPXS' },
@@ -66,9 +76,15 @@ const commands = [
                 ]
             },
             {
+                name: 'limit',
+                type: 4, // INTEGER
+                description: 'Number of recent winners to show (default 5).',
+                required: false,
+            },
+            {
                 name: 'period',
                 type: 3, // STRING
-                description: 'The time period to filter winners by. (Default: 7d)',
+                description: 'Time period for Leaderboard (default 7d).',
                 required: false,
                 choices: [
                     { name: 'Last 7 Days', value: '7d' },
@@ -219,30 +235,6 @@ const commands = [
                     { name: 'Weekly Grind VR (WG-VR)', value: 'WG-VR' },
                     { name: 'Monthly Grind (MG)', value: 'MG' },
                 ]
-            }
-        ]
-    },
-    {
-        name: 'list-past-winners',
-        description: 'Shows the winners of past tournaments.',
-        options: [
-            {
-                name: 'grind-type',
-                type: 3, // STRING
-                description: 'The tournament to check (leave blank for all).',
-                required: false,
-                choices: [
-                    { name: 'Daily Grind (DG)', value: 'DG' },
-                    { name: 'Weekly Grind VPXS (WG-VPXS)', value: 'WG-VPXS' },
-                    { name: 'Weekly Grind VR (WG-VR)', value: 'WG-VR' },
-                    { name: 'Monthly Grind (MG)', value: 'MG' },
-                ]
-            },
-            {
-                name: 'limit',
-                type: 4, // INTEGER
-                description: 'The number of past winners to show (default 5).',
-                required: false,
             }
         ]
     },

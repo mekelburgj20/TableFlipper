@@ -27,7 +27,7 @@ TableFlipper is a Node.js Discord bot designed to automate and manage pinball to
     *   **`/picktable`**: Allows the designated winner to choose the next table. Includes strict platform filtering and Autocomplete.
     *   **`/nominate-picker`**: Allows a repeat winner to nominate another player to pick the table.
     *   **`/list-active`**: Shows the currently active table for any or all tournament types.
-    *   **`/list-winners`**: Lists past winners for a specified tournament and period.
+    *   **`/list-winners`**: Lists past winners (chronological) or a leaderboard (win counts) for tournaments. Ephemeral by default.
     *   **`/current-dg-scores`**: High-speed lookup of current standings using the local database and public iScored API.
     *   **`/table-stats`**: Displays play count and high score records for a specific table.
     *   **`/trigger-cleanup`**: Manually sweeps away old locked or stray visible games (All tournaments or specific type).
