@@ -116,7 +116,7 @@ export function startDiscordBot() {
         else if (commandName === 'list-past-winners') {
             const gameType = interaction.options.getString('grind-type');
             const limit = interaction.options.getInteger('limit') ?? 5;
-            await interaction.deferReply();
+            await interaction.deferReply({ ephemeral: true });
 
             try {
                 const winners = await getRecentWinners(gameType, limit);
