@@ -10,5 +10,8 @@
 # Log files
 *.log
 
+# Database files
+data/*.db
+
 # Images
 *.png
