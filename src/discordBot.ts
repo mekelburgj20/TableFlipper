@@ -133,8 +133,8 @@ export function startDiscordBot() {
 
                 let description = '';
                 winners.forEach((w, i) => {
-                    const date = new Date(w.created_at).toLocaleDateString();
-                    description += `**${i + 1}. ${w.iscored_username}** - \`${w.game_name}\` (${date})\n`;
+                    const date = new Date(w.created_at).toLocaleDateString('en-US', { timeZone: 'America/Chicago' });
+                    description += `**${i + 1}. [${w.game_type}]** ${date}: **${w.iscored_username}** - \`${w.game_name}\`\n`;
                 });
 
                 embed.setDescription(description);
