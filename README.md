@@ -23,16 +23,17 @@ TableFlipper is a Node.js Discord bot designed to automate and manage pinball to
     *   **Reliable Interaction:** Uses direct browser execution and modal handling to navigate complex Single Page Application transitions, bypassing "busy" overlays and UI lag.
     *   **Automatic Sync:** The cleanup routine automatically imports unknown games from iScored into the local database to ensure safe management.
 *   **Comprehensive Discord Slash Commands:**
-    *   **`/submit-score`**: Submit your score and a photo for validation with interactive confirmation.
-    *   **`/picktable`**: Allows the designated winner to choose the next table. Includes strict platform filtering and Autocomplete.
+    *   **`/submit-score`**: Submit your score and a photo for validation. Choose to submit by tournament type (`grind-type`) or specific table name (`table-name`). Confirmations are interactive.
+    *   **`/picktable`**: Allows the designated winner to choose the next table. Weekly and Monthly picks activate immediately; Daily picks have a 24-hour buffer.
     *   **`/nominate-picker`**: Allows a repeat winner to nominate another player to pick the table.
     *   **`/list-active`**: Shows the currently active table for any or all tournament types.
-    *   **`/list-winners`**: Lists past winners (chronological) or a leaderboard (win counts) for tournaments. Ephemeral by default.
-    *   **`/current-dg-scores`**: High-speed lookup of current standings using the local database and public iScored API.
+    *   **`/list-winners`**: Lists past winners (chronological) or a leaderboard (win counts) for tournaments. Ephemeral results.
+    *   **`/list-scores`**: High-speed lookup of current standings. View all active grinds at once, or filter by `grind-type` or `table-name`.
     *   **`/table-stats`**: Displays play count and high score records for a specific table.
-    *   **`/trigger-cleanup`**: Manually sweeps away old locked or stray visible games (All tournaments or specific type).
-    *   **`/trigger-maintenance-[dg/weekly/monthly]`**: Manually triggers rotation for specific tournament types.
-    *   **`/pause-dg-pick`**: (Moderator only) Overwrites the next scheduled tournament slot with a special game choice, keeping the overall schedule on track.
+    *   **`/trigger-cleanup`**: (Moderator only) Manually sweeps away old locked or stray visible games.
+    *   **`/trigger-maintenance-[dg/weekly/monthly]`**: (Moderator only) Manually triggers rotation for specific tournament types.
+    *   **`/trigger-sync-state`**: (Moderator only) Manually synchronizes the bot's database with the live iScored lineup and performs reconciliation.
+    *   **`/pause-dg-pick`**: (Moderator only) Overwrites the next scheduled tournament slot with a special game choice.
 *   **Data Management:**
     *   **Automatic Initialization:** The SQLite database (`data/tableflipper.db`) is automatically created and initialized with the correct schema the first time the bot starts.
     *   **Local Persistence:** All tournament history and user mappings are stored locally.

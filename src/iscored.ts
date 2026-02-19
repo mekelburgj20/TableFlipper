@@ -584,7 +584,7 @@ async function applyStyleToGame(page: Page, style: Partial<TableRow>) {
     await page.waitForTimeout(1000);
 }
 
-export async function createGame(page: Page, gameName: string, grindType: string, styleId?: string | null): Promise<string> {
+export async function createGame(page: Page, gameName: string, grindType: string, styleId?: string | null): Promise<{ id: string, scheduledTime: Date }> {
 
     const fullGameName = gameName; // No longer appending suffix, Tags handle the type
 
@@ -1008,26 +1008,28 @@ export async function createGame(page: Page, gameName: string, grindType: string
         const tagToApply = TOURNAMENT_TAG_KEYS[grindType] || grindType;
         await addTagToGame(page, newlyCreatedGame.id, tagToApply);
 
-        // Hide the newly created game.
-        await hideGame(page, newlyCreatedGame);
-        logInfo(`✅ Game '${fullGameName}' created and hidden successfully.`);
-
-        // Lock the newly created game as well to prevent premature scores
-        await lockGame(page, newlyCreatedGame);
-        logInfo(`✅ Game '${fullGameName}' also locked to prevent premature scores.`);
-
-        // Determine scheduling: DG has 1-day buffer (show in 24h). Others show immediately.
         const now = new Date();
         let showDateTime: Date;
-        if (grindType === 'DG') {
-            showDateTime = new Date(now.getTime() + 24 * 60 * 60 * 1000); // 24 hours from now
-        } else {
-            showDateTime = new Date(now.getTime() + 10000); // 10 seconds from now (near immediate)
-        }
-        
-        await scheduleGameShow(newlyCreatedGame.name, showDateTime);
 
-        return newlyCreatedGame.id;
+        if (grindType === 'DG') {
+            // DG has 1-day buffer: hide and lock now, schedule unlock for 24h later
+            await hideGame(page, newlyCreatedGame);
+            await lockGame(page, newlyCreatedGame);
+            logInfo(`✅ Game '${fullGameName}' created, hidden and locked (DG buffer active).`);
+            
+            showDateTime = new Date(now.getTime() + 24 * 60 * 60 * 1000); // 24 hours from now
+            await scheduleGameShow(newlyCreatedGame.name, showDateTime);
+        } else {
+            // Weekly and Monthly: Activate immediately
+            // Ensure it's shown and unlocked (createBlankGame might have default states)
+            await showGame(page, newlyCreatedGame);
+            await unlockGame(page, newlyCreatedGame);
+            logInfo(`✅ Game '${fullGameName}' created and activated immediately (${grindType}).`);
+            
+            showDateTime = now; // For the announcement
+        }
+
+        return { id: newlyCreatedGame.id, scheduledTime: showDateTime };
 
     } catch (error) {
         logError(`❌ Failed to create game '${fullGameName}'.`, error);

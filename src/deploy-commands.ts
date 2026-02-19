@@ -108,6 +108,10 @@ const commands = [
         description: 'Manually triggers the maintenance routine for the Monthly Grind (MG).',
     },
     {
+        name: 'trigger-sync-state',
+        description: 'Manually synchronizes the local database with the live state on iScored.',
+    },
+    {
         name: 'trigger-cleanup',
         description: 'Manually triggers the cleanup routine (delete old locked games) for tournaments.',
         options: [
@@ -139,21 +143,28 @@ const commands = [
         ]
     },
     {
-        name: 'current-dg-scores',
-        description: 'View the current standings for a tournament.',
+        name: 'list-scores',
+        description: 'View current standings. Leave options blank to see all active grinds.',
         options: [
             {
                 name: 'grind-type',
                 type: 3, // STRING
-                description: 'The tournament to get scores for.',
-                required: true,
+                description: 'Filter standings by tournament type.',
+                required: false,
                 choices: [
                     { name: 'Daily Grind (DG)', value: 'DG' },
                     { name: 'Weekly Grind VPXS (WG-VPXS)', value: 'WG-VPXS' },
                     { name: 'Weekly Grind VR (WG-VR)', value: 'WG-VR' },
                     { name: 'Monthly Grind (MG)', value: 'MG' },
                 ]
-            }
+            },
+            {
+                name: 'table-name',
+                type: 3, // STRING
+                description: 'Filter standings by a specific table name.',
+                required: false,
+                autocomplete: true,
+            },
         ]
     },
     {
@@ -189,18 +200,6 @@ const commands = [
         description: 'Submit your tournament score and a photo for validation.',
         options: [
             {
-                name: 'grind-type',
-                type: 3, // STRING
-                description: 'The type of tournament you are submitting a score for.',
-                required: true,
-                choices: [
-                    { name: 'Daily Grind (DG)', value: 'DG' },
-                    { name: 'Weekly Grind VPXS (WG-VPXS)', value: 'WG-VPXS' },
-                    { name: 'Weekly Grind VR (WG-VR)', value: 'WG-VR' },
-                    { name: 'Monthly Grind (MG)', value: 'MG' },
-                ]
-            },
-            {
                 name: 'score',
                 type: 4, // INTEGER
                 description: 'Your score for the tournament.',
@@ -217,6 +216,25 @@ const commands = [
                 type: 3, // STRING
                 description: 'Your iScored username.',
                 required: true,
+            },
+            {
+                name: 'grind-type',
+                type: 3, // STRING
+                description: 'Submit score to the active table for this grind type.',
+                required: false,
+                choices: [
+                    { name: 'Daily Grind (DG)', value: 'DG' },
+                    { name: 'Weekly Grind VPXS (WG-VPXS)', value: 'WG-VPXS' },
+                    { name: 'Weekly Grind VR (WG-VR)', value: 'WG-VR' },
+                    { name: 'Monthly Grind (MG)', value: 'MG' },
+                ]
+            },
+            {
+                name: 'table-name',
+                type: 3, // STRING
+                description: 'Submit score to a specific active table by name.',
+                required: false,
+                autocomplete: true,
             },
         ],
     },

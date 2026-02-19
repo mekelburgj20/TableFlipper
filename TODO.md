@@ -15,6 +15,7 @@
 11. **Table "Heat Map":** Suggest tables that haven't been in rotation for a long time.
 12. **Monthly "Themes":** Allow moderators to restrict `/picktable` choices based on monthly themes (e.g., "90s Bally").
 13. **Multi-Arcade Support:** Refactor config to support managing multiple iScored gamerooms from one instance.
+14. **Last Played:** When picking a game for the next grind, once a title is chosen, the bot should show when the last time the game was played was and ask for confirmation to proceed. This should also be a slash command 'last-played' with parameter 'table-name:' and do a match on the text string entered (in case the exact name of the game played is not found).
 
 # Completed History
 1. [COMPLETED] **Lineup Repositioning (DOM-based):** Implemented automated reordering of the iScored Lineup using physical DOM manipulation and internal iScored save mechanisms. The bot now ensures that Active tournament games appear farthest left (top of list), followed by recent history, maintaining a logical flow for the scoreboard. Configurable via `LINEUP_TYPE_ORDER`.

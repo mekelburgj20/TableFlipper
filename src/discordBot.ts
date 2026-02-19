@@ -2,11 +2,12 @@ import { Client, GatewayIntentBits, Events, EmbedBuilder, ActionRowBuilder, Butt
 import { Browser } from 'playwright';
 import { loginToIScored, createGame, submitScoreToIscored } from './iscored.js';
 import { getIscoredNameByDiscordId, getDiscordIdByIscoredName } from './userMapping.js';
-import { getPicker, setPicker, updateQueuedGame, getNextQueuedGame, searchTables, getTable, getRecentGameNames, getRandomCompatibleTable, injectSpecialGame, getActiveGame } from './database.js';
+import { getPicker, setPicker, updateQueuedGame, getNextQueuedGame, searchTables, getTable, getRecentGameNames, getRandomCompatibleTable, injectSpecialGame, getActiveGame, searchGamesByStatus, getGameByNameAndStatus, getAllActiveGames } from './database.js';
 import { getLastWinner, getHistory, getTableStats, getRecentWinners } from './history.js';
 import { getTablesFromSheet } from './googleSheet.js';
 import { getStandingsFromApi } from './api.js';
 import { triggerAllMaintenanceRoutines, runMaintenanceForGameType, runCleanupForGameType } from './maintenance.js';
+import { runStateSync } from './sync-state.js';
 import { logInfo, logError, logWarn } from './logger.js';
 
 export function startDiscordBot() {
@@ -47,25 +48,30 @@ export function startDiscordBot() {
             const focusedOption = interaction.options.getFocused(true);
 
             if (focusedOption.name === 'table-name') {
+                const commandName = interaction.commandName;
                 const gameType = interaction.options.getString('grind-type');
-                logInfo(`Autocomplete debug: gameType='${gameType}', query='${focusedOption.value}'`);
+                logInfo(`Autocomplete debug: command='${commandName}', gameType='${gameType}', query='${focusedOption.value}'`);
                 
                 let choices: any[] = [];
 
-                if (gameType === 'DG') {
-                    choices = await searchTables(focusedOption.value, 25, 'atgames');
-                } else if (gameType === 'WG-VR') {
-                    choices = await searchTables(focusedOption.value, 25, 'vr');
-                } else if (gameType === 'WG-VPXS') {
-                    choices = await searchTables(focusedOption.value, 25, 'vpxs');
-                } else {
-                    // For MG or others, provide no suggestions (allow free typing)
-                    await interaction.respond([]);
-                    return;
+                if (commandName === 'picktable') {
+                    if (gameType === 'DG') {
+                        choices = await searchTables(focusedOption.value, 25, 'atgames');
+                    } else if (gameType === 'WG-VR') {
+                        choices = await searchTables(focusedOption.value, 25, 'vr');
+                    } else if (gameType === 'WG-VPXS') {
+                        choices = await searchTables(focusedOption.value, 25, 'vpxs');
+                    }
+                } else if (commandName === 'list-scores') {
+                    // Entire current lineup (locked and unlocked), but not queued (hidden)
+                    choices = await searchGamesByStatus(focusedOption.value, ['ACTIVE', 'COMPLETED']);
+                } else if (commandName === 'submit-score') {
+                    // Only active games (not locked or hidden)
+                    choices = await searchGamesByStatus(focusedOption.value, ['ACTIVE']);
                 }
 
                 const filtered = choices.map(t => ({ name: t.name, value: t.name }));
-                logInfo(`Autocomplete debug: found ${filtered.length} results for gameType='${gameType}'`);
+                logInfo(`Autocomplete debug: found ${filtered.length} results`);
                 await interaction.respond(filtered);
             }
             return;
@@ -259,25 +265,27 @@ export function startDiscordBot() {
                 const { browser: newBrowser, page } = await loginToIScored();
                 browser = newBrowser;
                 
-                // This function now creates the game and returns the iScored ID
+                // This function now creates the game and returns an object with ID and scheduled time
                 // We pass the grind-type as the second argument to be added as a Tag
-                const iscoredGameId = await createGame(page, newGameName, gameType, styleId); 
+                const { id: iscoredGameId, scheduledTime } = await createGame(page, newGameName, gameType, styleId); 
                 
                 // 5. Update the game entry in our database
                 await updateQueuedGame(nextGame.id, tableName!, iscoredGameId);
 
-                // Format the activation time
-                let formattedTime = 'Unknown Time';
-                if (nextGame.scheduled_to_be_active_at) {
-                    const activeDate = new Date(nextGame.scheduled_to_be_active_at);
-                     formattedTime = activeDate.toLocaleDateString('en-US', {
+                // Format the activation message
+                let timeMessage = '';
+                if (gameType === 'DG') {
+                    const formattedTime = scheduledTime.toLocaleDateString('en-US', {
                         year: 'numeric', month: 'numeric', day: 'numeric', timeZone: 'America/Chicago'
-                     }) + ' at ' + activeDate.toLocaleTimeString('en-US', {
-                         hour: 'numeric', minute: '2-digit', hour12: true, timeZone: 'America/Chicago'
-                     }).toLowerCase() + ' Central';
+                    }) + ' at ' + scheduledTime.toLocaleTimeString('en-US', {
+                        hour: 'numeric', minute: '2-digit', hour12: true, timeZone: 'America/Chicago'
+                    }).toLowerCase() + ' Central';
+                    timeMessage = `It will be the table for the tournament beginning **${formattedTime}**.`;
+                } else {
+                    timeMessage = `It has been activated and is **ready for play right now!**`;
                 }
 
-                const confirmationMessage = `Thank you, ${interaction.user.toString()}! The table **${tableName} ${gameType}** has been selected and created. It will be the table for the tournament beginning ${formattedTime}.`;
+                const confirmationMessage = `Thank you, ${interaction.user.toString()}! The table **${tableName} ${gameType}** has been selected and created. ${timeMessage}`;
                 
                 await interaction.editReply({ content: confirmationMessage, components: [] });
 
@@ -460,6 +468,27 @@ export function startDiscordBot() {
             }
         }
 
+        else if (commandName === 'trigger-sync-state') {
+            await interaction.deferReply({ ephemeral: true });
+            const modRoleId = process.env.MOD_ROLE_ID;
+            if (!modRoleId) {
+                await interaction.editReply('The MOD_ROLE_ID is not configured. Please contact an admin.');
+                return;
+            }
+            const memberRoles = interaction.member?.roles as any;
+            if (!memberRoles || !memberRoles.cache.has(modRoleId)) {
+                await interaction.editReply('You do not have permission to use this command.');
+                return;
+            }
+            try {
+                await runStateSync();
+                await interaction.editReply('Tournament state has been successfully synchronized with iScored.');
+            } catch (error) {
+                logError('❌ Error manually triggering state sync:', error);
+                await interaction.editReply('An error occurred while trying to synchronize state.');
+            }
+        }
+
         else if (commandName === 'trigger-cleanup') {
             const gameType = interaction.options.getString('grind-type') ?? 'ALL';
             await interaction.deferReply({ ephemeral: true });
@@ -530,7 +559,7 @@ export function startDiscordBot() {
                 
                 // Create (or find) the game and get its ID
                 // Apply 'DG' tag
-                const iscoredGameId = await createGame(page, fullGameName, 'DG', styleId);
+                const { id: iscoredGameId } = await createGame(page, fullGameName, 'DG', styleId);
                 
                 // 3. Inject into Database
                 await injectSpecialGame('DG', fullGameName, iscoredGameId);
@@ -547,41 +576,62 @@ export function startDiscordBot() {
             }
         }
         
-        else if (commandName === 'current-dg-scores') {
-            const gameType = interaction.options.getString('grind-type', true);
+        else if (commandName === 'list-scores') {
+            const gameType = interaction.options.getString('grind-type');
+            const tableName = interaction.options.getString('table-name');
             await interaction.deferReply({ ephemeral: true });
 
             try {
-                // Use the database instead of the slow findActiveGame scraper
-                const activeGame = await getActiveGame(gameType);
-                if (!activeGame) {
-                    await interaction.editReply(`Could not find an active tournament for ${gameType} in my database. Try running \`/list-active\` or ask an admin to sync state.`);
-                    return;
+                let targetGames: { name: string, type?: string }[] = [];
+
+                if (tableName) {
+                    targetGames = [{ name: tableName }];
+                } else if (gameType) {
+                    const active = await getActiveGame(gameType);
+                    if (active) {
+                        targetGames = [{ name: active.name, type: gameType }];
+                    } else {
+                        await interaction.editReply(`No active tournament found for **${gameType}**.`);
+                        return;
+                    }
+                } else {
+                    // Default: All Active Games
+                    const actives = await getAllActiveGames();
+                    if (actives.length === 0) {
+                        await interaction.editReply('No active tournaments found in the database.');
+                        return;
+                    }
+                    targetGames = actives.map(a => ({ name: a.name, type: a.type }));
                 }
 
-                const standings = await getStandingsFromApi(activeGame.name);
-                if (standings.length === 0) {
-                    await interaction.editReply(`No scores have been submitted yet for ${activeGame.name}.`);
-                    return;
+                const embeds = [];
+
+                for (const game of targetGames) {
+                    const standings = await getStandingsFromApi(game.name);
+                    
+                    const title = game.type ? `Standings: ${game.type} (${game.name})` : `Standings: ${game.name}`;
+                    const embed = new EmbedBuilder()
+                        .setTitle(title)
+                        .setColor(0x00AE86)
+                        .setTimestamp();
+
+                    if (standings.length === 0) {
+                        embed.setDescription('No scores submitted yet.');
+                    } else {
+                        let description = '';
+                        standings.slice(0, 10).forEach(s => { 
+                            description += `**${s.rank}. ${s.name}** - ${s.score}\n`;
+                        });
+                        embed.setDescription(description);
+                    }
+                    embeds.push(embed);
                 }
 
-                const embed = new EmbedBuilder()
-                    .setTitle(`Current Standings for ${activeGame.name}`)
-                    .setColor(0x00AE86)
-                    .setTimestamp();
-
-                let description = '';
-                standings.slice(0, 15).forEach(s => { // Limit to top 15 to avoid hitting char limits
-                    description += `**${s.rank}. ${s.name}** - ${s.score}\n`;
-                });
-                
-                embed.setDescription(description);
-
-                await interaction.editReply({ embeds: [embed] });
+                await interaction.editReply({ embeds: embeds.slice(0, 10) });
 
             } catch (error) {
-                logError(`Error in /current-dg-scores:`, error);
-                await interaction.editReply('An error occurred while trying to fetch the current scores.');
+                logError(`Error in /list-scores:`, error);
+                await interaction.editReply('An error occurred while fetching the standings.');
             }
         }
         
@@ -659,8 +709,9 @@ export function startDiscordBot() {
 
         }
         
-        else if (commandName === 'submit-score') { // Note: Command name was updated
-            const gameType = interaction.options.getString('grind-type', true);
+        else if (commandName === 'submit-score') { 
+            const gameType = interaction.options.getString('grind-type');
+            const tableName = interaction.options.getString('table-name');
             const score = interaction.options.getInteger('score', true);
             const photoAttachment = interaction.options.getAttachment('photo', true);
             const iScoredUsername = interaction.options.getString('iscored_username', true);
@@ -668,59 +719,58 @@ export function startDiscordBot() {
             await interaction.deferReply();
 
             try {
-                // Check if the provided iScored username is already mapped to a different Discord user
                 const existingDiscordId = getIscoredNameByDiscordId(iScoredUsername);
                 if (existingDiscordId && existingDiscordId !== interaction.user.id) {
                     await interaction.editReply(`The iScored username '${iScoredUsername}' is already linked to another Discord user.`);
                     return;
                 }
 
-                // Get active game name for confirmation
-                const activeGame = await getActiveGame(gameType);
-                const activeGameName = activeGame ? activeGame.name : "Unknown (Check /list-active)";
+                let targetGameName: string | null = null;
+                let iscoredId: string | null = null;
+                let contextType: string = 'Game';
 
-                if (!activeGame) {
-                    await interaction.editReply(`I couldn't find an active game for **${gameType}** in my database. Please check if the tournament is active.`);
+                if (tableName) {
+                    const game = await getGameByNameAndStatus(tableName, ['ACTIVE']);
+                    if (game) {
+                        targetGameName = game.name;
+                        iscoredId = game.iscored_game_id;
+                    } else {
+                        await interaction.editReply(`The table "**${tableName}**" is either not active or not found in my database. Scores can only be submitted to active games.`);
+                        return;
+                    }
+                } else if (gameType) {
+                    const activeGame = await getActiveGame(gameType);
+                    if (activeGame) {
+                        targetGameName = activeGame.name;
+                        iscoredId = activeGame.iscored_game_id;
+                        contextType = `Tournament (${gameType})`;
+                    } else {
+                        await interaction.editReply(`I couldn't find an active game for **${gameType}** in my database.`);
+                        return;
+                    }
+                } else {
+                    await interaction.editReply('Please specify either a **grind-type** or a **table-name**.');
                     return;
                 }
 
-                // Confirmation UI
-                const confirmBtn = new ButtonBuilder()
-                    .setCustomId('confirm_score')
-                    .setLabel(`Yes, submit for ${activeGameName}`)
-                    .setStyle(ButtonStyle.Primary);
-                
-                const cancelBtn = new ButtonBuilder()
-                    .setCustomId('cancel_score')
-                    .setLabel('Cancel')
-                    .setStyle(ButtonStyle.Secondary);
-
+                const confirmBtn = new ButtonBuilder().setCustomId('confirm_score').setLabel(`Yes, submit for ${targetGameName}`).setStyle(ButtonStyle.Primary);
+                const cancelBtn = new ButtonBuilder().setCustomId('cancel_score').setLabel('Cancel').setStyle(ButtonStyle.Secondary);
                 const row = new ActionRowBuilder<ButtonBuilder>().addComponents(confirmBtn, cancelBtn);
 
                 const response = await interaction.editReply({
-                    content: `**Score Submission Review**\n\n**Tournament:** ${gameType}\n**Active Table:** ${activeGameName}\n**Score:** ${score}\n**Player:** ${iScoredUsername}\n\nIs this correct?`,
+                    content: `**Score Submission Review**\n\n**${contextType}:** ${targetGameName}\n**Score:** ${score.toLocaleString()}\n**Player:** ${iScoredUsername}\n\nIs this correct?`,
                     components: [row]
                 });
 
-                try {
-                    const confirmation = await response.awaitMessageComponent({ 
-                        filter: i => i.user.id === interaction.user.id, 
-                        time: 60000 
-                    });
-
-                    if (confirmation.customId === 'cancel_score') {
-                        await confirmation.update({ content: 'Submission cancelled.', components: [] });
-                        return;
-                    }
-
-                    await confirmation.update({ content: `Confirmed! Submitting score to iScored...`, components: [] });
-
-                    await submitScoreToIscored(iScoredUsername, interaction.user.id, score, photoAttachment.url, activeGame.iscored_game_id, activeGameName);
-                    await interaction.editReply(`**Success!** Score of ${score} posted for ${activeGameName}.`);
-
-                } catch (e) {
-                    await interaction.editReply({ content: 'Confirmation timed out. Submission cancelled.', components: [] });
+                const confirmation = await response.awaitMessageComponent({ filter: i => i.user.id === interaction.user.id, time: 60000 });
+                if (confirmation.customId === 'cancel_score') {
+                    await confirmation.update({ content: 'Submission cancelled.', components: [] });
+                    return;
                 }
+
+                await confirmation.update({ content: `Confirmed! Submitting score to iScored...`, components: [] });
+                await submitScoreToIscored(iScoredUsername, interaction.user.id, score, photoAttachment.url, iscoredId!, targetGameName!);
+                await interaction.editReply(`**Success!** Score of ${score.toLocaleString()} posted for **${targetGameName}**.`);
             } catch (error) {
                 logError(`Error in /submit-score:`, error);
                 await interaction.editReply(`An error occurred while trying to submit your score.`);

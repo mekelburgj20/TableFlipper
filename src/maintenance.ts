@@ -4,7 +4,7 @@ import { getWinnerAndScoreFromPage, getStandingsFromPage } from './api.js';
 import { checkWinnerHistory, updateWinnerHistory } from './history.js';
 import { sendDiscordNotification } from './discord.js';
 import { getDiscordIdByIscoredName } from './userMapping.js';
-import { getActiveGame, getNextQueuedGame, updateGameStatus, setPicker, createGameEntry, GameRow, hasScores, saveScores, getGameByIscoredId, syncCompletedGame, upsertTable, getTable, getLineupOrder } from './database.js';
+import { getActiveGame, getNextQueuedGame, updateGameStatus, setPicker, createGameEntry, GameRow, hasScores, saveScores, getGameByIscoredId, syncCompletedGame, syncQueuedGame, upsertTable, getTable, getLineupOrder } from './database.js';
 import { logInfo, logError, logWarn } from './logger.js';
 
 const ALL_GAME_TYPES = ['DG', 'WG-VPXS', 'WG-VR', 'MG'];
@@ -54,11 +54,11 @@ async function cleanupOldGames(page: Page, gameType: string) {
         // Navigate to Lineup page to find games
         await navigateToLineupPage(page);
         
-        const { activeGames, completedGames } = await findGames(page, gameType);
+        const { activeGames, nextGames, completedGames } = await findGames(page, gameType);
         const officialActiveGame = await getActiveGame(gameType);
         
-        // Any game that is SHOWN (active or completed list) is a candidate
-        const visibleGames = [...activeGames, ...completedGames];
+        // Any game that is SHOWN or HIDDEN but tagged is a candidate for sync
+        const visibleGames = [...activeGames, ...completedGames, ...nextGames];
         
         logInfo(`   -> Found ${visibleGames.length} visible ${gameType} games to evaluate.`);
 
@@ -69,19 +69,30 @@ async function cleanupOldGames(page: Page, gameType: string) {
                 continue;
             }
 
-            logInfo(`   Processing cleanup for '${game.name}' (ID: ${game.id})...`);
+            logInfo(`   Processing sync/cleanup for '${game.name}' (ID: ${game.id})...`);
             
             // Check if we have this game in DB
             let dbGame = await getGameByIscoredId(game.id);
             
-            // If the game isn't in our DB, we should create a record for it so we can track and delete it.
+            // If the game isn't in our DB, we should create a record for it so we can track it.
             if (!dbGame) {
-                logInfo(`   -> Game not found in local DB. Importing as COMPLETED to allow cleanup.`);
-                await syncCompletedGame(gameType, game.id, game.name);
+                if (game.isHidden) {
+                    logInfo(`   -> Game not found in local DB. Importing as QUEUED to allow maintenance promotion.`);
+                    await syncQueuedGame(gameType, game.id, game.name);
+                } else {
+                    logInfo(`   -> Game not found in local DB. Importing as COMPLETED to allow cleanup.`);
+                    await syncCompletedGame(gameType, game.id, game.name);
+                }
                 dbGame = await getGameByIscoredId(game.id);
             }
             
             if (dbGame) {
+                // If it's HIDDEN, we don't delete it - we just let maintenance handle it
+                if (game.isHidden) {
+                    logInfo(`   -> Game is hidden/queued. Leaving for maintenance logic.`);
+                    continue;
+                }
+
                 // Check if scores are saved
                 const scoresExist = await hasScores(dbGame.id);
                 if (!scoresExist) {
@@ -105,8 +116,12 @@ async function cleanupOldGames(page: Page, gameType: string) {
                     await updateGameStatus(dbGame.id, 'COMPLETED');
                 }
 
-                // Delete the game from iScored
-                await deleteGame(page, game.name, game.id);
+                // Delete the game from iScored only if it's not the active one
+                if (dbGame.status !== 'ACTIVE' && (!officialActiveGame || dbGame.id !== officialActiveGame.id)) {
+                    await deleteGame(page, game.name, game.id);
+                    // Mark as HIDDEN in DB so it doesn't show up in 'current' autocomplete
+                    await updateGameStatus(dbGame.id, 'HIDDEN');
+                }
                 
                 // We need to re-navigate to Lineup page because deleteGame goes to Games tab
                 await navigateToLineupPage(page);
@@ -176,12 +191,18 @@ export async function runMaintenanceForGameType(gameType: string) {
     let browser: Browser | null = null;
 
     try {
-        // --- Phase 1: Get Game States from DB ---
-        const activeGame = await getActiveGame(gameType);
-        const nextGame = await getNextQueuedGame(gameType);
-
         const { browser: b, page } = await loginToIScored();
         browser = b;
+
+        // --- Phase 0: Sync/Cleanup Sweep ---
+        // This ensures any manually created games on iScored are imported into the DB 
+        // as COMPLETED (or QUEUED if they are tagged but hidden) so maintenance can see them.
+        await cleanupOldGames(page, gameType);
+
+        // --- Phase 1: Get Game States from DB ---
+        // Refetch activeGame and nextGame AFTER the sync sweep to pick up any new imports
+        const activeGame = await getActiveGame(gameType);
+        const nextGame = await getNextQueuedGame(gameType);
         
         // --- Phase 2: Process Active Game (if one exists) ---
         if (activeGame) {

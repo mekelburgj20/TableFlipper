@@ -51,7 +51,7 @@ export async function checkPickerTimeouts() {
                     // 2. Create the game in iScored
                     const { browser: newBrowser, page } = await loginToIScored();
                     browser = newBrowser;
-                    const iscoredGameId = await createGame(page, newGameName, gameType);
+                    const { id: iscoredGameId } = await createGame(page, newGameName, gameType);
 
                     // 3. Update the game in the database (keeping base name in DB, createGame adds suffix for iScored)
                     await updateQueuedGame(game.id, newGameName, iscoredGameId);

@@ -57,8 +57,8 @@ async function main() {
             timezone: "America/Chicago"
         });
 
-        // Schedule the Weekly Grind maintenance to run at 12:01 AM on Wednesdays
-        cron.schedule('1 0 * * 3', async () => {
+        // Schedule the Weekly Grind maintenance to run at 11:00 PM on Wednesdays
+        cron.schedule('0 23 * * 3', async () => {
             logInfo('⏰ Kicking off scheduled maintenance for Weekly Grinds...');
             try {
                 await runMaintenanceForGameType('WG-VPXS');
@@ -72,8 +72,8 @@ async function main() {
             timezone: "America/Chicago"
         });
 
-        // Schedule the Cleanup Routine for DG and WG to run at 11:00 PM on Wednesdays
-        cron.schedule('0 23 * * 3', async () => {
+        // Schedule the Cleanup Routine for DG and WG to run at 11:01 PM on Wednesdays
+        cron.schedule('1 23 * * 3', async () => {
             logInfo('🧹 Kicking off scheduled cleanup for DG and WG...');
             try {
                 await runCleanupForGameType('DG');

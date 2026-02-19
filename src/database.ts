@@ -310,23 +310,20 @@ export async function injectSpecialGame(gameType: string, gameName: string, isco
 export async function syncActiveGame(gameType: string, iscoredGameId: string | null, gameName: string | null): Promise<void> {
     const db = await openDb();
     try {
-        // 1. Deactivate any CURRENTLY active games for this type in DB
-        // (We assume iScored is truth. If iScored says Game X is active, Game Y in DB should stop being active)
-        await db.run(
-            `UPDATE games SET status = 'COMPLETED', completed_at = ? WHERE type = ? AND status = 'ACTIVE'`,
-            new Date().toISOString(), gameType
-        );
-
         if (iscoredGameId && gameName) {
-            // 2. Check if the iScored game exists in DB
+            // 1. Deactivate any other games for this type that are NOT this game
+            await db.run(
+                `UPDATE games SET status = 'COMPLETED', completed_at = ? WHERE type = ? AND status = 'ACTIVE' AND iscored_game_id != ?`,
+                new Date().toISOString(), gameType, iscoredGameId
+            );
+
+            // 2. Check if this game exists
             const existingGame = await db.get<GameRow>("SELECT * FROM games WHERE iscored_game_id = ?", iscoredGameId);
 
             if (existingGame) {
-                // Update it to ACTIVE
                 await db.run("UPDATE games SET status = 'ACTIVE', completed_at = NULL WHERE id = ?", existingGame.id);
                 console.log(`🔄 Synced DB: Set existing game '${gameName}' to ACTIVE.`);
             } else {
-                // Insert as new ACTIVE game
                 const newId = uuidv4();
                 await db.run(
                     `INSERT INTO games (id, iscored_game_id, name, type, status, created_at)
@@ -336,6 +333,11 @@ export async function syncActiveGame(gameType: string, iscoredGameId: string | n
                 console.log(`🔄 Synced DB: Created new ACTIVE entry for '${gameName}'.`);
             }
         } else {
+            // No active game on iScored - mark ALL active games of this type as COMPLETED
+            await db.run(
+                `UPDATE games SET status = 'COMPLETED', completed_at = ? WHERE type = ? AND status = 'ACTIVE'`,
+                new Date().toISOString(), gameType
+            );
             console.log(`🔄 Synced DB: No active game found on iScored for ${gameType}. Cleared active state in DB.`);
         }
 
@@ -402,7 +404,9 @@ export async function createGameEntry(game: Omit<GameRow, 'id' | 'created_at' | 
         const now = new Date();
         let scheduledTime: Date;
 
-        if (game.type === 'DG') {
+        if (game.scheduled_to_be_active_at) {
+            scheduledTime = new Date(game.scheduled_to_be_active_at);
+        } else if (game.type === 'DG') {
             // DG has a 1-day buffer (it's picked 2 days in advance, so it sits in QUEUED for a day)
             scheduledTime = new Date(now.getTime());
             scheduledTime.setDate(scheduledTime.getDate() + 2);
@@ -437,6 +441,15 @@ export async function getActiveGame(gameType: string): Promise<GameRow | null> {
     const db = await openDb();
     try {
         return await db.get<GameRow>("SELECT * FROM games WHERE type = ? AND status = 'ACTIVE'", gameType) ?? null;
+    } finally {
+        await db.close();
+    }
+}
+
+export async function getAllActiveGames(): Promise<GameRow[]> {
+    const db = await openDb();
+    try {
+        return await db.all<GameRow[]>("SELECT * FROM games WHERE status = 'ACTIVE' ORDER BY type ASC");
     } finally {
         await db.close();
     }
@@ -573,6 +586,30 @@ export async function getLineupOrder(typeOrder: string[]): Promise<string[]> {
         }
 
         return orderedIds;
+    } finally {
+        await db.close();
+    }
+}
+
+export async function searchGamesByStatus(query: string, statuses: string[], limit: number = 25): Promise<GameRow[]> {
+    const db = await openDb();
+    try {
+        const placeholders = statuses.map(() => '?').join(',');
+        const sql = `SELECT * FROM games WHERE name LIKE ? AND status IN (${placeholders}) ORDER BY created_at DESC LIMIT ?`;
+        const params = [`%${query}%`, ...statuses, limit];
+        return await db.all<GameRow[]>(sql, ...params);
+    } finally {
+        await db.close();
+    }
+}
+
+export async function getGameByNameAndStatus(name: string, statuses: string[]): Promise<GameRow | null> {
+    const db = await openDb();
+    try {
+        const placeholders = statuses.map(() => '?').join(',');
+        const sql = `SELECT * FROM games WHERE name = ? AND status IN (${placeholders}) LIMIT 1`;
+        const params = [name, ...statuses];
+        return await db.get<GameRow>(sql, ...params) ?? null;
     } finally {
         await db.close();
     }
