@@ -1,6 +1,7 @@
 import 'dotenv/config';
 import { loginToIScored, findGames, navigateToLineupPage } from './iscored.js';
 import { syncActiveGame, syncQueuedGame, syncCompletedGame } from './database.js';
+import { triggerLineupRepositioning } from './maintenance.js';
 import { logInfo, logError } from './logger.js';
 
 const GAME_TYPES = ['DG', 'WG-VPXS', 'WG-VR', 'MG'];
@@ -78,6 +79,9 @@ export async function runStateSync() {
         }
 
         logInfo('✅ State sync completed successfully.');
+
+        // Trigger lineup repositioning after sync
+        await triggerLineupRepositioning();
 
     } catch (error) {
         logError('❌ State sync failed:', error);
