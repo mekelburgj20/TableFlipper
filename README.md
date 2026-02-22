@@ -89,11 +89,38 @@ npm run deploy-commands
 *   `npm run sync-state`: Scrapes iScored to align the database with the live site (Active/Queued/Completed games).
 *   `npm run build`: Compiles TypeScript to the `dist/` folder.
 
-## 5. Logs
+## 6. Backup and Restore
+
+TableFlipper supports full system backups, preserving the database, configuration, and **all games currently on the iScored lineup** (including non-tournament games), along with their scores and photos.
+
+### Creating a Backup
+Backups are triggered via a Discord slash command (Moderator only):
+*   `/trigger-backup`: Creates a timestamped folder in the `backups/` directory (e.g., `backups/2026-02-19_14-30-00`). This process first synchronizes the tournament state, then scrapes the entire iScored lineup.
+
+### Restoring a Backup
+**⚠️ Warning:** Restoring is a destructive action. It will **wipe the ENTIRE iScored lineup** (deleting all games) and overwrite the local database. It should only be performed when the server is stopped or maintenance mode is active.
+
+To restore a backup, use the CLI command from the server terminal:
+```bash
+npm run restore-backup -- <backup_folder_name>
+```
+**Example:**
+```bash
+npm run restore-backup -- 2026-02-19_14-30-00
+```
+This will:
+1.  **Delete ALL** games currently on the iScored lineup.
+2.  **Recreate** all games from the backup state (restoring names, tags, hidden/locked status).
+3.  **Restore** the local database and configuration files.
+4.  **Re-submit** all original scores and photos.
+
+**Note:** For photo restoration to work, ensure `ISCORED_PUBLIC_URL` is set in your `.env` file (e.g., `ISCORED_PUBLIC_URL=https://www.iscored.info/your-arcade`).
+
+## 7. Logs
 
 The bot maintains detailed logs in `data/bot.log`. Check this file for troubleshooting browser automation steps or maintenance failures.
 
-## 6. Release Notes
+## 8. Release Notes
 
 ### v1.1.0 (Current)
 *   **Multi-Channel Webhooks:** Implemented support for tournament-specific Discord webhooks (`DISCORD_WEBHOOK_URL_DG`, etc.), enabling targeted announcements for different grind types.

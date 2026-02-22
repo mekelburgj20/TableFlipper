@@ -31,6 +31,7 @@ export interface Game {
     name: string;
     isHidden: boolean; 
     isLocked: boolean;
+    tags?: string[];
 }
 
 /**
@@ -194,6 +195,69 @@ export async function findGames(page: Page, gameType: string): Promise<{ activeG
         logError('❌ Failed to find games on the Lineup page.');
         await page.screenshot({ path: 'find_games_error.png', fullPage: true });
         logInfo('📷 Screenshot of the Lineup page saved to find_games_error.png.');
+        throw error;
+    }
+}
+
+export async function getAllGames(page: Page): Promise<Game[]> {
+    logInfo(`🔎 Fetching ALL games from the Lineup page...`);
+    try {
+        const mainFrame = page.frameLocator('#main');
+        await navigateToLineupPage(page);
+
+        // The list might be hidden if empty, so we just wait for it to be attached to the DOM
+        const list = mainFrame.locator('ul#orderGameUL');
+        try {
+            await list.waitFor({ state: 'attached', timeout: 5000 });
+        } catch (e) {
+            // If even attached fails, maybe valid empty state if navigateToLineupPage passed?
+            logWarn('   -> Warning: Order list UL not attached.');
+        }
+
+        const gameElements = await mainFrame.locator('li.list-group-item').all();
+        logInfo(`   -> Found ${gameElements.length} total elements.`);
+
+        const games: Game[] = [];
+
+        for (const gameRow of gameElements) {
+            const nameElement = gameRow.locator('span.dragHandle');
+            const name = (await nameElement.innerText()).trim();
+            const idAttr = await gameRow.getAttribute('id');
+            if (!idAttr) continue;
+            const id = idAttr;
+
+            // Extract tags
+            const tagInput = gameRow.locator(`input[name="tagInput${id}"]`);
+            const tagValue = await tagInput.getAttribute('value') || '';
+            let tags: string[] = [];
+            
+            try {
+                if (tagValue && tagValue !== '[]') {
+                     const parsed = JSON.parse(tagValue);
+                     if (Array.isArray(parsed)) {
+                         tags = parsed.map((t: any) => t.value);
+                     } else {
+                         tags = [tagValue];
+                     }
+                }
+            } catch (e) {
+                if (tagValue) tags = [tagValue];
+            }
+
+            // Status checks
+            const hideCheckbox = gameRow.locator(`#hide${id}`); 
+            const isHidden = await hideCheckbox.isChecked();
+            
+            const lockCheckbox = gameRow.locator(`#lock${id}`);
+            const isLocked = await lockCheckbox.isChecked();
+
+            games.push({ id, name, isHidden, isLocked, tags });
+        }
+
+        return games;
+
+    } catch (error) {
+        logError('❌ Failed to fetch all games from Lineup page.', error);
         throw error;
     }
 }
@@ -466,20 +530,35 @@ export async function navigateToLineupPage(page: Page) {
 
                 await list.waitFor({ state: 'visible', timeout: 5000 });
                 
-                // Additional check to ensure it has children
-                const count = await list.locator('li').count();
-                if (count > 0) {
+                // Additional check to ensure it has children (unless we accept empty)
+                // For backup/restore/sync, 0 games is a valid state (e.g. fresh start or wiped board)
+                // So we just check if the LIST element is visible.
+                if (await list.isVisible()) {
+                    const count = await list.locator('li').count();
                     logInfo(`✅ On Lineup page. Found ${count} games.`);
                     return;
                 }
             } catch (e) {
-                logWarn(`   -> List not visible or empty after attempt ${i+1}.`);
+                logWarn(`   -> List not visible after attempt ${i+1}.`);
             }
         }
         
         throw new Error('Failed to load Lineup list after 3 attempts.');
 
     } catch (e) {
+        // Fallback: If the tab is active but list is missing, assume it's empty (0 games)
+        try {
+            const mainFrame = page.frameLocator('#main');
+            const activeTab = mainFrame.locator('ul.nav.nav-tabs.settingsTabs > li.active > a');
+            const activeText = await activeTab.innerText();
+            if (activeText.includes('Lineup') || activeText.includes('Order')) { // "Lineup" or similar
+                 logInfo('⚠️ Lineup list not found, but Lineup tab is active. Assuming empty list.');
+                 return;
+            }
+        } catch (checkErr) {
+            // Ignore
+        }
+
         logError('❌ Timeout or error in navigateToLineupPage. Taking a screenshot.');
         try {
             await page.screenshot({ path: 'lineup_page_error.png', fullPage: true });
@@ -1101,40 +1180,57 @@ export async function submitScoreToIscored(iScoredUsername: string, discordUserI
         }, score.toString());
 
         // 5. Handle photo upload
-        logInfo(`📷 Downloading photo from ${photoUrl}`);
-        const tempDir = path.join(os.tmpdir(), 'tableflipper_tmp'); // Use system's temp directory
-        await fsPromises.mkdir(tempDir, { recursive: true }); // Ensure directory exists
-        const photoResponse = await axios({
-            url: photoUrl,
-            method: 'GET',
-            responseType: 'stream'
-        });
+        let tempPhotoPath: string;
         
-        const tempPhotoPath = path.join(tempDir, `score_photo_${Date.now()}.jpg`);
-        const writer = fs.createWriteStream(tempPhotoPath);
-        photoResponse.data.pipe(writer);
-        
-        await new Promise((resolve, reject) => {
-            writer.on('finish', () => resolve(undefined));
-            writer.on('error', reject);
-        });
-
-        logInfo(`✅ Photo downloaded to ${tempPhotoPath}`);
+        if (photoUrl.startsWith('file://')) {
+            // Local file path (for restore process)
+            const cleanPath = photoUrl.replace('file://', '');
+            // Handle Windows paths if they get messed up by file:// protocol (e.g. file:///C:/...)
+            // Simple replace is usually enough for absolute paths in Node context if passed correctly.
+            
+            if (fs.existsSync(cleanPath)) {
+                logInfo(`   -> Using local photo file for upload: ${cleanPath}`);
+                tempPhotoPath = cleanPath;
+            } else {
+                 throw new Error(`Local photo file not found: ${cleanPath}`);
+            }
+        } else {
+            // Remote URL download
+            logInfo(`📷 Downloading photo from ${photoUrl}`);
+            const tempDir = path.join(os.tmpdir(), 'tableflipper_tmp');
+            await fsPromises.mkdir(tempDir, { recursive: true });
+            const photoResponse = await axios({
+                url: photoUrl,
+                method: 'GET',
+                responseType: 'stream'
+            });
+            
+            tempPhotoPath = path.join(tempDir, `score_photo_${Date.now()}.jpg`);
+            const writer = fs.createWriteStream(tempPhotoPath);
+            photoResponse.data.pipe(writer);
+            
+            await new Promise((resolve, reject) => {
+                writer.on('finish', () => resolve(undefined));
+                writer.on('error', reject);
+            });
+            logInfo(`✅ Photo downloaded to ${tempPhotoPath}`);
+        }
         
         // Re-implement file chooser logic
         const fileChooserPromise = page.waitForEvent('filechooser');
-        await mainFrame.locator('#takePhoto').click(); // Click the button to trigger the file chooser
+        await mainFrame.locator('#takePhoto').click(); 
         const fileChooser = await fileChooserPromise;
         logInfo(`   -> Setting files for upload: ${tempPhotoPath}`);
         await fileChooser.setFiles(tempPhotoPath);
         logInfo(`✅ Photo uploaded via file chooser.`);
-        // Add a small delay to allow the page to process the file selection
+        
+        // Add a small delay
         await page.waitForTimeout(1000);
 
         // 6. Post the score.
         await mainFrame.getByRole('button', { name: 'Post Your Score!' }).click();
         
-        // 7. Wait for submission to complete and handle potential confirmation dialog.
+        // 7. Wait for submission and handle confirmation
         try {
             const confirmButton = mainFrame.getByRole('button', { name: 'Yes Please.' });
             await confirmButton.click({ timeout: 3000 });
@@ -1143,16 +1239,16 @@ export async function submitScoreToIscored(iScoredUsername: string, discordUserI
             logInfo('   -> "Yes Please." confirmation dialog not found, continuing...');
         }
 
-        // Wait for the modal to disappear as a final confirmation of success.
         await mainFrame.locator('#scoreEntryDiv').waitFor({ state: 'hidden' });
         logInfo(`✅ Score ${score} submitted successfully to iScored for game '${gameName}' by ${iScoredUsername}.`);
 
-        // Add/Update user mapping after successful score submission
         await addUserMapping(iScoredUsername, discordUserId);
 
-        // Clean up the downloaded photo
-        await fsPromises.unlink(tempPhotoPath);
-        logInfo(`🗑️ Deleted temporary photo: ${tempPhotoPath}`);
+        // Only delete if it was a downloaded temp file
+        if (!photoUrl.startsWith('file://')) {
+            await fsPromises.unlink(tempPhotoPath);
+            logInfo(`🗑️ Deleted temporary photo: ${tempPhotoPath}`);
+        }
 
     } catch (error) {
         logError(`❌ Failed to submit score to iScored for user '${iScoredUsername}' (Discord: ${discordUserId}):`, error);
@@ -1347,4 +1443,83 @@ export async function repositionLineup(page: Page, orderedIds: string[]): Promis
         logError('❌ Error during repositionLineup:', e);
         throw e;
     }
+}
+
+export interface ScoreWithPhoto {
+    rank: string;
+    username: string;
+    score: string;
+    photoUrl: string | null;
+}
+
+export async function scrapeScoresForGame(page: Page, gameId: string): Promise<ScoreWithPhoto[]> {
+    const publicUrl = process.env.ISCORED_PUBLIC_URL;
+    if (!publicUrl) {
+        logWarn('⚠️ ISCORED_PUBLIC_URL not set. Cannot scrape scores.');
+        return [];
+    }
+    
+    // Navigate only if not already on the public page (fuzzy match to allow for params)
+    // OR if we are currently on the settings page (admin side)
+    if (!page.url().includes(publicUrl) || page.url().includes('settings.php')) {
+        logInfo(`   -> Navigating to public URL: ${publicUrl}`);
+        await page.goto(publicUrl);
+        await page.waitForLoadState('domcontentloaded');
+        // Wait a bit for dynamic content
+        await page.waitForTimeout(5000);
+    }
+
+    const mainFrame = page.frameLocator('#main');
+    const gameCardSelector = `div.game#a${gameId}`;
+    const gameCard = mainFrame.locator(gameCardSelector);
+    
+    try {
+        await gameCard.waitFor({ state: 'attached', timeout: 5000 });
+        // It might be hidden if it's not active? But we are syncing state, so maybe we only backup active/completed visible games?
+        // If it's not visible, we can't scrape it from public page easily.
+    } catch (e) {
+        logWarn(`⚠️ Game card ${gameCardSelector} not found on public page.`);
+        return [];
+    }
+
+    const scoreboxes = await gameCard.locator('.scorebox').all();
+    const results: ScoreWithPhoto[] = [];
+    let rankCounter = 1;
+
+    for (const box of scoreboxes) {
+        if (await box.isVisible()) {
+            const nameEl = box.locator('.name');
+            const scoreEl = box.locator('.score:not([id])');
+
+            if (await nameEl.count() === 0 || await scoreEl.count() === 0) continue;
+
+            const name = await nameEl.innerText();
+            const score = await scoreEl.innerText();
+            
+            // Look for photo link. Usually an anchor tag wrapping the score or an icon.
+            // We look for any 'a' tag that links to an image file or the uploads directory.
+            const link = box.locator('a[href*="/uploads/"], a[href*=".jpg"], a[href*=".png"], a[href*=".jpeg"]');
+            let photoUrl: string | null = null;
+            
+            if (await link.count() > 0) {
+                const rawUrl = await link.first().getAttribute('href');
+                if (rawUrl) {
+                    if (rawUrl.startsWith('http')) {
+                        photoUrl = rawUrl;
+                    } else {
+                        const baseUrl = new URL(publicUrl).origin;
+                        photoUrl = new URL(rawUrl, baseUrl).toString();
+                    }
+                }
+            }
+            
+            results.push({
+                rank: (rankCounter++).toString(),
+                username: name.trim(),
+                score: score.trim(),
+                photoUrl
+            });
+        }
+    }
+    return results;
 }

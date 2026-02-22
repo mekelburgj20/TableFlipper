@@ -8,6 +8,7 @@ import { getTablesFromSheet } from './googleSheet.js';
 import { getStandingsFromApi } from './api.js';
 import { triggerAllMaintenanceRoutines, runMaintenanceForGameType, runCleanupForGameType } from './maintenance.js';
 import { runStateSync } from './sync-state.js';
+import { createBackup, restoreBackup } from './backup-restore.js';
 import { logInfo, logError, logWarn } from './logger.js';
 
 export function startDiscordBot() {
@@ -524,6 +525,28 @@ export function startDiscordBot() {
             }
         }
         
+        else if (commandName === 'trigger-backup') {
+            await interaction.deferReply({ ephemeral: true });
+            const modRoleId = process.env.MOD_ROLE_ID;
+            if (!modRoleId) {
+                await interaction.editReply('The MOD_ROLE_ID is not configured. Please contact an admin.');
+                return;
+            }
+            const memberRoles = interaction.member?.roles as any;
+            if (!memberRoles || !memberRoles.cache.has(modRoleId)) {
+                await interaction.editReply('You do not have permission to use this command.');
+                return;
+            }
+            try {
+                const backupPath = await createBackup();
+                const folderName = backupPath.split(/[\\/]/).pop();
+                await interaction.editReply(`**Backup Successful!**\n\nA full system backup has been created at:\n\`${folderName}\`\n\nTo restore this state, use:\n\`/restore-backup backup-folder:${folderName}\``);
+            } catch (error) {
+                logError('❌ Error during backup:', error);
+                await interaction.editReply('An error occurred while creating the backup.');
+            }
+        }
+
         else if (commandName === 'pause-dg-pick') {
             const specialGameName = interaction.options.getString('special-game-name', true);
 

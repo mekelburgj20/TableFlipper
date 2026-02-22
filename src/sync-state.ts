@@ -3,6 +3,7 @@ import { loginToIScored, findGames, navigateToLineupPage } from './iscored.js';
 import { syncActiveGame, syncQueuedGame, syncCompletedGame } from './database.js';
 import { triggerLineupRepositioning } from './maintenance.js';
 import { logInfo, logError } from './logger.js';
+import { fileURLToPath } from 'url';
 
 const GAME_TYPES = ['DG', 'WG-VPXS', 'WG-VR', 'MG'];
 
@@ -94,4 +95,6 @@ export async function runStateSync() {
 }
 
 // Support running directly
-runStateSync().catch(() => process.exit(1));
+if (process.argv[1] === fileURLToPath(import.meta.url)) {
+    runStateSync().catch(() => process.exit(1));
+}

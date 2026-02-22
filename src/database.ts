@@ -614,3 +614,12 @@ export async function getGameByNameAndStatus(name: string, statuses: string[]): 
         await db.close();
     }
 }
+
+export async function getAllVisibleGames(): Promise<GameRow[]> {
+    const db = await openDb();
+    try {
+        return await db.all<GameRow[]>("SELECT * FROM games WHERE status IN ('ACTIVE', 'QUEUED', 'COMPLETED')");
+    } finally {
+        await db.close();
+    }
+}

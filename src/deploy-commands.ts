@@ -131,6 +131,10 @@ const commands = [
         ]
     },
     {
+        name: 'trigger-backup',
+        description: 'Create a full backup of the current state (DB, scores, photos).',
+    },
+    {
         name: 'pause-dg-pick',
         description: 'Pauses the winner pick and sets a special game for the next cycle.',
         options: [
