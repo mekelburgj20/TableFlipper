@@ -1,7 +1,7 @@
 import 'dotenv/config';
 import { loginToIScored, findGames, navigateToLineupPage } from './iscored.js';
 import { syncActiveGame, syncQueuedGame, syncCompletedGame } from './database.js';
-import { triggerLineupRepositioning } from './maintenance.js';
+import { triggerLineupRepositioning, syncAllActiveStyles } from './maintenance.js';
 import { logInfo, logError } from './logger.js';
 import { fileURLToPath } from 'url';
 
@@ -15,6 +15,11 @@ export async function runStateSync() {
         const { browser: b, page } = await loginToIScored();
         browser = b;
 
+        // --- Phase 1: Style Learning ---
+        // Learn styles for all currently active tables before syncing state
+        // Pass the current page to avoid double-login
+        await syncAllActiveStyles(page);
+
         await navigateToLineupPage(page);
 
         const foundIscoredIds: string[] = [];
@@ -24,12 +29,15 @@ export async function runStateSync() {
             const { activeGames, nextGames, completedGames } = await findGames(page, type);
             
             if (activeGames.length > 0) {
-                const active = activeGames[0];
-                logInfo(`   -> Found iScored Active: ${active.name} (${active.id})`);
-                await syncActiveGame(type, active.id, active.name);
-                foundIscoredIds.push(active.id);
+                logInfo(`   -> Found ${activeGames.length} active game(s) on iScored for ${type}.`);
+                for (const active of activeGames) {
+                    logInfo(`      - ${active.name} (${active.id})`);
+                    await syncActiveGame(type, active.id, active.name);
+                    foundIscoredIds.push(active.id);
+                }
             } else {
-                logInfo(`   -> No active game found on iScored for ${type}.`);
+                logInfo(`   -> No active games found on iScored for ${type}.`);
+                // Only clear active state if we found literally zero active games for this type
                 await syncActiveGame(type, null, null);
             }
 

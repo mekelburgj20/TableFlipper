@@ -1,0 +1,12 @@
+<context>
+@README.md @checkpoint.md @TODO.md
+</context>
+
+<task>
+The dual-wg-vpxs appears to have been successful. Merge and push. New task - When performing /submit-score and then choosing the grind-type, then the optional 'table-name' param, a list of options appear. These should represent what options (tables) are available as per the grind-type selected. Currently, all grind tables are being shown.
+</task>
+
+<final_instruction>
+Remember to think step-by-step before answering.
+</final_instruction>
+

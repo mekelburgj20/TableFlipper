@@ -311,13 +311,11 @@ export async function syncActiveGame(gameType: string, iscoredGameId: string | n
     const db = await openDb();
     try {
         if (iscoredGameId && gameName) {
-            // 1. Deactivate any other games for this type that are NOT this game
-            await db.run(
-                `UPDATE games SET status = 'COMPLETED', completed_at = ? WHERE type = ? AND status = 'ACTIVE' AND iscored_game_id != ?`,
-                new Date().toISOString(), gameType, iscoredGameId
-            );
+            // Note: We no longer deactivate others here because a type might have multiple active games (e.g. WG-VPXS).
+            // Deactivation should be handled by maintenance or a specific 'clear other active' function if needed.
+            // For now, we just ensure this specific game is marked ACTIVE in the DB.
 
-            // 2. Check if this game exists
+            // Check if this game exists
             const existingGame = await db.get<GameRow>("SELECT * FROM games WHERE iscored_game_id = ?", iscoredGameId);
 
             if (existingGame) {
@@ -334,11 +332,12 @@ export async function syncActiveGame(gameType: string, iscoredGameId: string | n
             }
         } else {
             // No active game on iScored - mark ALL active games of this type as COMPLETED
+            // This is only called when iScored literally has ZERO games for this type.
             await db.run(
                 `UPDATE games SET status = 'COMPLETED', completed_at = ? WHERE type = ? AND status = 'ACTIVE'`,
                 new Date().toISOString(), gameType
             );
-            console.log(`🔄 Synced DB: No active game found on iScored for ${gameType}. Cleared active state in DB.`);
+            console.log(`🔄 Synced DB: No active games found on iScored for ${gameType}. Cleared active state in DB.`);
         }
 
     } finally {
@@ -437,13 +436,18 @@ export async function createGameEntry(game: Omit<GameRow, 'id' | 'created_at' | 
     }
 }
 
-export async function getActiveGame(gameType: string): Promise<GameRow | null> {
+export async function getActiveGames(gameType: string): Promise<GameRow[]> {
     const db = await openDb();
     try {
-        return await db.get<GameRow>("SELECT * FROM games WHERE type = ? AND status = 'ACTIVE'", gameType) ?? null;
+        return await db.all<GameRow[]>("SELECT * FROM games WHERE type = ? AND status = 'ACTIVE'", gameType);
     } finally {
         await db.close();
     }
+}
+
+export async function getActiveGame(gameType: string): Promise<GameRow | null> {
+    const games = await getActiveGames(gameType);
+    return games.length > 0 ? games[0] : null;
 }
 
 export async function getAllActiveGames(): Promise<GameRow[]> {
@@ -464,13 +468,18 @@ export async function getGameByIscoredId(iscoredId: string): Promise<GameRow | n
     }
 }
 
-export async function getNextQueuedGame(gameType: string): Promise<GameRow | null> {
+export async function getNextQueuedGames(gameType: string, limit: number = 1): Promise<GameRow[]> {
     const db = await openDb();
     try {
-        return await db.get<GameRow>("SELECT * FROM games WHERE type = ? AND status = 'QUEUED' ORDER BY scheduled_to_be_active_at ASC LIMIT 1", gameType) ?? null;
+        return await db.all<GameRow[]>("SELECT * FROM games WHERE type = ? AND status = 'QUEUED' ORDER BY scheduled_to_be_active_at ASC LIMIT ?", gameType, limit);
     } finally {
         await db.close();
     }
+}
+
+export async function getNextQueuedGame(gameType: string): Promise<GameRow | null> {
+    const games = await getNextQueuedGames(gameType, 1);
+    return games.length > 0 ? games[0] : null;
 }
 
 export async function updateGameStatus(id: string, status: GameRow['status']): Promise<void> {
@@ -564,13 +573,15 @@ export async function getLineupOrder(typeOrder: string[]): Promise<string[]> {
         const orderedIds: string[] = [];
 
         for (const type of typeOrder) {
-            // Get Active game for this type first
-            const active = await db.get<GameRow>(
-                "SELECT iscored_game_id FROM games WHERE type = ? AND status = 'ACTIVE' LIMIT 1",
+            // Get Active games for this type
+            const activeGames = await db.all<GameRow[]>(
+                "SELECT iscored_game_id FROM games WHERE type = ? AND status = 'ACTIVE' ORDER BY scheduled_to_be_active_at ASC",
                 type
             );
-            if (active?.iscored_game_id && active.iscored_game_id !== 'TBD') {
-                orderedIds.push(active.iscored_game_id);
+            for (const active of activeGames) {
+                if (active.iscored_game_id && active.iscored_game_id !== 'TBD') {
+                    orderedIds.push(active.iscored_game_id);
+                }
             }
 
             // Get Completed games for this type, newest first (by scheduled time or created_at)

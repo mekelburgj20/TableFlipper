@@ -2,7 +2,7 @@ import { Client, GatewayIntentBits, Events, EmbedBuilder, ActionRowBuilder, Butt
 import { Browser } from 'playwright';
 import { loginToIScored, createGame, submitScoreToIscored } from './iscored.js';
 import { getIscoredNameByDiscordId, getDiscordIdByIscoredName } from './userMapping.js';
-import { getPicker, setPicker, updateQueuedGame, getNextQueuedGame, searchTables, getTable, getRecentGameNames, getRandomCompatibleTable, injectSpecialGame, getActiveGame, searchGamesByStatus, getGameByNameAndStatus, getAllActiveGames } from './database.js';
+import { getPicker, setPicker, updateQueuedGame, getNextQueuedGame, searchTables, getTable, getRecentGameNames, getRandomCompatibleTable, injectSpecialGame, getActiveGames, searchGamesByStatus, getGameByNameAndStatus, getAllActiveGames } from './database.js';
 import { getLastWinner, getHistory, getTableStats, getRecentWinners } from './history.js';
 import { getTablesFromSheet } from './googleSheet.js';
 import { getStandingsFromApi } from './api.js';
@@ -93,9 +93,10 @@ export function startDiscordBot() {
             try {
                 if (gameType) {
                     // Specific type requested
-                    const activeGame = await getActiveGame(gameType);
-                    if (activeGame) {
-                        await interaction.editReply(`The currently active table for **${gameType}** is: **${activeGame.name}**`);
+                    const activeGames = await getActiveGames(gameType);
+                    if (activeGames.length > 0) {
+                        const names = activeGames.map(g => `**${g.name}**`).join(', ');
+                        await interaction.editReply(`The currently active table(s) for **${gameType}** are: ${names}`);
                     } else {
                         await interaction.editReply(`There is no active table for **${gameType}** at this time.`);
                     }
@@ -105,9 +106,10 @@ export function startDiscordBot() {
                     let message = '**Currently Active Tables:**\n';
                     
                     for (const type of types) {
-                        const activeGame = await getActiveGame(type);
-                        if (activeGame) {
-                            message += `**${type}:** ${activeGame.name}\n`;
+                        const activeGames = await getActiveGames(type);
+                        if (activeGames.length > 0) {
+                            const names = activeGames.map(g => g.name).join(', ');
+                            message += `**${type}:** ${names}\n`;
                         } else {
                             message += `**${type}:** *None*\n`;
                         }
@@ -610,9 +612,9 @@ export function startDiscordBot() {
                 if (tableName) {
                     targetGames = [{ name: tableName }];
                 } else if (gameType) {
-                    const active = await getActiveGame(gameType);
-                    if (active) {
-                        targetGames = [{ name: active.name, type: gameType }];
+                    const activeGames = await getActiveGames(gameType);
+                    if (activeGames.length > 0) {
+                        targetGames = activeGames.map(g => ({ name: g.name, type: gameType }));
                     } else {
                         await interaction.editReply(`No active tournament found for **${gameType}**.`);
                         return;
@@ -762,11 +764,14 @@ export function startDiscordBot() {
                         return;
                     }
                 } else if (gameType) {
-                    const activeGame = await getActiveGame(gameType);
-                    if (activeGame) {
-                        targetGameName = activeGame.name;
-                        iscoredId = activeGame.iscored_game_id;
+                    const activeGames = await getActiveGames(gameType);
+                    if (activeGames.length === 1) {
+                        targetGameName = activeGames[0].name;
+                        iscoredId = activeGames[0].iscored_game_id;
                         contextType = `Tournament (${gameType})`;
+                    } else if (activeGames.length > 1) {
+                        await interaction.editReply(`Multiple active tables found for **${gameType}**: ${activeGames.map(g => `**${g.name}**`).join(', ')}. Please use the **table-name** option to specify which table you are submitting for.`);
+                        return;
                     } else {
                         await interaction.editReply(`I couldn't find an active game for **${gameType}** in my database.`);
                         return;

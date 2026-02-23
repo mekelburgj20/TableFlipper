@@ -358,6 +358,31 @@ export async function lockGame(page: Page, game: Game) {
     logInfo(`✅ Game locked: ${game.name} (ID: ${game.id})`);
 }
 
+export async function removeGameHeaderImage(page: Page, gameName: string): Promise<void> {
+    logInfo(`🖼️ Removing header image for: ${gameName}`);
+    try {
+        const mainFrame = page.frameLocator('#main');
+        await navigateToSettingsPage(page);
+        
+        // Ensure we are on the Games tab
+        const gamesTab = mainFrame.locator('a[href="#games"]');
+        await gamesTab.click();
+
+        // The button logic is usually: click button, handle any immediate AJAX/State
+        const removeBtn = mainFrame.locator('button:has-text("Remove Header Image")');
+        await removeBtn.waitFor({ state: 'visible', timeout: 5000 });
+        
+        // Use evaluate to bypass any overlay issues
+        await removeBtn.evaluate(el => (el as HTMLElement).click());
+        
+        // Give it a moment to process the removal
+        await page.waitForTimeout(1000);
+        logInfo(`✅ Header image removed for ${gameName}.`);
+    } catch (e) {
+        logError(`❌ Failed to remove header image for ${gameName}:`, e);
+    }
+}
+
 export async function hideGame(page: Page, game: Game): Promise<void> {
     logInfo(`📦 Hiding game: ${game.name} (ID: ${game.id})`);
     try {
@@ -608,13 +633,14 @@ export async function syncStyleFromIScored(page: Page, tableName: string, gameId
     logInfo(`🎨 Syncing style details for '${tableName}' (ID: ${gameId})...`);
     try {
         const mainFrame = page.frameLocator('#main');
-        await navigateToSettingsPage(page);
         
+        // Use a faster selector and wait for selection to process
         const selectGame = mainFrame.locator('#selectGame');
-        await selectGame.waitFor({ state: 'visible' });
         await selectGame.selectOption(gameId);
         await selectGame.dispatchEvent('change');
-        await page.waitForTimeout(2000); // Wait for fields to populate
+        
+        // Wait for the fields to actually populate
+        await page.waitForTimeout(2000); 
 
         const cssTitle = await mainFrame.locator('#CSSTitle').inputValue();
         const cssInitials = await mainFrame.locator('#CSSInitials').inputValue();
@@ -624,9 +650,26 @@ export async function syncStyleFromIScored(page: Page, tableName: string, gameId
         const scoreType = await mainFrame.locator('#ScoreType').inputValue();
         const sortAsc = await mainFrame.locator('#SortAscending').isChecked();
 
+        // --- Forensic Style ID Extraction ---
+        // Look at the #testGame preview element's background-image to see if it points to a community style.
+        let communityStyleId: string | null = null;
+        try {
+            const testGame = mainFrame.locator('#testGame');
+            const bgImageStyle = await testGame.getAttribute('style') || '';
+            // Pattern: background-image: url("/community/images/backgrounds/gameBg3390?t=...")
+            const match = bgImageStyle.match(/\/community\/images\/backgrounds\/gameBg(\d+)/);
+            if (match && match[1]) {
+                communityStyleId = match[1];
+                logInfo(`   -> Detected Community Style ID: ${communityStyleId}`);
+            }
+        } catch (e) {
+            logWarn('   -> Failed to extract communityStyleId from preview.');
+        }
+
         logInfo(`✅ Style captured for ${tableName}.`);
         
         return {
+            style_id: communityStyleId,
             css_title: cssTitle,
             css_initials: cssInitials,
             css_scores: cssScores,
@@ -644,6 +687,11 @@ export async function syncStyleFromIScored(page: Page, tableName: string, gameId
 async function applyStyleToGame(page: Page, style: Partial<TableRow>) {
     logInfo('   -> Applying custom CSS and styling fields...');
     const mainFrame = page.frameLocator('#main');
+    
+    // Ensure we are on the Games tab
+    await navigateToSettingsPage(page);
+    const gamesTab = mainFrame.locator('a[href="#games"]');
+    await gamesTab.click();
     
     if (style.css_title) await mainFrame.locator('#CSSTitle').fill(style.css_title);
     if (style.css_initials) await mainFrame.locator('#CSSInitials').fill(style.css_initials);
@@ -664,386 +712,108 @@ async function applyStyleToGame(page: Page, style: Partial<TableRow>) {
 }
 
 export async function createGame(page: Page, gameName: string, grindType: string, styleId?: string | null): Promise<{ id: string, scheduledTime: Date }> {
-
     const fullGameName = gameName; // No longer appending suffix, Tags handle the type
 
-    logInfo(`✨ Creating new game: ${fullGameName}${styleId ? ` (Style ID: ${styleId})` : ''}`);
+    // 1. Resolve styleId from DB if not provided
+    let targetStyleId = styleId;
+    const tableData = await getTable(gameName);
+    if (!targetStyleId && tableData?.style_id) {
+        targetStyleId = tableData.style_id;
+        logInfo(`   -> Auto-resolved Style ID from database: ${targetStyleId}`);
+    }
 
-    
+    logInfo(`✨ Creating new game: ${fullGameName}${targetStyleId ? ` (Style ID: ${targetStyleId})` : ''}`);
 
     try {
-
         const mainFrame = page.frameLocator('#main');
 
-
-
         // Ensure we are on the settings page, then go to Games tab
-
         await navigateToSettingsPage(page);
-
         await mainFrame.locator('a[href="#games"]').click();
-
         await mainFrame.locator('button:has-text("Add New Game")').waitFor({ state: 'visible' });
 
-
-
         await mainFrame.locator('button:has-text("Add New Game")').click();
-
-        
-
-                const searchInput = mainFrame.locator('input[type="search"][aria-controls="stylesTable"]');
-
-        
-
-        
-
-        
-
-                if (styleId) {
-
-        
-
-                    logInfo(`   -> Applying Community Style ID: ${styleId}`);
-
-        
-
-                    
-
-        
-
-                    // 1. Load the preview FIRST using evaluate
-
-        
-
-                    await mainFrame.locator(':root').evaluate((el, id) => {
-
-        
-
-                        if (typeof (window as any).loadStylePreview === 'function') {
-
-        
-
-                            (window as any).loadStylePreview(id);
-
-        
-
-                        }
-
-        
-
-                    }, styleId);
-
-        
-
-                    await page.waitForTimeout(2000);
-
-        
-
-                    
-
-        
-
-                    // 2. Set the game name directly on the hidden internal GameName field if it exists,
-
-        
-
-                    // or just use the search input but ensure it's triggered.
-
-        
-
-                    // Based on iScored's JS, createGame() uses the search box value if style is -1,
-
-        
-
-                    // but if style is set, it might use the style's name.
-
-        
-
-                    // Let's try to FORCE the search box value using direct JS to be sure.
-
-        
-
-                    await searchInput.evaluate((el, val) => {
-
-        
-
-                        const input = el as HTMLInputElement;
-
-        
-
-                        input.value = val;
-
-        
-
-                        input.dispatchEvent(new Event('input', { bubbles: true }));
-
-        
-
-                        input.dispatchEvent(new Event('change', { bubbles: true }));
-
-        
-
-                    }, fullGameName);
-
-        
-
-                    await page.waitForTimeout(1000);
-
-        
-
-        
-
-        
-
-                    // 3. Click the button. 
-
-        
-
-                    // We use evaluate here too to be safe from overlays.
-
-        
-
-                                const createBtn = mainFrame.locator('button:has-text("Create Game Using Selected Style")');
-
-        
-
-                                await createBtn.evaluate(el => (el as HTMLElement).click());
-
-        
-
-                                
-
-        
-
-                                logInfo(`✅ Created game using style ${styleId}. Waiting for redirect...`);
-
-        
-
-                                await page.waitForTimeout(3000); // Wait for iScored to finish creation and potentially redirect
-
-        
-
-                    
-
-        
-
-                                // Re-select the game in the dropdown (it should be the new one)
-
-        
-
-                                // Or better: Find it by Tag if we just created it? No, tags aren't added yet.
-
-        
-
-                                // Find it by Style ID in the dropdown if we can, but let's try finding the "latest" game.
-
-        
-
-                                
-
-        
-
-                                // Actually, we can just search the lineup for WHATEVER was just created if we knew the name iScored gave it.
-
-        
-
-                                // But we don't. So let's look for any game that DOES NOT have our desired name.
-
-        
-
-                                
-
-        
-
-                                // Strategy: Go to Games tab, select the LAST game in the dropdown (often the newest),
-
-        
-
-                                // and RENAME it to our desired name.
-
-        
-
-                                const selectGame = mainFrame.locator('#selectGame');
-
-        
-
-                                await selectGame.waitFor({ state: 'visible' });
-
-        
-
-                                
-
-        
-
-                                // Get all options
-
-        
-
-                                const options = await selectGame.locator('option').all();
-
-        
-
-                                const lastOptionValue = await options[options.length - 1].getAttribute('value');
-
-        
-
-                                
-
-        
-
-                                if (lastOptionValue && lastOptionValue !== '0') {
-
-        
-
-                                    logInfo(`   -> Renaming the newly created game (ID: ${lastOptionValue}) to '${fullGameName}'`);
-
-        
-
-                                                await selectGame.selectOption(lastOptionValue);
-
-        
-
-                                                await selectGame.dispatchEvent('change');
-
-        
-
-                                                await page.waitForTimeout(1000);
-
-        
-
-                                                
-
-        
-
-                                                const nameInput = mainFrame.locator('#GameName');
-
-        
-
-                                                await nameInput.fill(fullGameName);
-
-        
-
-                                                await nameInput.dispatchEvent('change');
-
-        
-
-                                                await page.waitForTimeout(1000);
-
-        
-
-                                    
-
-        
-
-                                                // 4. APPLY DATABASE STYLES (OVERRIDE COMMUNITY STYLE WITH OUR SAVED ONES)
-
-        
-
-                                                const tableData = await getTable(gameName);
-
-        
-
-                                                if (tableData) {
-
-        
-
-                                                    await applyStyleToGame(page, tableData);
-
-        
-
-                                                }
-
-        
-
-                                    
-
-        
-
-                                                logInfo(`✅ Renamed to '${fullGameName}' and applied DB styles.`);
-
-        
-
-                                            }
-
-        
-
-                                        } else {
-
-        
-
-                                            await searchInput.fill(fullGameName);
-
-        
-
-                                            await mainFrame.locator('button:has-text("Create Blank Game")').click();
-
-        
-
-                                            logInfo(`✅ Created blank game '${fullGameName}'.`);
-
-        
-
-                                            
-
-        
-
-                                            await page.waitForTimeout(2000);
-
-        
-
-                                            const selectGame = mainFrame.locator('#selectGame');
-
-        
-
-                                            const options = await selectGame.locator('option').all();
-
-        
-
-                                            const lastOptionValue = await options[options.length - 1].getAttribute('value');
-
-        
-
-                                            if (lastOptionValue && lastOptionValue !== '0') {
-
-        
-
-                                                await selectGame.selectOption(lastOptionValue);
-
-        
-
-                                                await selectGame.dispatchEvent('change');
-
-        
-
-                                                await page.waitForTimeout(1000);
-
-        
-
-                                                
-
-        
-
-                                                const tableData = await getTable(gameName);
-
-        
-
-                                                if (tableData) {
-
-        
-
-                                                    await applyStyleToGame(page, tableData);
-
-        
-
-                                                }
-
-        
-
-                                            }
-
-        
-
-                                        }
+        const searchInput = mainFrame.locator('input[type="search"][aria-controls="stylesTable"]');
+
+        if (targetStyleId) {
+            logInfo(`   -> Applying Community Style ID: ${targetStyleId}`);
+
+            // 1. Load the preview FIRST using evaluate
+            await mainFrame.locator(':root').evaluate((el, id) => {
+                if (typeof (window as any).loadStylePreview === 'function') {
+                    (window as any).loadStylePreview(id);
+                }
+            }, targetStyleId);
+            await page.waitForTimeout(2000);
+
+            // 2. Set the game name directly on the hidden internal GameName field if it exists,
+            // or just use the search input but ensure it's triggered.
+            // Based on iScored's JS, createGame() uses the search box value if style is -1,
+            // but if style is set, it might use the style's name.
+            // Let's try to FORCE the search box value using direct JS to be sure.
+            await searchInput.evaluate((el, val) => {
+                const input = el as HTMLInputElement;
+                input.value = val;
+                input.dispatchEvent(new Event('input', { bubbles: true }));
+                input.dispatchEvent(new Event('change', { bubbles: true }));
+            }, fullGameName);
+            await page.waitForTimeout(1000);
+
+            // 3. Click the button. 
+            // We use evaluate here too to be safe from overlays.
+            const createBtn = mainFrame.locator('button:has-text("Create Game Using Selected Style")');
+            await createBtn.evaluate(el => (el as HTMLElement).click());
+
+            logInfo(`✅ Created game using style ${targetStyleId}. Waiting for redirect...`);
+            await page.waitForTimeout(3000); // Wait for iScored to finish creation and potentially redirect
+
+            // Re-select the game in the dropdown (it should be the new one)
+            // Strategy: Go to Games tab, select the LAST game in the dropdown (often the newest),
+            // and RENAME it to our desired name.
+            const selectGame = mainFrame.locator('#selectGame');
+            await selectGame.waitFor({ state: 'visible' });
+
+            // Get all options
+            const options = await selectGame.locator('option').all();
+            const lastOptionValue = await options[options.length - 1].getAttribute('value');
+
+            if (lastOptionValue && lastOptionValue !== '0') {
+                logInfo(`   -> Renaming the newly created game (ID: ${lastOptionValue}) to '${fullGameName}'`);
+                await selectGame.selectOption(lastOptionValue);
+                await selectGame.dispatchEvent('change');
+                await page.waitForTimeout(1000);
+
+                const nameInput = mainFrame.locator('#GameName');
+                await nameInput.fill(fullGameName);
+                await nameInput.dispatchEvent('change');
+                await page.waitForTimeout(1000);
+
+                // 4. APPLY DATABASE STYLES (OVERRIDE COMMUNITY STYLE WITH OUR SAVED ONES)
+                if (tableData) {
+                    await applyStyleToGame(page, tableData);
+                }
+
+                logInfo(`✅ Renamed to '${fullGameName}' and applied DB styles.`);
+            }
+        } else {
+            await searchInput.fill(fullGameName);
+            await mainFrame.locator('button:has-text("Create Blank Game")').click();
+            logInfo(`✅ Created blank game '${fullGameName}'.`);
+
+            await page.waitForTimeout(2000);
+            const selectGame = mainFrame.locator('#selectGame');
+            const options = await selectGame.locator('option').all();
+            const lastOptionValue = await options[options.length - 1].getAttribute('value');
+            if (lastOptionValue && lastOptionValue !== '0') {
+                await selectGame.selectOption(lastOptionValue);
+                await selectGame.dispatchEvent('change');
+                await page.waitForTimeout(1000);
+
+                if (tableData) {
+                    await applyStyleToGame(page, tableData);
+                }
+            }
+        }
 
         
 
@@ -1106,6 +876,11 @@ export async function createGame(page: Page, gameName: string, grindType: string
             logInfo(`✅ Game '${fullGameName}' created and activated immediately (${grindType}).`);
             
             showDateTime = now; // For the announcement
+        }
+
+        // --- Post-Activation Options ---
+        if (process.env.REMOVE_HEADER_IMAGE === 'true') {
+            await removeGameHeaderImage(page, fullGameName);
         }
 
         return { id: newlyCreatedGame.id, scheduledTime: showDateTime };

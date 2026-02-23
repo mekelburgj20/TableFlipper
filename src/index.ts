@@ -61,6 +61,7 @@ async function main() {
         cron.schedule('0 23 * * 3', async () => {
             logInfo('⏰ Kicking off scheduled maintenance for Weekly Grinds...');
             try {
+                await syncAllActiveStyles(); // Learned styles for all active tables
                 await runMaintenanceForGameType('WG-VPXS');
                 await runMaintenanceForGameType('WG-VR');
                 await triggerLineupRepositioning();
@@ -76,6 +77,7 @@ async function main() {
         cron.schedule('1 23 * * 3', async () => {
             logInfo('🧹 Kicking off scheduled cleanup for DG and WG...');
             try {
+                await syncAllActiveStyles(); // Final style sync before cleanup
                 await runCleanupForGameType('DG');
                 await runCleanupForGameType('WG-VPXS');
                 await runCleanupForGameType('WG-VR');
@@ -92,6 +94,7 @@ async function main() {
         cron.schedule('1 0 1 * *', async () => {
             logInfo('⏰ Kicking off scheduled maintenance for Monthly Grind...');
             try {
+                await syncAllActiveStyles(); // Learned styles for all active tables
                 await runMaintenanceForGameType('MG');
                 await triggerLineupRepositioning();
             } catch (error) {
