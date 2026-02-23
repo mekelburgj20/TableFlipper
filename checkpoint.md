@@ -3,59 +3,56 @@
 "TableFlipper" is a fully functional Discord bot for managing pinball tournaments. The codebase features robust iScored automation, intelligent state reconciliation, and a highly flexible command structure.
 
 **Recent Work:**
-1.  **Unified Commands:** Refactored `/list-scores` and `/submit-score` to support both tournament-based and table-based interaction. Implemented autocomplete for all current lineup games.
-2.  **Immediate Weekly Activation:** Refined `createGame` logic so that Weekly and Monthly table picks activate immediately on iScored, while Daily picks retain their 24-hour buffer.
-3.  **State Reconciliation:** Implemented automatic DB cleanup during sync/maintenance sweeps to identify and hide "ghost" games that are no longer present on iScored.
-4.  **Scheduled Maintenance Refinement:** Updated Weekly maintenance to trigger at 11:00 PM Central on Wednesdays.
-5.  **Multi-Channel Routing:** Fully operational routing for tournament-specific Discord announcements and timeout notifications.
+1.  **Dual-Slot Weekly Grinds:** Refactored maintenance and sync logic to support multiple active tables for a single tournament type (e.g., dual WG-VPXS).
+2.  **Forensic Style Sniffing:** Implemented automated extraction of Community Style IDs from active games to ensure perfect visual persistence across rotations.
+3.  **Non-Tournament Support:** Integrated type 'OTHER' for any unlocked game on iScored, making them available for score submission.
+4.  **Full State Reconciliation:** Updated sync logic to identify and hide 'ghost' games, including those in the hidden queue.
+5.  **Scoreboard Wipe:** Added a CLI utility for clearing the board.
 
 **Current Context:**
-*   The bot handles DG, WG, and MG cycles autonomously.
-*   Weekly maintenance/cleanup is at 11 PM Central on Wednesdays.
-*   Database state is automatically reconciled against iScored during sync.
-*   Autocomplete lists are strictly limited to active/lineup games.
+*   The bot now handles multiple winners and pickers per cycle.
+*   Style learning is board-wide and triggers during every state sync.
+*   Autocomplete is optimized for clean labels and type-specific filtering.
 
 **Next Actions:**
-1.  **Community Styles:** Investigate applying styles to games via the DB.
-2.  **Admin Override:** Implement moderator nomination overrides.
-3.  **OCR Verification:** Research lightweight OCR for automatic score validation.
+1.  **Admin Override:** Implement moderator nomination overrides.
+2.  **OCR Verification:** Research lightweight OCR for automatic score validation.
+3.  **Proactive Picker DMs:** Send friendly DM reminders to winners.
 
 **Files to Watch:**
 *   `src/discordBot.ts` (Command handlers & Autocomplete)
-*   `src/database.ts` (State & search logic)
-*   `src/sync-state.ts` (Reconciliation logic)
-*   `src/maintenance.ts` (Phase 0 sync sweeps)
+*   `src/database.ts` (Reconciliation & multi-slot logic)
+*   `src/sync-state.ts` (Board-wide synchronization)
+*   `src/iscored.ts` (Style sniffing & header removal)
 <!-- END PROMPT -->
 
-# Checkpoint for TableFlipper Project (Update 6)
+# Checkpoint for TableFlipper Project (Update 7)
 
-**Date:** February 18, 2026
+**Date:** February 23, 2026
 
-## Project Summary: Command Unification & State Intelligence
+## Project Summary: Multi-Slot Support & Style Forensic Sniffing
 
-This update represents a significant leap in the bot's UX and backend reliability. It unifies the command structure for better flexibility and introduces "State Intelligence" to ensure the bot's local memory always matches the live iScored lineup.
+This update significantly expands the bot's architectural flexibility and visual reliability. It introduces the ability to manage multiple active tournaments of the same type and implements a high-fidelity style learning system that survives game deletions and resets.
 
 ### Key Changes Implemented:
 
-#### 1. Unified Standings & Submissions
-*   **Refactored `/list-scores`**: A single command that can show all active grinds (default), or be filtered by specific tournament type or table name.
-*   **Refactored `/submit-score`**: Users can now submit scores by selecting a specific active table from an autocomplete list OR by tournament type.
-*   **Intelligent Autocomplete**: Autocomplete lists now filter based on context:
-    *   Listings: Shows all games currently in the lineup (Active or Locked).
-    *   Submissions: Shows ONLY active (unlocked) games.
+#### 1. Dual-Slot Weekly Grinds
+*   **Multi-Active Support**: Refactored the core engine to allow multiple active games for a single grind type (e.g., two concurrent `WG-VPXS` tables).
+*   **Sequential Picking**: If a user wins multiple slots in a cycle, the system correctly tracks their double-pick rights and allows them to perform `/picktable` twice.
+*   **Aggressive Rollover**: Maintenance now loops through all active games, determines separate winners, and activates the corresponding number of queued games.
 
-#### 2. Immediate Weekly Rotation
-*   **Zero-Buffer Weekly/Monthly**: Weekly and Monthly grinds now skip the 24-hour buffer. When a winner picks a table, it is immediately unlocked and unhidden on iScored.
-*   **Preserved DG Buffer**: The Daily Grind maintains its 1-day lead time to ensure a consistent daily cycle.
-*   **Announcement Accuracy**: Discord messages now dynamically state whether a game is "ready for play right now" or starting at a future time.
+#### 2. Forensic Style Sniffing & Application
+*   **Fingerprint Extraction**: The bot now scans the `background-image` CSS of every active game to extract the underlying Community Style ID (`style_id`).
+*   **Visual Fidelity**: By storing both the `style_id` and raw CSS overrides, the bot can perfectly recreate an admin's manual styling choices when a game returns to rotation.
+*   **Header Removal Toggle**: Added a global option to automatically strip game logos (header images) after creation, as preferred by the community.
 
-#### 3. Automatic State Reconciliation
-*   **Ghost Game Elimination**: Implemented a reconciliation phase in `runStateSync` and the daily maintenance sweep. The bot now automatically identifies games in its DB that have been deleted from iScored and marks them as `HIDDEN`.
-*   **Lineup Accuracy**: This ensures that autocomplete lists never show old historical games or deleted test entries.
-*   **Maintenance "Phase 0"**: Added an initial sync sweep to the maintenance routine to ensure manually created games on iScored are "adopted" and promoted correctly.
+#### 3. Non-Tournament Game Awareness
+*   **Universal Submissions**: The bot now tracks every unlocked game on the board as type `OTHER`. 
+*   **Type 'OTHER' Integration**: Users can now use `/submit-score` for any game on the arcade, even if it's not part of a tournament grind.
 
-#### 4. Scheduling Precision
-*   **WG End Time**: Successfully moved Weekly maintenance to 11:00 PM Central on Wednesdays to align with the community's desired end-of-week timing.
+#### 4. Absolute State Reconciliation
+*   **Ghost Purging**: Fixed an edge case where deleted queued games remained active in the database. Reconciliation now checks the entire iScored board against the local DB and marks any missing entries as `HIDDEN`.
+*   **Scoreboard Wipe**: A new CLI command `npm run scoreboard-wipe` allows for instant clearing of all games on the iScored board.
 
 ## Final Status
-The bot is now more intuitive for users and more self-healing for administrators. State synchronization is robust, and the new command structure provides a professional, streamlined interface for tournament participation.
+The bot has evolved from a simple tournament manager into a comprehensive arcade automation engine. It is now robust enough to handle custom events, manual board edits, and complex multi-winner scenarios with zero loss of data or visual style.

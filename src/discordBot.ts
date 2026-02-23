@@ -51,29 +51,51 @@ export function startDiscordBot() {
             if (focusedOption.name === 'table-name') {
                 const commandName = interaction.commandName;
                 const gameType = interaction.options.getString('grind-type');
-                logInfo(`Autocomplete debug: command='${commandName}', gameType='${gameType}', query='${focusedOption.value}'`);
+                const query = focusedOption.value;
+
+                logInfo(`Autocomplete debug: command='${commandName}', gameType='${gameType}', query='${query}'`);
                 
                 let choices: any[] = [];
 
                 if (commandName === 'picktable') {
                     if (gameType === 'DG') {
-                        choices = await searchTables(focusedOption.value, 25, 'atgames');
+                        choices = await searchTables(query, 25, 'atgames');
                     } else if (gameType === 'WG-VR') {
-                        choices = await searchTables(focusedOption.value, 25, 'vr');
+                        choices = await searchTables(query, 25, 'vr');
                     } else if (gameType === 'WG-VPXS') {
-                        choices = await searchTables(focusedOption.value, 25, 'vpxs');
+                        choices = await searchTables(query, 25, 'vpxs');
                     }
                 } else if (commandName === 'list-scores') {
                     // Entire current lineup (locked and unlocked), but not queued (hidden)
-                    choices = await searchGamesByStatus(focusedOption.value, ['ACTIVE', 'COMPLETED'], 25, gameType);
+                    choices = await searchGamesByStatus(query, ['ACTIVE', 'COMPLETED'], 25, gameType);
                 } else if (commandName === 'submit-score') {
                     // Only active games (not locked or hidden)
-                    choices = await searchGamesByStatus(focusedOption.value, ['ACTIVE'], 25, gameType);
+                    choices = await searchGamesByStatus(query, ['ACTIVE'], 25, gameType);
                 }
 
-                const filtered = choices.map(t => ({ name: t.name, value: t.name }));
-                logInfo(`Autocomplete debug: found ${filtered.length} results`);
-                await interaction.respond(filtered);
+                let filtered = choices.map(t => {
+                    // Use the 'type' if available (GameRow) or map based on platform flags (TableRow)
+                    let typeLabel = '';
+                    if ('type' in t && t.type) {
+                        typeLabel = ` [${t.type}]`;
+                    } else if ('is_atgames' in t) {
+                        if (t.is_atgames) typeLabel = ' [DG]';
+                        else if (t.is_wg_vpxs) typeLabel = ' [WG-VPXS]';
+                        else if (t.is_wg_vr) typeLabel = ' [WG-VR]';
+                    }
+                    return { name: `${t.name}${typeLabel}`, value: t.name };
+                });
+
+                // --- Empty Result Handling ---
+                if (filtered.length === 0) {
+                    const typeMsg = gameType ? ` for ${gameType}` : '';
+                    filtered = [{ 
+                        name: `(No active games found${typeMsg})`, 
+                        value: 'NONE_FOUND' 
+                    }];
+                }
+
+                await interaction.respond(filtered.slice(0, 25));
             }
             return;
         }
@@ -102,15 +124,16 @@ export function startDiscordBot() {
                     }
                 } else {
                     // List all types
-                    const types = ['DG', 'WG-VPXS', 'WG-VR', 'MG'];
+                    const types = ['DG', 'WG-VPXS', 'WG-VR', 'MG', 'OTHER'];
                     let message = '**Currently Active Tables:**\n';
                     
                     for (const type of types) {
                         const activeGames = await getActiveGames(type);
                         if (activeGames.length > 0) {
                             const names = activeGames.map(g => g.name).join(', ');
-                            message += `**${type}:** ${names}\n`;
-                        } else {
+                            const typeLabel = type === 'OTHER' ? 'Non-Tournament' : type;
+                            message += `**${typeLabel}:** ${names}\n`;
+                        } else if (type !== 'OTHER') {
                             message += `**${type}:** *None*\n`;
                         }
                     }
@@ -736,7 +759,7 @@ export function startDiscordBot() {
         
         else if (commandName === 'submit-score') { 
             const gameType = interaction.options.getString('grind-type');
-            const tableName = interaction.options.getString('table-name');
+            let tableName = interaction.options.getString('table-name');
             const score = interaction.options.getInteger('score', true);
             const photoAttachment = interaction.options.getAttachment('photo', true);
             const iScoredUsername = interaction.options.getString('iscored_username', true);
@@ -744,6 +767,19 @@ export function startDiscordBot() {
             await interaction.deferReply();
 
             try {
+                // --- Table Name Cleanup ---
+                // Support cleaning up any leftover separators if needed
+                if (tableName) {
+                    if (tableName.includes(' » ')) tableName = tableName.split(' » ').pop()!;
+                    if (tableName.includes(' ➔ ')) tableName = tableName.split(' ➔ ').pop()!;
+                    if (tableName.includes(' > ')) tableName = tableName.split(' > ').pop()!;
+                }
+
+                if (tableName === 'NONE_FOUND' || (tableName && tableName.startsWith('(No active games'))) {
+                    await interaction.editReply('You must select a valid table name from the list. If no tables are shown, ensure the selected grind type has active games.');
+                    return;
+                }
+
                 const existingDiscordId = getIscoredNameByDiscordId(iScoredUsername);
                 if (existingDiscordId && existingDiscordId !== interaction.user.id) {
                     await interaction.editReply(`The iScored username '${iScoredUsername}' is already linked to another Discord user.`);
@@ -755,12 +791,19 @@ export function startDiscordBot() {
                 let contextType: string = 'Game';
 
                 if (tableName) {
-                    const game = await getGameByNameAndStatus(tableName, ['ACTIVE']);
+                    if (tableName.startsWith('NONE_')) {
+                        await interaction.editReply('You must select a valid table name from the list. If no tables are shown, ensure the selected grind type has active games.');
+                        return;
+                    }
+                    // If both are provided, filter by both for maximum precision
+                    const game = await getGameByNameAndStatus(tableName, ['ACTIVE'], gameType);
                     if (game) {
                         targetGameName = game.name;
                         iscoredId = game.iscored_game_id;
+                        if (gameType) contextType = `Tournament (${gameType})`;
                     } else {
-                        await interaction.editReply(`The table "**${tableName}**" is either not active or not found in my database. Scores can only be submitted to active games.`);
+                        const typeError = gameType ? ` for the **${gameType}** tournament` : '';
+                        await interaction.editReply(`The table "**${tableName}**" is either not active or not found${typeError}. Scores can only be submitted to active games.`);
                         return;
                     }
                 } else if (gameType) {

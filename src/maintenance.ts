@@ -4,7 +4,7 @@ import { getWinnerAndScoreFromPage, getStandingsFromPage } from './api.js';
 import { updateWinnerHistory, getLastWinner } from './history.js';
 import { sendDiscordNotification } from './discord.js';
 import { getDiscordIdByIscoredName } from './userMapping.js';
-import { getActiveGames, getActiveGame, getNextQueuedGames, getNextQueuedGame, updateGameStatus, setPicker, createGameEntry, GameRow, hasScores, saveScores, getGameByIscoredId, syncCompletedGame, syncQueuedGame, upsertTable, getTable, getLineupOrder } from './database.js';
+import { getActiveGames, getActiveGame, getNextQueuedGames, getNextQueuedGame, updateGameStatus, setPicker, createGameEntry, GameRow, hasScores, saveScores, getGameByIscoredId, syncCompletedGame, syncQueuedGame, upsertTable, getTable, getLineupOrder, reconcileGames } from './database.js';
 import { logInfo, logError, logWarn } from './logger.js';
 
 const ALL_GAME_TYPES = ['DG', 'WG-VPXS', 'WG-VR', 'MG'];
@@ -136,6 +136,12 @@ async function cleanupOldGames(page: Page, gameType: string) {
             // Give the site a moment to "breathe" between deletions to avoid UI lag
             await page.waitForTimeout(2000);
         }
+
+        // --- Reconciliation Phase ---
+        // Mark any game in DB for THIS type that was NOT found on iScored as HIDDEN
+        // This handles cases where games were deleted manually or the board was wiped.
+        const foundIds = visibleGames.map(g => g.id);
+        await reconcileGames(foundIds, gameType);
         
     } catch (error) {
         logError(`❌ Error during cleanupOldGames for ${gameType}:`, error);

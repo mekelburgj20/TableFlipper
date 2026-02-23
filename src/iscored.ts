@@ -19,7 +19,7 @@ const ISCORED_GAMES_URL = 'https://iscored.info/settings.php#games'; // Direct U
  * Formal mapping of tournament types to their iScored tag "key".
  * This allows us to identify games by tag even if the name suffix is missing or different.
  */
-const TOURNAMENT_TAG_KEYS: Record<string, string> = {
+export const TOURNAMENT_TAG_KEYS: Record<string, string> = {
     'DG': 'DG',
     'WG-VPXS': 'WG-VPXS',
     'WG-VR': 'WG-VR',

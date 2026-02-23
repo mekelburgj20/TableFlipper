@@ -3,7 +3,7 @@
 </context>
 
 <task>
-The dual-wg-vpxs appears to have been successful. Merge and push. New task - When performing /submit-score and then choosing the grind-type, then the optional 'table-name' param, a list of options appear. These should represent what options (tables) are available as per the grind-type selected. Currently, all grind tables are being shown.
+When using /submit-score , there is no option to submit scores to non-grind games. The submit score functionality should be such that any game that is unlocked in iscored should be able to have a score submitted to it. The sync-state should identify games that are not grinds (they have no grind tags) and still mark them as active games that can have scores submitted. The slash command needs to be updated to allow these games to be displayed when no grind-type is selected and instead just 'table-name' is used. 
 </task>
 
 <final_instruction>

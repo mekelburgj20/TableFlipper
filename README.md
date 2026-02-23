@@ -8,8 +8,9 @@ TableFlipper is a Node.js Discord bot designed to automate and manage pinball to
 
 *   **Automated Tournament Management:**
     *   **Multi-Format Support:** Manages Daily Grind (`DG`), Weekly Grinds (`WG-VPXS`, `WG-VR`), and Monthly Grind (`MG`) tournaments.
+    *   **Dual-Slot Weekly Grind:** Supports multiple active games for the same tournament type (e.g., two `WG-VPXS` tables running simultaneously).
+    *   **Non-Tournament Support:** Automatically identifies and tracks non-tournament games (type `OTHER`), allowing score submission for any unlocked game on the board.
     *   **Channel-Specific Announcements:** Supports dedicated Discord webhooks for each tournament type, allowing winners and status updates to be routed to specific channels (e.g., `#daily-grind`, `#monthly-grind`) with a general fallback.
-    *   **Lineup Repositioning:** Automatically reorders games on the iScored scoreboard so that active grinds are always farthest left (top of the list), followed by chronological history. Uses physical DOM manipulation for maximum reliability. Configurable via `.env`.
     *   **Scheduled Maintenance:** Automatically and reliably locks completed games, accurately determines winners, unlocks new games, and sends Discord announcements based on predefined schedules (Daily at 12 AM Central, Weekly on Wednesdays, Monthly on the 1st).
     *   **Delayed Cleanup:** Daily and Weekly tables remain visible (locked) until Wednesday night at 11 PM Central, allowing players to view the week's history.
     *   **Manual Trigger:** Maintenance routines and cleanup sweeps can be manually triggered via moderator-restricted Discord slash commands.
@@ -19,11 +20,13 @@ TableFlipper is a Node.js Discord bot designed to automate and manage pinball to
     *   **Picker Timeout:** If a designated picker or nominee fails to select a table within 18 hours, the bot automatically selects a random compatible table.
 *   **Robust iScored Automation:**
     *   **Tag-Based Management:** Uses iScored Tags (e.g., `DG`, `WG-VPXS`) as the primary key for tournament identification, allowing for clean game names without mandatory suffixes.
-    *   **Style Learning System:** Automatically scrapes and saves CSS, fonts, and background settings from active games every night, ensuring a consistent look for future rotations.
+    *   **Style Sniffing & Learning:** Automatically "sniffs" the Community Style ID from active games and saves them to the local database. Re-applies these styles (plus custom CSS tweaks) during future rotations.
+    *   **Automated Header Removal:** Optional global configuration to automatically remove game logos (header images) after creation for a cleaner, community-preferred look.
     *   **Reliable Interaction:** Uses direct browser execution and modal handling to navigate complex Single Page Application transitions, bypassing "busy" overlays and UI lag.
-    *   **Automatic Sync:** The cleanup routine automatically imports unknown games from iScored into the local database to ensure safe management.
+    *   **Full State Reconciliation:** The sync routine automatically identifies and hides "ghost" games (including queued entries) that are no longer present on the live iScored lineup.
 *   **Comprehensive Discord Slash Commands:**
     *   **`/submit-score`**: Submit your score and a photo for validation. Choose to submit by tournament type (`grind-type`) or specific table name (`table-name`). Confirmations are interactive.
+        *   ⚠️ **Note**: Discord caches autocomplete results aggressively. If you switch the `grind-type` and the list doesn't update, you must **restart the slash command** (hit Esc and type it again) to see the correct tables.
     *   **`/picktable`**: Allows the designated winner to choose the next table. Weekly and Monthly picks activate immediately; Daily picks have a 24-hour buffer.
     *   **`/nominate-picker`**: Allows a repeat winner to nominate another player to pick the table.
     *   **`/list-active`**: Shows the currently active table for any or all tournament types.
@@ -86,7 +89,8 @@ npm run deploy-commands
 ## 4. Key Scripts
 
 *   `npm run sync-tables`: Updates the `tables` database from the Google Sheet catalog.
-*   `npm run sync-state`: Scrapes iScored to align the database with the live site (Active/Queued/Completed games).
+*   `npm run sync-state`: Scrapes iScored to align the database with the live site (Active/Queued/Completed/Other games).
+*   `npm run scoreboard-wipe`: (CLI only) Deletes EVERY game currently on the iScored lineup. Use with extreme caution.
 *   `npm run build`: Compiles TypeScript to the `dist/` folder.
 
 ## 6. Backup and Restore
@@ -122,8 +126,16 @@ The bot maintains detailed logs in `data/bot.log`. Check this file for troublesh
 
 ## 8. Release Notes
 
-### v1.1.0 (Current)
-*   **Multi-Channel Webhooks:** Implemented support for tournament-specific Discord webhooks (`DISCORD_WEBHOOK_URL_DG`, etc.), enabling targeted announcements for different grind types.
+### v1.2.0 (Current)
+*   **Dual-Slot Weekly Grinds:** Refactored maintenance and sync logic to support multiple active tables for a single tournament type. Includes logic for multiple winners and double-pick rights.
+*   **Forensic Style Sniffing:** Implemented advanced style learning that extracts the Community Style ID from background image URLs, ensuring 100% visual fidelity during rotations.
+*   **Non-Tournament Game Support:** Any unlocked game on iScored is now tracked as type `OTHER` and available for score submission via `/submit-score`.
+*   **Scoreboard Wipe Utility:** Added a dedicated CLI command to clear the entire iScored board for special events or resets.
+*   **Ghost Game Reconciliation:** Fixed a bug where deleted queued games remained in the database; reconciliation now covers all visible and hidden tournament slots.
+*   **Global Header Removal Toggle:** Added `REMOVE_HEADER_IMAGE` to `.env` to automatically strip logos from new games.
+*   **Autocomplete Optimization:** Refined the Discord autocomplete UX with better labeling and strict tournament-type filtering.
+
+### v1.1.0
 *   **Dynamic Notification Headers:** Refactored Discord announcements to dynamically identify the tournament type in the message header (e.g., "The Monthly Grind is Closed!").
 *   **Lineup Repositioning (DOM-based):** Added automated reordering of tournament games using physical DOM injection. The active Daily Grind is now always pushed to the farthest left position on the scoreboard, with historical grinds following in chronological order.
 *   **Style Learning & Sync:** The bot now automatically "learns" your manual styling changes (CSS, fonts, backgrounds) from active games every night and reapplies them to future rotations.

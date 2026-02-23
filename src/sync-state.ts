@@ -1,6 +1,6 @@
 import 'dotenv/config';
-import { loginToIScored, findGames, navigateToLineupPage } from './iscored.js';
-import { syncActiveGame, syncQueuedGame, syncCompletedGame } from './database.js';
+import { loginToIScored, getAllGames, TOURNAMENT_TAG_KEYS, navigateToLineupPage } from './iscored.js';
+import { syncActiveGame, syncQueuedGame, syncCompletedGame, reconcileGames } from './database.js';
 import { triggerLineupRepositioning, syncAllActiveStyles } from './maintenance.js';
 import { logInfo, logError } from './logger.js';
 import { fileURLToPath } from 'url';
@@ -20,72 +20,82 @@ export async function runStateSync() {
         // Pass the current page to avoid double-login
         await syncAllActiveStyles(page);
 
-        await navigateToLineupPage(page);
+        const allGames = await getAllGames(page);
+        logInfo(`   -> Found ${allGames.length} total games on iScored lineup.`);
 
         const foundIscoredIds: string[] = [];
+        const processedIds = new Set<string>();
 
+        // 1. Process Tournament Grinds first (to ensure they get correct types)
         for (const type of GAME_TYPES) {
-            logInfo(`🔎 Checking state for ${type}...`);
-            const { activeGames, nextGames, completedGames } = await findGames(page, type);
+            logInfo(`🔎 Identifying ${type} games...`);
+            const tagKey = TOURNAMENT_TAG_KEYS[type] || type;
+
+            for (const game of allGames) {
+                // Skip if already processed (though a game shouldn't have multiple grind tags ideally)
+                if (processedIds.has(game.id)) continue;
+
+                // Identification Logic:
+                // 1. Check for the formal Tag Key (Primary)
+                // 2. Fallback to Name Suffix (Legacy/Human) - only if name ends with it
+                const tagMatch = game.tags?.some(t => t.toUpperCase().includes(tagKey.toUpperCase()));
+                const nameMatch = game.name.toUpperCase().endsWith(' ' + type.toUpperCase());
+
+                if (tagMatch || nameMatch) {
+                    logInfo(`      - Found ${type}: ${game.name} (${game.id})`);
+                    
+                    if (game.isHidden) {
+                        await syncQueuedGame(type, game.id, game.name);
+                    } else if (!game.isHidden && !game.isLocked) {
+                        await syncActiveGame(type, game.id, game.name);
+                    } else if (!game.isHidden && game.isLocked) {
+                        await syncCompletedGame(type, game.id, game.name);
+                    }
+                    
+                    foundIscoredIds.push(game.id);
+                    processedIds.add(game.id);
+                }
+            }
+        }
+
+        // 2. Process all other games as 'OTHER' type
+        logInfo(`🔎 Identifying non-tournament games...`);
+        for (const game of allGames) {
+            if (processedIds.has(game.id)) continue;
+
+            logInfo(`      - Found OTHER: ${game.name} (${game.id})`);
             
-            if (activeGames.length > 0) {
-                logInfo(`   -> Found ${activeGames.length} active game(s) on iScored for ${type}.`);
-                for (const active of activeGames) {
-                    logInfo(`      - ${active.name} (${active.id})`);
-                    await syncActiveGame(type, active.id, active.name);
-                    foundIscoredIds.push(active.id);
-                }
+            // For 'OTHER' games, we follow simple visibility/lock rules
+            if (!game.isHidden && !game.isLocked) {
+                await syncActiveGame('OTHER', game.id, game.name);
+            } else if (!game.isHidden && game.isLocked) {
+                await syncCompletedGame('OTHER', game.id, game.name);
             } else {
-                logInfo(`   -> No active games found on iScored for ${type}.`);
-                // Only clear active state if we found literally zero active games for this type
+                await syncQueuedGame('OTHER', game.id, game.name);
+            }
+
+            foundIscoredIds.push(game.id);
+            processedIds.add(game.id);
+        }
+
+        // Handle case where a tournament type has NO active games on iScored
+        for (const type of GAME_TYPES) {
+            const hasActive = allGames.some(g => {
+                const tagKey = TOURNAMENT_TAG_KEYS[type] || type;
+                const tagMatch = g.tags?.some(t => t.toUpperCase().includes(tagKey.toUpperCase()));
+                const nameMatch = g.name.toUpperCase().endsWith(' ' + type.toUpperCase());
+                return (tagMatch || nameMatch) && !g.isHidden && !g.isLocked;
+            });
+
+            if (!hasActive) {
+                logInfo(`   -> No active games found on iScored for ${type}. Cleared active state in DB.`);
                 await syncActiveGame(type, null, null);
-            }
-
-            if (nextGames.length > 0) {
-                logInfo(`   -> Found ${nextGames.length} queued (hidden) games on iScored for ${type}.`);
-                for (const next of nextGames) {
-                    await syncQueuedGame(type, next.id, next.name);
-                    foundIscoredIds.push(next.id);
-                }
-            }
-
-            if (completedGames && completedGames.length > 0) {
-                logInfo(`   -> Found ${completedGames.length} completed (shown+locked) games on iScored for ${type}.`);
-                for (const comp of completedGames) {
-                    await syncCompletedGame(type, comp.id, comp.name);
-                    foundIscoredIds.push(comp.id);
-                }
             }
         }
 
         // --- Reconciliation Phase ---
-        // Mark any game in DB that is ACTIVE or COMPLETED but NOT on iScored as HIDDEN
-        const db = await (async () => {
-            const { open } = await import('sqlite');
-            const sqlite3 = await import('sqlite3');
-            const path = await import('path');
-            return open({
-                filename: path.join(process.cwd(), 'data', 'tableflipper.db'),
-                driver: sqlite3.default.Database
-            });
-        })();
-
-        try {
-            if (foundIscoredIds.length > 0) {
-                const placeholders = foundIscoredIds.map(() => '?').join(',');
-                const result = await db.run(
-                    `UPDATE games SET status = 'HIDDEN' 
-                     WHERE status IN ('ACTIVE', 'COMPLETED') 
-                     AND iscored_game_id NOT IN (${placeholders})`,
-                    ...foundIscoredIds
-                );
-                if (result.changes && result.changes > 0) {
-                    logInfo(`🧹 Reconciliation: Marked ${result.changes} missing games as HIDDEN.`);
-                }
-            }
-        } finally {
-            await db.close();
-        }
+        // Mark any game in DB that is ACTIVE, COMPLETED, or QUEUED but NOT on iScored as HIDDEN
+        await reconcileGames(foundIscoredIds);
 
         logInfo('✅ State sync completed successfully.');
 

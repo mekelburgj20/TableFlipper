@@ -622,12 +622,19 @@ export async function searchGamesByStatus(query: string, statuses: string[], lim
     }
 }
 
-export async function getGameByNameAndStatus(name: string, statuses: string[]): Promise<GameRow | null> {
+export async function getGameByNameAndStatus(name: string, statuses: string[], gameType: string | null = null): Promise<GameRow | null> {
     const db = await openDb();
     try {
         const placeholders = statuses.map(() => '?').join(',');
-        const sql = `SELECT * FROM games WHERE name = ? AND status IN (${placeholders}) LIMIT 1`;
-        const params = [name, ...statuses];
+        let sql = `SELECT * FROM games WHERE name = ? AND status IN (${placeholders})`;
+        const params: any[] = [name, ...statuses];
+
+        if (gameType) {
+            sql += ` AND type = ?`;
+            params.push(gameType);
+        }
+
+        sql += ` LIMIT 1`;
         return await db.get<GameRow>(sql, ...params) ?? null;
     } finally {
         await db.close();
@@ -638,6 +645,41 @@ export async function getAllVisibleGames(): Promise<GameRow[]> {
     const db = await openDb();
     try {
         return await db.all<GameRow[]>("SELECT * FROM games WHERE status IN ('ACTIVE', 'QUEUED', 'COMPLETED')");
+    } finally {
+        await db.close();
+    }
+}
+
+/**
+ * Reconciles the local database with the live state on iScored.
+ * Any game in the DB that is marked as visible/active but missing from the provided IDs 
+ * is updated to 'HIDDEN'.
+ * @param foundIscoredIds Array of iScored IDs found during scraping.
+ * @param gameType Optional tournament type to filter reconciliation.
+ */
+export async function reconcileGames(foundIscoredIds: string[], gameType: string | null = null): Promise<void> {
+    const db = await openDb();
+    try {
+        let sql = `UPDATE games SET status = 'HIDDEN' 
+                   WHERE status IN ('ACTIVE', 'COMPLETED', 'QUEUED') 
+                   AND iscored_game_id != 'TBD'`;
+        const params: any[] = [];
+
+        if (gameType) {
+            sql += ` AND type = ?`;
+            params.push(gameType);
+        }
+
+        if (foundIscoredIds.length > 0) {
+            const placeholders = foundIscoredIds.map(() => '?').join(',');
+            sql += ` AND iscored_game_id NOT IN (${placeholders})`;
+            params.push(...foundIscoredIds);
+        }
+
+        const result = await db.run(sql, ...params);
+        if (result.changes && result.changes > 0) {
+            console.log(`🧹 Reconciliation${gameType ? ' [' + gameType + ']' : ''}: Marked ${result.changes} missing games as HIDDEN.`);
+        }
     } finally {
         await db.close();
     }
