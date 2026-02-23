@@ -65,10 +65,10 @@ export function startDiscordBot() {
                     }
                 } else if (commandName === 'list-scores') {
                     // Entire current lineup (locked and unlocked), but not queued (hidden)
-                    choices = await searchGamesByStatus(focusedOption.value, ['ACTIVE', 'COMPLETED']);
+                    choices = await searchGamesByStatus(focusedOption.value, ['ACTIVE', 'COMPLETED'], 25, gameType);
                 } else if (commandName === 'submit-score') {
                     // Only active games (not locked or hidden)
-                    choices = await searchGamesByStatus(focusedOption.value, ['ACTIVE']);
+                    choices = await searchGamesByStatus(focusedOption.value, ['ACTIVE'], 25, gameType);
                 }
 
                 const filtered = choices.map(t => ({ name: t.name, value: t.name }));

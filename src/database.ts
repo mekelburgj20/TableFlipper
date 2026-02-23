@@ -602,12 +602,20 @@ export async function getLineupOrder(typeOrder: string[]): Promise<string[]> {
     }
 }
 
-export async function searchGamesByStatus(query: string, statuses: string[], limit: number = 25): Promise<GameRow[]> {
+export async function searchGamesByStatus(query: string, statuses: string[], limit: number = 25, gameType: string | null = null): Promise<GameRow[]> {
     const db = await openDb();
     try {
         const placeholders = statuses.map(() => '?').join(',');
-        const sql = `SELECT * FROM games WHERE name LIKE ? AND status IN (${placeholders}) ORDER BY created_at DESC LIMIT ?`;
-        const params = [`%${query}%`, ...statuses, limit];
+        let sql = `SELECT * FROM games WHERE name LIKE ? AND status IN (${placeholders})`;
+        const params: any[] = [`%${query}%`, ...statuses];
+
+        if (gameType) {
+            sql += ` AND type = ?`;
+            params.push(gameType);
+        }
+
+        sql += ` ORDER BY created_at DESC LIMIT ?`;
+        params.push(limit);
         return await db.all<GameRow[]>(sql, ...params);
     } finally {
         await db.close();
