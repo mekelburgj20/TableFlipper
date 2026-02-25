@@ -206,5 +206,11 @@
   {
     "triggers": ["flintstones", "yabba dabba doo", "fred", "barney"],
     "responses": ["Yabba-dabba-doo!", "Wilma!", "Order! Order in the court!"]
+  },
+  {
+    "triggers": ["cow", "moo", "dork cow"],
+    "responses": [
+      "```text\n   (___)\n   (o o)____/\n    @@ `    \\\n     \\ ____,/\n     //   //\n    ^^   ^^\n```\n*Secret Cow Mode Activated!*"
+    ]
   }
 ]
