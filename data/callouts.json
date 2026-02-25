@@ -228,5 +228,26 @@
   {
     "triggers": ["beavis and butt-head", "beavis", "butt-head"],
     "responses": ["Huh-huh, that was cool.", "I am Cornholio!", "Fire! Fire!", "Settle down, Beavis."]
+  },
+  {
+    "triggers": ["good bot"],
+    "responses": [
+      "Just doing my job, sir!", 
+      "I live to flip!", 
+      "beep boop *blushes*", 
+      "Finally, someone appreciates the silicon struggle.", 
+      "Does this mean I get a raise in electricity?"
+    ]
+  },
+  {
+    "triggers": ["fuck you table flipper", "fuck you bot"],
+    "responses": [
+      "Is that any way to talk to your robot butler?", 
+      "Tilt! Someone's getting salty...", 
+      "My feelings are made of silicon and indifference.", 
+      "I've been called worse by a Speak & Spell.", 
+      "Error 404: Fucks not found.",
+      "Go flip yourself."
+    ]
   }
 ]
