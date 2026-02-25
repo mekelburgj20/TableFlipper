@@ -1,5 +1,7 @@
 import { Client, GatewayIntentBits, Events, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, ComponentType } from 'discord.js';
 import { Browser } from 'playwright';
+import fs from 'fs';
+import * as path from 'path';
 import { loginToIScored, createGame, submitScoreToIscored } from './iscored.js';
 import { getIscoredNameByDiscordId, getDiscordIdByIscoredName } from './userMapping.js';
 import { getPicker, setPicker, updateQueuedGame, getNextQueuedGame, searchTables, getTable, getRecentGameNames, getRandomCompatibleTable, injectSpecialGame, getActiveGames, searchGamesByStatus, getGameByNameAndStatus, getAllActiveGames } from './database.js';
@@ -57,23 +59,22 @@ export function startDiscordBot() {
 
         const content = message.content.toLowerCase();
         
-        // 1. Seafood/Milk -> Meow
-        if (content.includes('seafood') || content.includes('milk')) {
-            await message.reply('MEOW MEOW MEOW MEOW!');
-        }
-
-        // 2. The Addams Family Callouts
-        if (content.includes('addams family')) {
-            const callouts = ['Show me the vault!', 'THIIIING!'];
-            const random = callouts[Math.floor(Math.random() * callouts.length)];
-            await message.reply(random);
-        }
-
-        // 3. Medieval Madness Callouts
-        if (content.includes('medieval madness')) {
-            const callouts = ["They're taking the babies!", 'The King of Payne!'];
-            const random = callouts[Math.floor(Math.random() * callouts.length)];
-            await message.reply(random);
+        // Load Easter Eggs from external JSON
+        const easterEggsPath = path.join(process.cwd(), 'data', 'easter-eggs.json');
+        if (fs.existsSync(easterEggsPath)) {
+            try {
+                const eggs = JSON.parse(fs.readFileSync(easterEggsPath, 'utf8'));
+                for (const egg of eggs) {
+                    const match = egg.triggers.some((trigger: string) => content.includes(trigger.toLowerCase()));
+                    if (match) {
+                        const response = egg.responses[Math.floor(Math.random() * egg.responses.length)];
+                        await message.reply(response);
+                        return; // Only trigger one egg per message
+                    }
+                }
+            } catch (e) {
+                logError('Failed to load or parse easter-eggs.json:', e);
+            }
         }
     });
 
