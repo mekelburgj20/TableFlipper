@@ -1,6 +1,6 @@
 import 'dotenv/config';
 import { loginToIScored, getAllGames, TOURNAMENT_TAG_KEYS, navigateToLineupPage } from './iscored.js';
-import { syncActiveGame, syncQueuedGame, syncCompletedGame, reconcileGames } from './database.js';
+import { syncActiveGame, syncQueuedGame, syncCompletedGame, reconcileGames, getGameByIscoredId } from './database.js';
 import { triggerLineupRepositioning, syncAllActiveStyles } from './maintenance.js';
 import { logInfo, logError } from './logger.js';
 import { fileURLToPath } from 'url';
@@ -42,14 +42,27 @@ export async function runStateSync() {
                 const nameMatch = game.name.toUpperCase().endsWith(' ' + type.toUpperCase());
 
                 if (tagMatch || nameMatch) {
-                    logInfo(`      - Found ${type}: ${game.name} (${game.id})`);
+                    logInfo(`      - Found ${type}: ${game.name} (${game.id}) [Locked: ${game.isLocked}, Hidden: ${game.isHidden}]`);
                     
-                    if (game.isHidden) {
-                        await syncQueuedGame(type, game.id, game.name);
-                    } else if (!game.isHidden && !game.isLocked) {
-                        await syncActiveGame(type, game.id, game.name);
-                    } else if (!game.isHidden && game.isLocked) {
+                    // Safter Logic: Locked always means COMPLETED for tournament grinds (unless it's a TBD shell, but those aren't on iScored yet)
+                    if (game.isLocked && !game.isHidden) {
                         await syncCompletedGame(type, game.id, game.name);
+                    } else if (game.isLocked && game.isHidden) {
+                        // This could be a new QUEUED game OR an old COMPLETED game that was hidden.
+                        // Check if it's already in the DB.
+                        const dbGame = await getGameByIscoredId(game.id);
+                        if (dbGame && (dbGame.status === 'COMPLETED' || dbGame.status === 'ACTIVE')) {
+                            // If it was already active or completed, keep it as COMPLETED even if hidden.
+                            await syncCompletedGame(type, game.id, game.name);
+                        } else {
+                            // If it's new or already queued, keep it as QUEUED.
+                            await syncQueuedGame(type, game.id, game.name);
+                        }
+                    } else if (!game.isLocked && !game.isHidden) {
+                        await syncActiveGame(type, game.id, game.name);
+                    } else if (!game.isLocked && game.isHidden) {
+                        // Unlocked but hidden? iScored doesn't usually allow this for long, but we'll treat as ACTIVE
+                        await syncActiveGame(type, game.id, game.name);
                     }
                     
                     foundIscoredIds.push(game.id);

@@ -311,19 +311,20 @@ export async function syncActiveGame(gameType: string, iscoredGameId: string | n
     const db = await openDb();
     try {
         if (iscoredGameId && gameName) {
-            // Note: We no longer deactivate others here because a type might have multiple active games (e.g. WG-VPXS).
-            // Deactivation should be handled by maintenance or a specific 'clear other active' function if needed.
-            // For now, we just ensure this specific game is marked ACTIVE in the DB.
-
             // Check if this game exists
             const existingGame = await db.get<GameRow>("SELECT * FROM games WHERE iscored_game_id = ?", iscoredGameId);
 
             if (existingGame) {
-                await db.run(
-                    "UPDATE games SET status = 'ACTIVE', type = ?, name = ?, completed_at = NULL WHERE id = ?", 
-                    gameType, gameName, existingGame.id
-                );
-                console.log(`🔄 Synced DB: Set existing game '${gameName}' to ACTIVE (Type: ${gameType}).`);
+                if (existingGame.status !== 'ACTIVE') {
+                    await db.run(
+                        "UPDATE games SET status = 'ACTIVE', type = ?, name = ?, completed_at = NULL WHERE id = ?", 
+                        gameType, gameName, existingGame.id
+                    );
+                    console.log(`🔄 Synced DB: Set existing game '${gameName}' from ${existingGame.status} to ACTIVE (Type: ${gameType}).`);
+                } else {
+                    // Update metadata even if status is the same
+                    await db.run("UPDATE games SET type = ?, name = ? WHERE id = ?", gameType, gameName, existingGame.id);
+                }
             } else {
                 const newId = uuidv4();
                 await db.run(
@@ -331,16 +332,17 @@ export async function syncActiveGame(gameType: string, iscoredGameId: string | n
                      VALUES (?, ?, ?, ?, 'ACTIVE', ?)`,
                     newId, iscoredGameId, gameName, gameType, new Date().toISOString()
                 );
-                console.log(`🔄 Synced DB: Created new ACTIVE entry for '${gameName}'.`);
+                console.log(`🔄 Synced DB: Created new ACTIVE entry for '${gameName}' (Type: ${gameType}).`);
             }
         } else {
             // No active game on iScored - mark ALL active games of this type as COMPLETED
-            // This is only called when iScored literally has ZERO games for this type.
-            await db.run(
+            const result = await db.run(
                 `UPDATE games SET status = 'COMPLETED', completed_at = ? WHERE type = ? AND status = 'ACTIVE'`,
                 new Date().toISOString(), gameType
             );
-            console.log(`🔄 Synced DB: No active games found on iScored for ${gameType}. Cleared active state in DB.`);
+            if (result.changes && result.changes > 0) {
+                console.log(`🔄 Synced DB: No active games found on iScored for ${gameType}. Marked ${result.changes} active games as COMPLETED in DB.`);
+            }
         }
 
     } finally {
@@ -356,18 +358,16 @@ export async function syncQueuedGame(gameType: string, iscoredGameId: string, ga
         if (existingGame) {
             if (existingGame.status !== 'QUEUED') {
                 await db.run("UPDATE games SET status = 'QUEUED', completed_at = NULL WHERE id = ?", existingGame.id);
-                console.log(`🔄 Synced DB: Set existing game '${gameName}' to QUEUED.`);
+                console.log(`🔄 Synced DB: Set existing game '${gameName}' from ${existingGame.status} to QUEUED.`);
             }
         } else {
             const newId = uuidv4();
-            // We set scheduled_to_be_active_at to now for simplicity, or we could try to order them?
-            // For now, simple import.
             await db.run(
                 `INSERT INTO games (id, iscored_game_id, name, type, status, created_at, scheduled_to_be_active_at)
                  VALUES (?, ?, ?, ?, 'QUEUED', ?, ?)`,
                 newId, iscoredGameId, gameName, gameType, new Date().toISOString(), new Date().toISOString()
             );
-            console.log(`🔄 Synced DB: Created new QUEUED entry for '${gameName}'.`);
+            console.log(`🔄 Synced DB: Created new QUEUED entry for '${gameName}' (Type: ${gameType}).`);
         }
     } finally {
         await db.close();
@@ -382,7 +382,7 @@ export async function syncCompletedGame(gameType: string, iscoredGameId: string,
         if (existingGame) {
             if (existingGame.status !== 'COMPLETED') {
                 await db.run("UPDATE games SET status = 'COMPLETED', completed_at = ? WHERE id = ?", new Date().toISOString(), existingGame.id);
-                console.log(`🔄 Synced DB: Set existing game '${gameName}' to COMPLETED.`);
+                console.log(`🔄 Synced DB: Set existing game '${gameName}' from ${existingGame.status} to COMPLETED.`);
             }
         } else {
             const newId = uuidv4();
@@ -391,7 +391,7 @@ export async function syncCompletedGame(gameType: string, iscoredGameId: string,
                  VALUES (?, ?, ?, ?, 'COMPLETED', ?, ?)`,
                 newId, iscoredGameId, gameName, gameType, new Date().toISOString(), new Date().toISOString()
             );
-            console.log(`🔄 Synced DB: Created new COMPLETED entry for '${gameName}'.`);
+            console.log(`🔄 Synced DB: Created new COMPLETED entry for '${gameName}' (Type: ${gameType}).`);
         }
     } finally {
         await db.close();
@@ -411,18 +411,9 @@ export async function createGameEntry(game: Omit<GameRow, 'id' | 'created_at' | 
         } else if (game.type === 'DG') {
             // DG has a 1-day buffer (it's picked 2 days in advance, so it sits in QUEUED for a day)
             // We set the start time to exactly 12:00 AM Central, 2 days from now.
-            const now = new Date();
-            const formatter = new Intl.DateTimeFormat('en-US', {
-                timeZone: 'America/Chicago',
-                year: 'numeric',
-                month: 'numeric',
-                day: 'numeric'
-            });
-            const parts = formatter.formatToParts(now);
-            const dateMap: any = {};
-            parts.forEach(p => dateMap[p.type] = p.value);
-            
-            scheduledTime = new Date(parseInt(dateMap.year), parseInt(dateMap.month) - 1, parseInt(dateMap.day) + 2, 0, 0, 0);
+            const centralDateString = new Date().toLocaleDateString('en-US', { timeZone: 'America/Chicago' });
+            const centralDate = new Date(centralDateString);
+            scheduledTime = new Date(centralDate.getFullYear(), centralDate.getMonth(), centralDate.getDate() + 2, 0, 0, 0);
         } else {
             // Weekly and Monthly grinds are active immediately upon being picked
             scheduledTime = new Date();

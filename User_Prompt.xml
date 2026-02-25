@@ -3,7 +3,15 @@
 </context>
 
 <task>
-Commit and merge, then push changes. Then, I want to inquire about potential functionality we could incorporate - without making any changes at the moment. I want to know if the app can respond to messages typed by users with a slash command. For example, the iscored.info Discord bot will reply with "squeal!" if a user types the string "squeal" in any part of their message, without a command trigger like / or ! or anything. Can we do the same?
+Add in to the @callouts.json the following trigger and response:
+[
+  {
+    "triggers": ["cow", "moo", "dork cow"],
+    "responses": [
+      "```text\n   (___)\n   (o o)____/\n    @@ `    \\\n     \\ ____,/\n     //   //\n    ^^   ^^\n```\n*Secret Cow Mode Activated!*"
+    ]
+  }
+]
 </task>
 
 <final_instruction>
