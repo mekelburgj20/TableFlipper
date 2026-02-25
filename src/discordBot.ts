@@ -11,6 +11,19 @@ import { runStateSync } from './sync-state.js';
 import { createBackup, restoreBackup } from './backup-restore.js';
 import { logInfo, logError, logWarn } from './logger.js';
 
+/**
+ * Helper to infer the tournament type based on the Discord channel name.
+ */
+function getGameTypeFromChannel(channelName: string | null): string | null {
+    if (!channelName) return null;
+    const name = channelName.toLowerCase();
+    if (name.includes('daily') || name.includes('-dg')) return 'DG';
+    if (name.includes('weekly-vpxs') || name.includes('-vpxs')) return 'WG-VPXS';
+    if (name.includes('weekly-vr') || name.includes('-vr')) return 'WG-VR';
+    if (name.includes('monthly') || name.includes('-mg')) return 'MG';
+    return null;
+}
+
 export function startDiscordBot() {
     logInfo('🤖 Starting Discord bot...');
     logInfo(`Debug: MOD_ROLE_ID from env: ${process.env.MOD_ROLE_ID}`);
@@ -38,6 +51,17 @@ export function startDiscordBot() {
         logInfo(`✅ Discord bot ready! Logged in as ${readyClient.user.tag}`);
     });
 
+    // --- Message Handler (Easter Eggs) ---
+    client.on(Events.MessageCreate, async message => {
+        if (message.author.bot) return;
+
+        const content = message.content.toLowerCase();
+        
+        if (content.includes('squeal')) {
+            await message.reply('squeal!');
+        }
+    });
+
     // --- Command Handler ---
     client.on(Events.InteractionCreate, async interaction => {
         // Autocomplete logging handled inside the block if needed, but let's log chat commands
@@ -50,8 +74,13 @@ export function startDiscordBot() {
 
             if (focusedOption.name === 'table-name') {
                 const commandName = interaction.commandName;
-                const gameType = interaction.options.getString('grind-type');
+                let gameType = interaction.options.getString('grind-type');
                 const query = focusedOption.value;
+
+                // Channel-specific context inference
+                if (!gameType && 'name' in interaction.channel!) {
+                    gameType = getGameTypeFromChannel(interaction.channel.name);
+                }
 
                 logInfo(`Autocomplete debug: command='${commandName}', gameType='${gameType}', query='${query}'`);
                 
@@ -110,7 +139,13 @@ export function startDiscordBot() {
         } 
         
         else if (commandName === 'list-active') {
-            const gameType = interaction.options.getString('grind-type');
+            let gameType = interaction.options.getString('grind-type');
+            
+            // Channel-specific context inference
+            if (!gameType && interaction.channel && 'name' in interaction.channel) {
+                gameType = getGameTypeFromChannel(interaction.channel.name);
+            }
+
             await interaction.deferReply();
 
             try {
@@ -147,7 +182,18 @@ export function startDiscordBot() {
         }
 
         else if (commandName === 'pick-table') {
-            const gameType = interaction.options.getString('grind-type', true);
+            let gameType = interaction.options.getString('grind-type');
+            
+            // Channel-specific context inference
+            if (!gameType && interaction.channel && 'name' in interaction.channel) {
+                gameType = getGameTypeFromChannel(interaction.channel.name);
+            }
+
+            if (!gameType) {
+                await interaction.reply({ content: 'Please specify a **grind-type** or run this command in a tournament-specific channel.', ephemeral: true });
+                return;
+            }
+
             let tableName = interaction.options.getString('table-name');
             const surpriseMe = interaction.options.getBoolean('surprise-me');
 
@@ -351,7 +397,13 @@ export function startDiscordBot() {
         
         else if (commandName === 'list-winners') {
             const view = interaction.options.getString('view') ?? 'recent';
-            const gameType = interaction.options.getString('grind-type');
+            let gameType = interaction.options.getString('grind-type');
+
+            // Channel-specific context inference
+            if (!gameType && interaction.channel && 'name' in interaction.channel) {
+                gameType = getGameTypeFromChannel(interaction.channel.name);
+            }
+
             const limit = interaction.options.getInteger('limit') ?? 5;
             const period = interaction.options.getString('period') ?? '7d';
 
@@ -626,7 +678,13 @@ export function startDiscordBot() {
         }
         
         else if (commandName === 'list-scores') {
-            const gameType = interaction.options.getString('grind-type');
+            let gameType = interaction.options.getString('grind-type');
+
+            // Channel-specific context inference
+            if (!gameType && interaction.channel && 'name' in interaction.channel) {
+                gameType = getGameTypeFromChannel(interaction.channel.name);
+            }
+
             const tableName = interaction.options.getString('table-name');
             await interaction.deferReply({ ephemeral: true });
 
@@ -723,19 +781,36 @@ export function startDiscordBot() {
         }
         
         else if (commandName === 'nominate-picker') {
-            const gameType = interaction.options.getString('grind-type', true);
+            let gameType = interaction.options.getString('grind-type');
+
+            // Channel-specific context inference
+            if (!gameType && interaction.channel && 'name' in interaction.channel) {
+                gameType = getGameTypeFromChannel(interaction.channel.name);
+            }
+
+            if (!gameType) {
+                await interaction.reply({ content: 'Please specify a **grind-type** or run this command in a tournament-specific channel.', ephemeral: true });
+                return;
+            }
+
             const nominatedUser = interaction.options.getUser('user', true);
             const nominatorUser = interaction.user;
 
             await interaction.deferReply({ ephemeral: true });
 
             // 1. Validate the nominator
-            const lastWinner = await getLastWinner(gameType);
-            const nominatorIscoredName = getIscoredNameByDiscordId(nominatorUser.id);
+            const modRoleId = process.env.MOD_ROLE_ID;
+            const memberRoles = interaction.member?.roles as any;
+            const isMod = modRoleId && modRoleId !== 'your_mod_role_id' && memberRoles && memberRoles.cache.has(modRoleId);
 
-            if (!lastWinner || !nominatorIscoredName || lastWinner.toLowerCase() !== nominatorIscoredName.toLowerCase()) {
-                await interaction.editReply(`You are not the last winner for the ${gameType} tournament, so you cannot nominate a picker.`);
-                return;
+            if (!isMod) {
+                const lastWinner = await getLastWinner(gameType);
+                const nominatorIscoredName = getIscoredNameByDiscordId(nominatorUser.id);
+
+                if (!lastWinner || !nominatorIscoredName || lastWinner.toLowerCase() !== nominatorIscoredName.toLowerCase()) {
+                    await interaction.editReply(`You are not the last winner for the ${gameType} tournament, so you cannot nominate a picker.`);
+                    return;
+                }
             }
 
             // 2. Check if a picker has already been nominated
@@ -749,11 +824,18 @@ export function startDiscordBot() {
             await setPicker(gameType, nominatedUser.id, nominatorUser.id);
 
             // 4. Send confirmation
-            await interaction.editReply(`You have successfully nominated ${nominatedUser.toString()} to pick the next table for the ${gameType} tournament.`);
+            const nominationMsg = isMod ? 
+                `**Admin Override:** ${nominatorUser.toString()} has designated ${nominatedUser.toString()} as the picker for the next ${gameType} tournament.` :
+                `You have successfully nominated ${nominatedUser.toString()} to pick the next table for the ${gameType} tournament.`;
+            
+            await interaction.editReply(nominationMsg);
             
             // Also send a public message to the channel
             if (interaction.channel && 'send' in interaction.channel) {
-                await interaction.channel.send(`${nominatorUser.toString()} has nominated ${nominatedUser.toString()} to pick the next table for the ${gameType} tournament!`);
+                const publicMsg = isMod ?
+                    `**Admin Override:** ${nominatorUser.toString()} has designated ${nominatedUser.toString()} to pick the next table for the ${gameType} tournament!` :
+                    `${nominatorUser.toString()} has nominated ${nominatedUser.toString()} to pick the next table for the ${gameType} tournament!`;
+                await interaction.channel.send(publicMsg);
             }
 
         }

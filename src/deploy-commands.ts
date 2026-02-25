@@ -14,7 +14,7 @@ const commands = [
                 name: 'grind-type',
                 type: 3, // STRING
                 description: 'The type of tournament you are picking for.',
-                required: true,
+                required: false,
                 choices: [
                     { name: 'Daily Grind (DG)', value: 'DG' },
                     { name: 'Weekly Grind VPXS (WG-VPXS)', value: 'WG-VPXS' },
@@ -183,7 +183,7 @@ const commands = [
                 name: 'grind-type',
                 type: 3, // STRING
                 description: 'The type of tournament you are nominating for.',
-                required: true,
+                required: false,
                 choices: [
                     { name: 'Daily Grind (DG)', value: 'DG' },
                     { name: 'Weekly Grind VPXS (WG-VPXS)', value: 'WG-VPXS' },
