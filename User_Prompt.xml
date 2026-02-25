@@ -3,7 +3,7 @@
 </context>
 
 <task>
-When using /submit-score , there is no option to submit scores to non-grind games. The submit score functionality should be such that any game that is unlocked in iscored should be able to have a score submitted to it. The sync-state should identify games that are not grinds (they have no grind tags) and still mark them as active games that can have scores submitted. The slash command needs to be updated to allow these games to be displayed when no grind-type is selected and instead just 'table-name' is used. 
+Commit and merge, then push changes. Then, I want to inquire about potential functionality we could incorporate - without making any changes at the moment. I want to know if the app can respond to messages typed by users with a slash command. For example, the iscored.info Discord bot will reply with "squeal!" if a user types the string "squeal" in any part of their message, without a command trigger like / or ! or anything. Can we do the same?
 </task>
 
 <final_instruction>

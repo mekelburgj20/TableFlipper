@@ -64,7 +64,7 @@ export async function sendDiscordNotification(params: NotificationParams) {
             );
         } else if (winnerId) {
             messageLines.push(
-                `\n${winnerMention}, it's your turn to pick the next table! Use the \`/picktable <game_name>\` command.`
+                `\n${winnerMention}, it's your turn to pick the next table! Use the \`/pick-table <game_name>\` command.`
             );
         } else if (winner !== 'N/A') {
             // This case handles when the winner mapping doesn't exist yet.

@@ -3,17 +3,17 @@
 
 # Future Considerations
 1. **Admin Nomination Override:** Allow Moderators/Admins to use `/nominate-picker` to designate a picker if the winner is unresponsive, preventing a random timeout selection.
-2. **Channel-Specific Context:** Restrict/default `/picktable` and other commands based on the Discord channel (e.g., `/picktable` in `#wg-vpxs` defaults to `WG-VPXS`).
+2. **Channel-Specific Context:** Restrict/default `/pick-table` and other commands based on the Discord channel (e.g., `/pick-table` in `#wg-vpxs` defaults to `WG-VPXS`).
 3. **AI-Powered Score Verification:** Integrate OCR to automatically verify scores from submitted photos.
 4. **Persistent Live Leaderboards:** Maintain a pinned, auto-updating standings message in each tournament channel.
 5. **Player Profiles & Achievements:** Track all-time wins, "Dynasty" triggers, and unique tables per player with a `/profile` command.
 6. **Proactive Picker DMs:** Send friendly DM reminders to winners before their picking window expires.
 7. **iScored Health Dashboard:** Add a moderator command to monitor site sync status and browser automation health.
-8. **Style Previewer:** Show a preview of the learned table style during the `/picktable` flow.
+8. **Style Previewer:** Show a preview of the learned table style during the `/pick-table` flow.
 9. **Global "Hall of Fame":** Track arcade-wide records (e.g., all-time high score across all grinds).
 10. **Tournament Seasons:** Implement quarterly leaderboards to give players fresh starts.
 11. **Table "Heat Map":** Suggest tables that haven't been in rotation for a long time.
-12. **Monthly "Themes":** Allow moderators to restrict `/picktable` choices based on monthly themes (e.g., "90s Bally").
+12. **Monthly "Themes":** Allow moderators to restrict `/pick-table` choices based on monthly themes (e.g., "90s Bally").
 13. **Multi-Arcade Support:** Refactor config to support managing multiple iScored gamerooms from one instance.
 14. **Last Played:** When picking a game for the next grind, once a title is chosen, the bot should show when the last time the game was played was and ask for confirmation to proceed. This should also be a slash command 'last-played' with parameter 'table-name:' and do a match on the text string entered (in case the exact name of the game played is not found).
 

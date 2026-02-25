@@ -22,13 +22,13 @@ Check back tomorrow (or after a maintenance cycle) to see who won!
 
 ### 3. 🎱 Pick a Table (If you win!)
 If you win a Daily/Weekly grind, you get to pick the next one.
-*   Type `/picktable` and choose a grind type.
+*   Type `/pick-table` and choose a grind type.
 *   Start typing a table name (like "Addams") and pick from the list.
 *   **Fun Mode:** Pick the `surprise-me: True` option to let the bot choose a random table for you!
 
 ### 4. 📜 See the Available Tables
 Want to see every allowed table for future picks?
-*   Type `/dg-table-selection`.
+*   Type `/view-selection`.
 *   It will show you a massive list that **only you** can see.
 
 ---

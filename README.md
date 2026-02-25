@@ -27,16 +27,16 @@ TableFlipper is a Node.js Discord bot designed to automate and manage pinball to
 *   **Comprehensive Discord Slash Commands:**
     *   **`/submit-score`**: Submit your score and a photo for validation. Choose to submit by tournament type (`grind-type`) or specific table name (`table-name`). Confirmations are interactive.
         *   ⚠️ **Note**: Discord caches autocomplete results aggressively. If you switch the `grind-type` and the list doesn't update, you must **restart the slash command** (hit Esc and type it again) to see the correct tables.
-    *   **`/picktable`**: Allows the designated winner to choose the next table. Weekly and Monthly picks activate immediately; Daily picks have a 24-hour buffer.
+    *   **`/pick-table`**: Allows the designated winner to choose the next table. Weekly and Monthly picks activate immediately; Daily picks have a 24-hour buffer.
     *   **`/nominate-picker`**: Allows a repeat winner to nominate another player to pick the table.
     *   **`/list-active`**: Shows the currently active table for any or all tournament types.
     *   **`/list-winners`**: Lists past winners (chronological) or a leaderboard (win counts) for tournaments. Ephemeral results.
     *   **`/list-scores`**: High-speed lookup of current standings. View all active grinds at once, or filter by `grind-type` or `table-name`.
-    *   **`/table-stats`**: Displays play count and high score records for a specific table.
-    *   **`/trigger-cleanup`**: (Moderator only) Manually sweeps away old locked or stray visible games.
-    *   **`/trigger-maintenance-[dg/weekly/monthly]`**: (Moderator only) Manually triggers rotation for specific tournament types.
-    *   **`/trigger-sync-state`**: (Moderator only) Manually synchronizes the bot's database with the live iScored lineup and performs reconciliation.
-    *   **`/pause-dg-pick`**: (Moderator only) Overwrites the next scheduled tournament slot with a special game choice.
+    *   **`/view-stats`**: Displays play count and high score records for a specific table.
+    *   **`/run-cleanup`**: (Moderator only) Manually sweeps away old locked or stray visible games.
+    *   **`/run-maintenance-[dg/weekly/monthly]`**: (Moderator only) Manually triggers rotation for specific tournament types.
+    *   **`/sync-state`**: (Moderator only) Manually synchronizes the bot's database with the live iScored lineup and performs reconciliation.
+    *   **`/pause-pick`**: (Moderator only) Overwrites the next scheduled tournament slot with a special game choice.
 *   **Data Management:**
     *   **Automatic Initialization:** The SQLite database (`data/tableflipper.db`) is automatically created and initialized with the correct schema the first time the bot starts.
     *   **Local Persistence:** All tournament history and user mappings are stored locally.
@@ -99,7 +99,7 @@ TableFlipper supports full system backups, preserving the database, configuratio
 
 ### Creating a Backup
 Backups are triggered via a Discord slash command (Moderator only):
-*   `/trigger-backup`: Creates a timestamped folder in the `backups/` directory (e.g., `backups/2026-02-19_14-30-00`). This process first synchronizes the tournament state, then scrapes the entire iScored lineup.
+*   `/create-backup`: Creates a timestamped folder in the `backups/` directory (e.g., `backups/2026-02-19_14-30-00`). This process first synchronizes the tournament state, then scrapes the entire iScored lineup.
 
 ### Restoring a Backup
 **⚠️ Warning:** Restoring is a destructive action. It will **wipe the ENTIRE iScored lineup** (deleting all games) and overwrite the local database. It should only be performed when the server is stopped or maintenance mode is active.
@@ -140,8 +140,7 @@ The bot maintains detailed logs in `data/bot.log`. Check this file for troublesh
 *   **Lineup Repositioning (DOM-based):** Added automated reordering of tournament games using physical DOM injection. The active Daily Grind is now always pushed to the farthest left position on the scoreboard, with historical grinds following in chronological order.
 *   **Style Learning & Sync:** The bot now automatically "learns" your manual styling changes (CSS, fonts, backgrounds) from active games every night and reapplies them to future rotations.
 *   **Tag-Based Identification:** Transitioned to using iScored tags as the primary "key" for tournament games. Mandatory name suffixes (e.g., " DG") are no longer required for new games.
-*   **Schedule Stability (Pause Fix):** Updated `/pause-dg-pick` to overwrite the next available slot rather than shifting the entire queue, preventing "infinite queue growth" and keeping the tournament buffer stable.
-*   **Optimized Standings Lookup:** Refactored `/current-dg-scores` to use the local database and public iScored API, resulting in near-instant responses and eliminating browser timeouts.
+    *   **Schedule Stability (Pause Fix):** Updated `/pause-pick` to overwrite the next available slot rather than shifting the entire queue, preventing "infinite queue growth" and keeping the tournament buffer stable.*   **Optimized Standings Lookup:** Refactored `/current-dg-scores` to use the local database and public iScored API, resulting in near-instant responses and eliminating browser timeouts.
 *   **VPXS API Integration:** Expanded the table catalog for `WG-VPXS` by integrating the Virtual Pinball Spreadsheet API.
 *   **Robust iScored UI Engine:** Implemented `waitForBusyModal` and direct JavaScript execution (`evaluate`) for reliable automation.
 *   **Advanced Cleanup Logic:** Automated removal of old locked games on Wednesdays at 11 PM Central.

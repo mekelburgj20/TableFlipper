@@ -27,8 +27,8 @@ async function main() {
     }
 
     // Check for manual maintenance trigger
-    if (process.argv.includes('--trigger-maintenance')) {
-        logInfo('Detected --trigger-maintenance argument. Running all maintenance routines...');
+    if (process.argv.includes('--run-maintenance')) {
+        logInfo('Detected --run-maintenance argument. Running all maintenance routines...');
         try {
             await triggerAllMaintenanceRoutines();
             await triggerLineupRepositioning();

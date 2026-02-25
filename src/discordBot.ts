@@ -57,7 +57,7 @@ export function startDiscordBot() {
                 
                 let choices: any[] = [];
 
-                if (commandName === 'picktable') {
+                if (commandName === 'pick-table') {
                     if (gameType === 'DG') {
                         choices = await searchTables(query, 25, 'atgames');
                     } else if (gameType === 'WG-VR') {
@@ -77,7 +77,8 @@ export function startDiscordBot() {
                     // Use the 'type' if available (GameRow) or map based on platform flags (TableRow)
                     let typeLabel = '';
                     if ('type' in t && t.type) {
-                        typeLabel = ` [${t.type}]`;
+                        const displayType = t.type === 'OTHER' ? 'Non-Tournament' : t.type;
+                        typeLabel = ` [${displayType}]`;
                     } else if ('is_atgames' in t) {
                         if (t.is_atgames) typeLabel = ' [DG]';
                         else if (t.is_wg_vpxs) typeLabel = ' [WG-VPXS]';
@@ -104,7 +105,7 @@ export function startDiscordBot() {
 
         const { commandName } = interaction;
 
-        if (commandName === 'ping') {
+        if (commandName === 'check-ping') {
             await interaction.reply('Pong!');
         } 
         
@@ -145,7 +146,7 @@ export function startDiscordBot() {
             }
         }
 
-        else if (commandName === 'picktable') {
+        else if (commandName === 'pick-table') {
             const gameType = interaction.options.getString('grind-type', true);
             let tableName = interaction.options.getString('table-name');
             const surpriseMe = interaction.options.getBoolean('surprise-me');
@@ -161,7 +162,7 @@ export function startDiscordBot() {
             const nextGame = await getNextQueuedGame(gameType);
 
             if (!nextGame || !nextGame.picker_discord_id || nextGame.picker_discord_id !== interaction.user.id) {
-                logInfo(`❌ /picktable authorization failed for user ${interaction.user.id}.`);
+                logInfo(`❌ /pick-table authorization failed for user ${interaction.user.id}.`);
                 logInfo(`   - Next game picker slot: ${nextGame?.picker_discord_id}`);
                 await interaction.editReply(`You are not authorized to pick a table for the ${gameType} tournament right now.`);
                 return;
@@ -208,7 +209,7 @@ export function startDiscordBot() {
                     });
 
                     if (confirmation.customId === 'cancel_pick') {
-                        await confirmation.update({ content: 'Selection cancelled. You can run `/picktable` again.', components: [] });
+                        await confirmation.update({ content: 'Selection cancelled. You can run `/pick-table` again.', components: [] });
                         return;
                     }
 
@@ -282,7 +283,7 @@ export function startDiscordBot() {
             const newGameName = tableName!; // Use clean table name (Tags handle the type)
             let browser: Browser | null = null;
             try {
-                logInfo(`🚀 Handling /picktable for ${gameType} with table: ${tableName}`);
+                logInfo(`🚀 Handling /pick-table for ${gameType} with table: ${tableName}`);
                 
                 // Fetch styleId if available
                 const tableData = await getTable(tableName!);
@@ -316,7 +317,7 @@ export function startDiscordBot() {
                 await interaction.editReply({ content: confirmationMessage, components: [] });
 
             } catch (error) {
-                logError(`Error in /picktable:`, error);
+                logError(`Error in /pick-table:`, error);
                 await interaction.editReply(`An error occurred while trying to create the game '${newGameName}'.`);
             } finally {
                 if (browser) {
@@ -325,7 +326,7 @@ export function startDiscordBot() {
             }
         } 
         
-        else if (commandName === 'table-stats') {
+        else if (commandName === 'view-stats') {
             const tableName = interaction.options.getString('table-name', true);
             await interaction.deferReply();
 
@@ -430,7 +431,7 @@ export function startDiscordBot() {
             }
         }
         
-        else if (commandName === 'trigger-maintenance-dg') {
+        else if (commandName === 'run-maintenance-dg') {
             await interaction.deferReply({ ephemeral: true });
             const modRoleId = process.env.MOD_ROLE_ID;
             if (!modRoleId) {
@@ -451,7 +452,7 @@ export function startDiscordBot() {
             }
         }
         
-        else if (commandName === 'trigger-maintenance-weekly') {
+        else if (commandName === 'run-maintenance-weekly') {
             await interaction.deferReply({ ephemeral: true });
             const modRoleId = process.env.MOD_ROLE_ID;
             if (!modRoleId) {
@@ -473,7 +474,7 @@ export function startDiscordBot() {
             }
         }
 
-        else if (commandName === 'trigger-maintenance-monthly') {
+        else if (commandName === 'run-maintenance-monthly') {
             await interaction.deferReply({ ephemeral: true });
             const modRoleId = process.env.MOD_ROLE_ID;
             if (!modRoleId) {
@@ -494,7 +495,7 @@ export function startDiscordBot() {
             }
         }
 
-        else if (commandName === 'trigger-sync-state') {
+        else if (commandName === 'sync-state') {
             await interaction.deferReply({ ephemeral: true });
             const modRoleId = process.env.MOD_ROLE_ID;
             if (!modRoleId) {
@@ -515,7 +516,7 @@ export function startDiscordBot() {
             }
         }
 
-        else if (commandName === 'trigger-cleanup') {
+        else if (commandName === 'run-cleanup') {
             const gameType = interaction.options.getString('grind-type') ?? 'ALL';
             await interaction.deferReply({ ephemeral: true });
             
@@ -550,7 +551,7 @@ export function startDiscordBot() {
             }
         }
         
-        else if (commandName === 'trigger-backup') {
+        else if (commandName === 'create-backup') {
             await interaction.deferReply({ ephemeral: true });
             const modRoleId = process.env.MOD_ROLE_ID;
             if (!modRoleId) {
@@ -572,7 +573,7 @@ export function startDiscordBot() {
             }
         }
 
-        else if (commandName === 'pause-dg-pick') {
+        else if (commandName === 'pause-pick') {
             const specialGameName = interaction.options.getString('special-game-name', true);
 
             await interaction.deferReply({ ephemeral: true });
@@ -683,7 +684,7 @@ export function startDiscordBot() {
             }
         }
         
-        else if (commandName === 'dg-table-selection') {
+        else if (commandName === 'view-selection') {
             await interaction.deferReply({ ephemeral: true });
 
             const gid = process.env.GOOGLE_SHEET_GID;
@@ -716,7 +717,7 @@ export function startDiscordBot() {
                 }
 
             } catch (error) {
-                logError(`Error in /dg-table-selection:`, error);
+                logError(`Error in /view-selection:`, error);
                 await interaction.editReply('An error occurred while trying to fetch the table list.');
             }
         }
@@ -800,7 +801,13 @@ export function startDiscordBot() {
                     if (game) {
                         targetGameName = game.name;
                         iscoredId = game.iscored_game_id;
-                        if (gameType) contextType = `Tournament (${gameType})`;
+                        if (gameType) {
+                            contextType = `Tournament (${gameType})`;
+                        } else if (game.type === 'OTHER') {
+                            contextType = 'Non-Tournament Game';
+                        } else {
+                            contextType = `Tournament (${game.type})`;
+                        }
                     } else {
                         const typeError = gameType ? ` for the **${gameType}** tournament` : '';
                         await interaction.editReply(`The table "**${tableName}**" is either not active or not found${typeError}. Scores can only be submitted to active games.`);

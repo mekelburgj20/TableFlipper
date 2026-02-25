@@ -3,11 +3,11 @@ import 'dotenv/config';
 
 const commands = [
     {
-        name: 'ping',
+        name: 'check-ping',
         description: 'Replies with Pong!',
     },
     {
-        name: 'picktable',
+        name: 'pick-table',
         description: 'Allows the previous winner to pick the next table.',
         options: [
             {
@@ -38,7 +38,7 @@ const commands = [
         ],
     },
     {
-        name: 'table-stats',
+        name: 'view-stats',
         description: 'Shows statistics for a specific table.',
         options: [
             {
@@ -96,23 +96,23 @@ const commands = [
         ]
     },
     {
-        name: 'trigger-maintenance-dg',
+        name: 'run-maintenance-dg',
         description: 'Manually triggers the maintenance routine for the Daily Grind (DG).',
     },
     {
-        name: 'trigger-maintenance-weekly',
+        name: 'run-maintenance-weekly',
         description: 'Manually triggers the maintenance routine for all Weekly Grinds (WG-VPXS, WG-VR).',
     },
     {
-        name: 'trigger-maintenance-monthly',
+        name: 'run-maintenance-monthly',
         description: 'Manually triggers the maintenance routine for the Monthly Grind (MG).',
     },
     {
-        name: 'trigger-sync-state',
+        name: 'sync-state',
         description: 'Manually synchronizes the local database with the live state on iScored.',
     },
     {
-        name: 'trigger-cleanup',
+        name: 'run-cleanup',
         description: 'Manually triggers the cleanup routine (delete old locked games) for tournaments.',
         options: [
             {
@@ -131,11 +131,11 @@ const commands = [
         ]
     },
     {
-        name: 'trigger-backup',
+        name: 'create-backup',
         description: 'Create a full backup of the current state (DB, scores, photos).',
     },
     {
-        name: 'pause-dg-pick',
+        name: 'pause-pick',
         description: 'Pauses the winner pick and sets a special game for the next cycle.',
         options: [
             {
@@ -172,7 +172,7 @@ const commands = [
         ]
     },
     {
-        name: 'dg-table-selection',
+        name: 'view-selection',
         description: 'Lists the available tables to pick from for the Daily Grind.',
     },
     {

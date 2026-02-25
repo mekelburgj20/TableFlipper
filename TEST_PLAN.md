@@ -34,27 +34,27 @@ npm run test:sheets
 These steps require interacting with the bot in your Discord server.
 
 ### 1. Table Selection & Autocomplete
-**Goal:** Verify that `/picktable` suggests the correct tables and filters invalid ones.
+**Goal:** Verify that `/pick-table` suggests the correct tables and filters invalid ones.
 
 *   **Test A: Daily Grind (DG)**
-    1.  Type `/picktable grind-type: Daily Grind (DG)`.
+    1.  Type `/pick-table grind-type: Daily Grind (DG)`.
     2.  Click `table-name` and type `Aero`.
     3.  **Verify:** You see "Aerobatics" (if marked for AtGames).
     4.  Type a nonsense name (e.g. `XYz123`) and submit.
     5.  **Verify:** Bot rejects it with an error message.
 
 *   **Test B: Weekly Grind VPXS (WG-VPXS)**
-    1.  Type `/picktable grind-type: Weekly Grind VPXS`.
+    1.  Type `/pick-table grind-type: Weekly Grind VPXS`.
     2.  Click `table-name` (leave blank).
     3.  **Verify:** The list ONLY shows VPXS-compatible tables (e.g. "Africa" should NOT appear if `wg-vpxs=0`).
 
 *   **Test C: Monthly Grind (MG)**
-    1.  Type `/picktable grind-type: Monthly Grind`.
+    1.  Type `/pick-table grind-type: Monthly Grind`.
     2.  Type any random text for `table-name`.
     3.  **Verify:** Bot accepts it (MG has no strict validation).
 
 *   **Test D: Surprise Me**
-    1.  Type `/picktable grind-type: Daily Grind (DG) surprise-me: True`.
+    1.  Type `/pick-table grind-type: Daily Grind (DG) surprise-me: True`.
     2.  Leave `table-name` blank.
     3.  **Verify:** Bot replies "Fate has chosen: [Random Table]. Do you want to proceed?" with Yes/No buttons.
     4.  Click **No**.
@@ -73,7 +73,7 @@ These steps require interacting with the bot in your Discord server.
 ### 2. Viewing the Table List
 **Goal:** Verify the ephemeral list command.
 
-1.  Type `/dg-table-selection`.
+1.  Type `/view-selection`.
 2.  **Verify:** A long list of tables appears.
 3.  **Verify:** The message says "Only you can see this" (Ephemeral).
 
@@ -90,7 +90,7 @@ These steps require interacting with the bot in your Discord server.
 **Goal:** Verify that games rotate correctly.
 
 *   **Test A: Trigger DG Maintenance**
-    1.  Run `/trigger-maintenance-dg`.
+    1.  Run `/run-maintenance-dg`.
     2.  **Verify:**
         *   Current active DG game is Locked on iScored.
         *   Winner is announced in Discord.
@@ -98,13 +98,13 @@ These steps require interacting with the bot in your Discord server.
         *   Bot confirms completion.
 
 *   **Test C: Manual Override**
-    1.  Run `/pause-dg-pick special-game-name: "Test Override Game"`.
+    1.  Run `/pause-pick special-game-name: "Test Override Game"`.
     2.  **Verify:** Bot confirms "Manual Override Successful".
     3.  **Verify:** "Test Override Game" appears as the *next* game on iScored (Hidden).
     4.  **Verify:** The previous winner's pick is still in the database but scheduled for +24 hours later.
 
 *   **Test D: Trigger Weekly/Monthly**
-    1.  Run `/trigger-maintenance-weekly` or `/trigger-maintenance-monthly`.
+    1.  Run `/run-maintenance-weekly` or `/run-maintenance-monthly`.
     2.  **Verify:** Similar rotation occurs for the respective tournament type.
 
 ### 5. Statistics
@@ -112,7 +112,7 @@ These steps require interacting with the bot in your Discord server.
 
 1.  Run `/list-winners grind-type: Daily Grind period: All Time`.
 2.  **Verify:** A leaderboard of winners is displayed.
-3.  Run `/table-stats table-name: [A known table]`.
+3.  Run `/view-stats table-name: [A known table]`.
 4.  **Verify:** Play count and high score are displayed.
 
 ---

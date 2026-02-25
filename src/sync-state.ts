@@ -65,12 +65,14 @@ export async function runStateSync() {
 
             logInfo(`      - Found OTHER: ${game.name} (${game.id})`);
             
-            // For 'OTHER' games, we follow simple visibility/lock rules
-            if (!game.isHidden && !game.isLocked) {
+            // For 'OTHER' games, unlocked always means ACTIVE (submittable)
+            if (!game.isLocked) {
                 await syncActiveGame('OTHER', game.id, game.name);
-            } else if (!game.isHidden && game.isLocked) {
+            } else if (game.isLocked && !game.isHidden) {
+                // Locked but visible is COMPLETED
                 await syncCompletedGame('OTHER', game.id, game.name);
             } else {
+                // Locked and hidden is QUEUED (Hidden)
                 await syncQueuedGame('OTHER', game.id, game.name);
             }
 

@@ -38,7 +38,7 @@ This update significantly expands the bot's architectural flexibility and visual
 
 #### 1. Dual-Slot Weekly Grinds
 *   **Multi-Active Support**: Refactored the core engine to allow multiple active games for a single grind type (e.g., two concurrent `WG-VPXS` tables).
-*   **Sequential Picking**: If a user wins multiple slots in a cycle, the system correctly tracks their double-pick rights and allows them to perform `/picktable` twice.
+*   **Sequential Picking**: If a user wins multiple slots in a cycle, the system correctly tracks their double-pick rights and allows them to perform `/pick-table` twice.
 *   **Aggressive Rollover**: Maintenance now loops through all active games, determines separate winners, and activates the corresponding number of queued games.
 
 #### 2. Forensic Style Sniffing & Application

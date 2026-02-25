@@ -319,8 +319,11 @@ export async function syncActiveGame(gameType: string, iscoredGameId: string | n
             const existingGame = await db.get<GameRow>("SELECT * FROM games WHERE iscored_game_id = ?", iscoredGameId);
 
             if (existingGame) {
-                await db.run("UPDATE games SET status = 'ACTIVE', completed_at = NULL WHERE id = ?", existingGame.id);
-                console.log(`🔄 Synced DB: Set existing game '${gameName}' to ACTIVE.`);
+                await db.run(
+                    "UPDATE games SET status = 'ACTIVE', type = ?, name = ?, completed_at = NULL WHERE id = ?", 
+                    gameType, gameName, existingGame.id
+                );
+                console.log(`🔄 Synced DB: Set existing game '${gameName}' to ACTIVE (Type: ${gameType}).`);
             } else {
                 const newId = uuidv4();
                 await db.run(
