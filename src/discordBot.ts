@@ -65,7 +65,13 @@ export function startDiscordBot() {
             try {
                 const callouts = JSON.parse(fs.readFileSync(calloutsPath, 'utf8'));
                 for (const entry of callouts) {
-                    const match = entry.triggers.some((trigger: string) => content.includes(trigger.toLowerCase()));
+                    const match = entry.triggers.some((trigger: string) => {
+                        // Use regex with word boundaries for exact match, case-insensitive
+                        // Escape trigger for regex safety just in case
+                        const escapedTrigger = trigger.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+                        const regex = new RegExp(`\\b${escapedTrigger}\\b`, 'i');
+                        return regex.test(content);
+                    });
                     if (match) {
                         const response = entry.responses[Math.floor(Math.random() * entry.responses.length)];
                         await message.reply(response);

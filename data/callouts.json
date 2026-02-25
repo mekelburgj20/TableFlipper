@@ -4,7 +4,7 @@
     "responses": ["MEOW MEOW MEOW MEOW!"]
   },
   {
-    "triggers": ["addams family", "taf", "thing", "mamushka"],
+    "triggers": ["addams family", "taf", "mamushka"],
     "responses": ["Show me the vault!", "THIIIING!", "Dirty pool, old man!", "Look out!", "The Mamushka!"]
   },
   {
