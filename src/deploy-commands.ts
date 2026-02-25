@@ -180,6 +180,12 @@ const commands = [
         description: 'Allows a repeat winner to nominate another player to pick the next table.',
         options: [
             {
+                name: 'user',
+                type: 6, // USER
+                description: 'The user you want to nominate to pick the next table.',
+                required: true,
+            },
+            {
                 name: 'grind-type',
                 type: 3, // STRING
                 description: 'The type of tournament you are nominating for.',
@@ -190,12 +196,6 @@ const commands = [
                     { name: 'Weekly Grind VR (WG-VR)', value: 'WG-VR' },
                     { name: 'Monthly Grind (MG)', value: 'MG' },
                 ]
-            },
-            {
-                name: 'user',
-                type: 6, // USER
-                description: 'The user you want to nominate to pick the next table.',
-                required: true,
             },
         ],
     },
