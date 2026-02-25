@@ -56,6 +56,7 @@ export function startDiscordBot() {
     // --- Message Handler (Easter Eggs / Callouts) ---
     client.on(Events.MessageCreate, async message => {
         if (message.author.bot) return;
+        if (process.env.ENABLE_CALLOUTS === 'false') return;
 
         const content = message.content.toLowerCase();
         
