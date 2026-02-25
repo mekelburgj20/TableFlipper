@@ -53,27 +53,27 @@ export function startDiscordBot() {
         logInfo(`✅ Discord bot ready! Logged in as ${readyClient.user.tag}`);
     });
 
-    // --- Message Handler (Easter Eggs) ---
+    // --- Message Handler (Easter Eggs / Callouts) ---
     client.on(Events.MessageCreate, async message => {
         if (message.author.bot) return;
 
         const content = message.content.toLowerCase();
         
-        // Load Easter Eggs from external JSON
-        const easterEggsPath = path.join(process.cwd(), 'data', 'easter-eggs.json');
-        if (fs.existsSync(easterEggsPath)) {
+        // Load Callouts from external JSON
+        const calloutsPath = path.join(process.cwd(), 'data', 'callouts.json');
+        if (fs.existsSync(calloutsPath)) {
             try {
-                const eggs = JSON.parse(fs.readFileSync(easterEggsPath, 'utf8'));
-                for (const egg of eggs) {
-                    const match = egg.triggers.some((trigger: string) => content.includes(trigger.toLowerCase()));
+                const callouts = JSON.parse(fs.readFileSync(calloutsPath, 'utf8'));
+                for (const entry of callouts) {
+                    const match = entry.triggers.some((trigger: string) => content.includes(trigger.toLowerCase()));
                     if (match) {
-                        const response = egg.responses[Math.floor(Math.random() * egg.responses.length)];
+                        const response = entry.responses[Math.floor(Math.random() * entry.responses.length)];
                         await message.reply(response);
-                        return; // Only trigger one egg per message
+                        return; // Only trigger one callout per message
                     }
                 }
             } catch (e) {
-                logError('Failed to load or parse easter-eggs.json:', e);
+                logError('Failed to load or parse callouts.json:', e);
             }
         }
     });
