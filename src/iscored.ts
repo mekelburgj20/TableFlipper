@@ -861,12 +861,23 @@ export async function createGame(page: Page, gameName: string, grindType: string
         let showDateTime: Date;
 
         if (grindType === 'DG') {
-            // DG has 1-day buffer: hide and lock now, schedule unlock for 24h later
+            // DG has 1-day buffer: hide and lock now, schedule unlock for next 12:00 AM Central
             await hideGame(page, newlyCreatedGame);
             await lockGame(page, newlyCreatedGame);
             logInfo(`✅ Game '${fullGameName}' created, hidden and locked (DG buffer active).`);
             
-            showDateTime = new Date(now.getTime() + 24 * 60 * 60 * 1000); // 24 hours from now
+            const formatter = new Intl.DateTimeFormat('en-US', {
+                timeZone: 'America/Chicago',
+                year: 'numeric',
+                month: 'numeric',
+                day: 'numeric'
+            });
+            const parts = formatter.formatToParts(now);
+            const dateMap: any = {};
+            parts.forEach(p => dateMap[p.type] = p.value);
+            
+            showDateTime = new Date(parseInt(dateMap.year), parseInt(dateMap.month) - 1, parseInt(dateMap.day) + 1, 0, 0, 0);
+            
             await scheduleGameShow(newlyCreatedGame.name, showDateTime);
         } else {
             // Weekly and Monthly: Activate immediately

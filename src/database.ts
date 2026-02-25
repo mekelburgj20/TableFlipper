@@ -410,11 +410,22 @@ export async function createGameEntry(game: Omit<GameRow, 'id' | 'created_at' | 
             scheduledTime = new Date(game.scheduled_to_be_active_at);
         } else if (game.type === 'DG') {
             // DG has a 1-day buffer (it's picked 2 days in advance, so it sits in QUEUED for a day)
-            scheduledTime = new Date(now.getTime());
-            scheduledTime.setDate(scheduledTime.getDate() + 2);
+            // We set the start time to exactly 12:00 AM Central, 2 days from now.
+            const now = new Date();
+            const formatter = new Intl.DateTimeFormat('en-US', {
+                timeZone: 'America/Chicago',
+                year: 'numeric',
+                month: 'numeric',
+                day: 'numeric'
+            });
+            const parts = formatter.formatToParts(now);
+            const dateMap: any = {};
+            parts.forEach(p => dateMap[p.type] = p.value);
+            
+            scheduledTime = new Date(parseInt(dateMap.year), parseInt(dateMap.month) - 1, parseInt(dateMap.day) + 2, 0, 0, 0);
         } else {
             // Weekly and Monthly grinds are active immediately upon being picked
-            scheduledTime = new Date(now.getTime());
+            scheduledTime = new Date();
         }
 
         const newGame: GameRow = {
