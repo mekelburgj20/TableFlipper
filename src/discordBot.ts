@@ -57,8 +57,23 @@ export function startDiscordBot() {
 
         const content = message.content.toLowerCase();
         
-        if (content.includes('squeal')) {
-            await message.reply('squeal!');
+        // 1. Seafood/Milk -> Meow
+        if (content.includes('seafood') || content.includes('milk')) {
+            await message.reply('MEOW MEOW MEOW MEOW!');
+        }
+
+        // 2. The Addams Family Callouts
+        if (content.includes('addams family')) {
+            const callouts = ['Show me the vault!', 'THIIIING!'];
+            const random = callouts[Math.floor(Math.random() * callouts.length)];
+            await message.reply(random);
+        }
+
+        // 3. Medieval Madness Callouts
+        if (content.includes('medieval madness')) {
+            const callouts = ["They're taking the babies!", 'The King of Payne!'];
+            const random = callouts[Math.floor(Math.random() * callouts.length)];
+            await message.reply(random);
         }
     });
 
