@@ -8,7 +8,7 @@
     "responses": ["Show me the vault!", "THIIIING!", "Dirty pool, old man!", "Look out!", "The Mamushka!", "It's Showtime!"]
   },
   {
-    "triggers": ["medieval madness", "mm", "castle", "trolls"],
+    "triggers": ["medieval madness", "mm"],
     "responses": ["They're taking our babies!", "The King of Payne!", "I am the Duke of Bourbon!", "Troll! In the pantry!", "Sir Psycho!", "Ordered to be destroyed!"]
   },
   {
@@ -16,15 +16,15 @@
     "responses": ["ACK! ACK! ACK!", "Return to your planet!", "Martian Multiball!", "Don't move! They're right behind you!"]
   },
   {
-    "triggers": ["monster bash", "mb", "dracula", "frankenstein"],
+    "triggers": ["monster bash"],
     "responses": ["I'm a vvvampire!", "I'm a little bit Frankenstein!", "Let's get this party started!", "Dig him up!", "The Creature is ALIVE!", "Welcome back, Mummy!"]
   },
   {
-    "triggers": ["twilight zone", "tz", "door", "clock", "gumball"],
+    "triggers": ["twilight zone", "tz"],
     "responses": ["The clock... the clock is the key!", "You have just entered... The Twilight Zone.", "Greed is good!", "Don't touch the door!"]
   },
   {
-    "triggers": ["funhouse", "fh", "rudy"],
+    "triggers": ["funhouse", "fh"],
     "responses": ["Quit playing with the clock!", "Hey, Biff! Get yourself a hot dog!", "I'm still hungry!", "You big sausage!", "Sleep? I don't need no sleep!", "Get yourself a hot dog!"]
   },
   {
@@ -32,31 +32,31 @@
     "responses": ["Move your car!", "Focus!", "Stay cool, daddy-o!", "Thank you, enjoy the film!"]
   },
   {
-    "triggers": ["indiana jones", "indy", "ij", "grail"],
+    "triggers": ["indiana jones", "indy"],
     "responses": ["Choose wisely!", "Nothing shocks me, I'm a scientist!", "Indy, the bridge is out!", "You cheat, Dr. Jones!", "Don't look at it, Marion!"]
   },
   {
-    "triggers": ["star trek", "sttng", "picard", "borg"],
+    "triggers": ["star trek", "sttng"],
     "responses": ["Engage!", "Make it so.", "Resistance is futile.", "Thank you, Mr. Data.", "Return to duty."]
   },
   {
-    "triggers": ["white water", "wh2o", "bigfoot"],
+    "triggers": ["white water", "wh2o"],
     "responses": ["Welcome to Wet Willie’s!", "Watch out for Bigfoot!", "Disaster Drop!", "Go for the mountains!"]
   },
   {
-    "triggers": ["theatre of magic", "tom", "magic", "illusion"],
+    "triggers": ["theatre of magic", "tom"],
     "responses": ["You have the magic!", "Illusion!", "Shoot the trunk!", "Now you see it..."]
   },
   {
-    "triggers": ["tales of the arabian nights", "totan", "genie"],
+    "triggers": ["tales of the arabian nights", "totan"],
     "responses": ["Your wish is granted!", "Destroy the Genie!", "Fly to the Bazaar!"]
   },
   {
-    "triggers": ["cirqus voltaire", "cv", "ringmaster"],
+    "triggers": ["cirqus voltaire", "cv"],
     "responses": ["Join the Cirqus!", "I am the Ringmaster!", "Step right up!"]
   },
   {
-    "triggers": ["bram stoker", "dracula", "bsd", "thirty million"],
+    "triggers": ["bram stoker", "dracula", "bsd"],
     "responses": ["THIRTY MILLION!", "I am Dracula.", "Listen to them. Children of the night.", "Your willpower is fading!"]
   },
   {
@@ -68,15 +68,15 @@
     "responses": ["You're gonna need a bigger boat!", "Catch of the day!", "Keep your pants on!", "It was THIS big!"]
   },
   {
-    "triggers": ["earthshaker", "earthquake", "shaker"],
+    "triggers": ["earthshaker", "earthquake"],
     "responses": ["It's an earthquake!", "Ooh, give me shelter!", "Sunny driving!"]
   },
   {
-    "triggers": ["whirlwind", "storm"],
+    "triggers": ["whirlwind"],
     "responses": ["The storm is coming!", "Return to your homes!", "Feel the power of the wind!"]
   },
   {
-    "triggers": ["taxi", "gorbie", "pinbot"],
+    "triggers": ["taxi"],
     "responses": ["Taxi!", "Hey, buddy!", "I vant to go to Transylvania!", "Give me a ride!"]
   },
   {
@@ -88,15 +88,15 @@
     "responses": ["Destroy the ring!", "Fly, you fools!", "My precious!", "Keep it secret, keep it safe.", "Baruk Khazâd!"]
   },
   {
-    "triggers": ["simpsons", "tspp", "itchy", "scratchy"],
+    "triggers": ["simpsons", "tspp", "itchy", "scratchy", "homer", "marge", "bart", "lisa"],
     "responses": ["Worst. Pinball. Ever.", "Release the hounds!", "Ay caramba!", "D'oh!"]
   },
   {
-    "triggers": ["spider-man", "spiderman", "doc ock", "goblin"],
+    "triggers": ["spider-man", "spiderman"],
     "responses": ["I'm gonna put some dirt in your eye!", "The power of the sun, in the palm of my hand.", "We'll meet again, Spider-Man!"]
   },
   {
-    "triggers": ["deadpool", "dp", "chimichanga", "lil deadpool"],
+    "triggers": ["deadpool", "dp"],
     "responses": ["Chimichanga time!", "BOOM!", "Maximum effort!", "Snikt!"]
   },
   {
@@ -108,7 +108,7 @@
     "responses": ["KAIJU ATTACK!", "GODZILLA MULTIBALL!", "The city is in ruins!", "King of the Monsters!", "Shin-Gojira!", "Gojira no ikari da!", "Mecha-Gojira shutsugeki!"]
   },
   {
-    "triggers": ["jurassic park", "jp", "trex", "raptor"],
+    "triggers": ["jurassic park", "jp"],
     "responses": ["Life finds a way!", "Clever girl.", "Welcome to Jurassic Park!", "System ready!"]
   },
   {
@@ -132,7 +132,7 @@
     "responses": ["Stay cool.", "I'll be back.", "Excellent.", "Payback time!", "GET OUT!"]
   },
   {
-    "triggers": ["acdc", "ac/dc", "angus"],
+    "triggers": ["acdc", "ac/dc"],
     "responses": ["FOR THOSE ABOUT TO ROCK!", "THUNDERSTRUCK!", "Let there be light!", "FIRE!"]
   },
   {
@@ -160,19 +160,19 @@
     "responses": ["You get nothing! You lose! Good day sir!", "Come with me and you'll be in a world of pure imagination."]
   },
   {
-    "triggers": ["congo", "amy"],
+    "triggers": ["congo"],
     "responses": ["Stop eating my sesame cake!", "Ugly gorilla!", "Amy want green drop drink!"]
   },
   {
-    "triggers": ["ghostbusters", "stay puft", "slimer"],
+    "triggers": ["ghostbusters"],
     "responses": ["Don't cross the streams!", "Are you a god?", "He slimed me!", "I've been slimed!"]
   },
   {
-    "triggers": ["rick and morty", "portal", "plumbus"],
+    "triggers": ["rick and morty"],
     "responses": ["I'm Pickle Rick!", "Wubba lubba dub dub!", "Get schwifty!", "Existence is pain!"]
   },
   {
-    "triggers": ["metallica", "sparky", "master of puppets"],
+    "triggers": ["metallica"],
     "responses": ["Master! Master!", "Seek and Destroy!", "Fuel!", "Gimme fuel, gimme fire!"]
   },
   {
@@ -180,11 +180,11 @@
     "responses": ["Use the Force, Luke.", "It's a trap!", "Join the Dark Side.", "I am your father."]
   },
   {
-    "triggers": ["tron", "lightcycle", "flynn"],
+    "triggers": ["tron"],
     "responses": ["I fight for the users!", "End of line.", "Greetings, programs!", "The grid... a digital frontier."]
   },
   {
-    "triggers": ["world cup soccer", "wcs", "soccer", "goal"],
+    "triggers": ["world cup soccer", "wcs"],
     "responses": ["GOAAAAAL!", "Kickoff!", "I'm the goalie!", "Final match!"]
   },
   {
@@ -192,7 +192,7 @@
     "responses": ["I'm gonna get you, gofer!", "Fore!", "Buzz off!", "It's in the hole!"]
   },
   {
-    "triggers": ["guardians", "groot", "starlord"],
+    "triggers": ["guardians"],
     "responses": ["I am Groot.", "We are Groot.", "Hooked on a feeling!", "Dance off, bro!"]
   },
   {
@@ -200,12 +200,23 @@
     "responses": ["Welcome to the jungle!", "Sweet child o' mine!", "Paradise City!"]
   },
   {
-    "triggers": ["dr. dude", "coolness", "excellent"],
+    "triggers": ["dr. dude"],
     "responses": ["I'm the Dude!", "Way cool!", "Stay cool!"]
   },
   {
-    "triggers": ["flintstones", "yabba dabba doo", "fred", "barney"],
+    "triggers": ["flintstones"],
     "responses": ["Yabba-dabba-doo!", "Wilma!", "Order! Order in the court!"]
+  },
+  {
+    "triggers": ["junkyard", "junk yard", "crazy bob"],
+    "responses": [
+      "Welcome to my junk yard!", 
+      "I'm Crazy Bob!", 
+      "You're trash!", 
+      "Keep your hands off my junk!", 
+      "Go fetch!",
+      "Where do you think you're going with that?"
+    ]
   },
   {
     "triggers": ["cow", "moo", "dork cow"],
@@ -222,7 +233,7 @@
     "responses": ["Winter is coming!", "A Lannister always pays his debts.", "Dracarys!", "The North remembers."]
   },
   {
-    "triggers": ["the walking dead", "twd", "walkers"],
+    "triggers": ["the walking dead", "twd"],
     "responses": ["Fight the dead, fear the living.", "Don't open, dead inside.", "Lucille is thirsty!", "We are the walking dead."]
   },
   {
