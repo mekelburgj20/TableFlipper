@@ -5,11 +5,11 @@
   },
   {
     "triggers": ["addams family", "taf", "mamushka"],
-    "responses": ["Show me the vault!", "THIIIING!", "Dirty pool, old man!", "Look out!", "The Mamushka!"]
+    "responses": ["Show me the vault!", "THIIIING!", "Dirty pool, old man!", "Look out!", "The Mamushka!", "It's Showtime!"]
   },
   {
     "triggers": ["medieval madness", "mm", "castle", "trolls"],
-    "responses": ["They're taking our babies!", "The King of Payne!", "I am the Duke of Bourbon!", "Troll! In the pantry!", "Sir Psycho!"]
+    "responses": ["They're taking our babies!", "The King of Payne!", "I am the Duke of Bourbon!", "Troll! In the pantry!", "Sir Psycho!", "Ordered to be destroyed!"]
   },
   {
     "triggers": ["attack from mars", "afm", "mars", "martian"],
@@ -17,7 +17,7 @@
   },
   {
     "triggers": ["monster bash", "mb", "dracula", "frankenstein"],
-    "responses": ["I'm a vvvampire!", "I'm a little bit Frankenstein!", "Let's get this party started!", "Dig him up!"]
+    "responses": ["I'm a vvvampire!", "I'm a little bit Frankenstein!", "Let's get this party started!", "Dig him up!", "The Creature is ALIVE!", "Welcome back, Mummy!"]
   },
   {
     "triggers": ["twilight zone", "tz", "door", "clock", "gumball"],
@@ -25,7 +25,7 @@
   },
   {
     "triggers": ["funhouse", "fh", "rudy"],
-    "responses": ["Quit playing with the clock!", "Hey, Biff! Get yourself a hot dog!", "I'm still hungry!", "You big sausage!", "Sleep? I don't need no sleep!"]
+    "responses": ["Quit playing with the clock!", "Hey, Biff! Get yourself a hot dog!", "I'm still hungry!", "You big sausage!", "Sleep? I don't need no sleep!", "Get yourself a hot dog!"]
   },
   {
     "triggers": ["creature", "cftbl", "creature from the black lagoon", "snack bar"],
@@ -33,7 +33,7 @@
   },
   {
     "triggers": ["indiana jones", "indy", "ij", "grail"],
-    "responses": ["Choose wisely!", "Nothing shocks me, I'm a scientist!", "Indy, the bridge is out!", "You cheat, Dr. Jones!"]
+    "responses": ["Choose wisely!", "Nothing shocks me, I'm a scientist!", "Indy, the bridge is out!", "You cheat, Dr. Jones!", "Don't look at it, Marion!"]
   },
   {
     "triggers": ["star trek", "sttng", "picard", "borg"],
@@ -57,11 +57,11 @@
   },
   {
     "triggers": ["bram stoker", "dracula", "bsd", "thirty million"],
-    "responses": ["THIRTY MILLION!", "I am Dracula.", "Listen to them. Children of the night."]
+    "responses": ["THIRTY MILLION!", "I am Dracula.", "Listen to them. Children of the night.", "Your willpower is fading!"]
   },
   {
     "triggers": ["elvira", "scared stiff", "party monsters", "ehoh"],
-    "responses": ["Thank you, boys!", "Let's get scared stiff!", "I'm having a multiple... jackpot!", "Head for the crypt!"]
+    "responses": ["Thank you, boys!", "Let's get scared stiff!", "I'm having a multiple... jackpot!", "Head for the crypt!", "Unpleasant dreams!"]
   },
   {
     "triggers": ["fish tales", "ft", "boat", "fishing"],
@@ -85,7 +85,7 @@
   },
   {
     "triggers": ["lord of the rings", "lotr", "gollum", "balrog"],
-    "responses": ["Destroy the ring!", "Fly, you fools!", "My precious!", "Keep it secret, keep it safe."]
+    "responses": ["Destroy the ring!", "Fly, you fools!", "My precious!", "Keep it secret, keep it safe.", "Baruk Khazâd!"]
   },
   {
     "triggers": ["simpsons", "tspp", "itchy", "scratchy"],
@@ -105,7 +105,7 @@
   },
   {
     "triggers": ["godzilla", "gz", "kaiju", "mechagodzilla"],
-    "responses": ["KAIJU ATTACK!", "GODZILLA MULTIBALL!", "The city is in ruins!", "King of the Monsters!"]
+    "responses": ["KAIJU ATTACK!", "GODZILLA MULTIBALL!", "The city is in ruins!", "King of the Monsters!", "Shin-Gojira!", "Gojira no ikari da!", "Mecha-Gojira shutsugeki!"]
   },
   {
     "triggers": ["jurassic park", "jp", "trex", "raptor"],
@@ -113,7 +113,7 @@
   },
   {
     "triggers": ["iron maiden", "maiden", "imdn"],
-    "responses": ["Up the irons!", "Aces High!", "Can I play with madness?", "Scream for me!"]
+    "responses": ["Up the irons!", "Aces High!", "Can I play with madness?", "Scream for me!", "Two minutes to midnight!", "The Trooper!"]
   },
   {
     "triggers": ["avengers", "aiq", "thanos"],
@@ -212,5 +212,21 @@
     "responses": [
       "```text\n   (___)\n   (o o)____/\n    @@ `    \\\n     \\ ____,/\n     //   //\n    ^^   ^^\n```\n*Secret Cow Mode Activated!*"
     ]
+  },
+  {
+    "triggers": ["no fear"],
+    "responses": ["Go for it!", "No Fear!", "Talk is cheap!", "Second is first loser!"]
+  },
+  {
+    "triggers": ["game of thrones", "got", "winter is coming"],
+    "responses": ["Winter is coming!", "A Lannister always pays his debts.", "Dracarys!", "The North remembers."]
+  },
+  {
+    "triggers": ["the walking dead", "twd", "walkers"],
+    "responses": ["Fight the dead, fear the living.", "Don't open, dead inside.", "Lucille is thirsty!", "We are the walking dead."]
+  },
+  {
+    "triggers": ["beavis and butt-head", "beavis", "butt-head"],
+    "responses": ["Huh-huh, that was cool.", "I am Cornholio!", "Fire! Fire!", "Settle down, Beavis."]
   }
 ]
