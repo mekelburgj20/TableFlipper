@@ -65,17 +65,28 @@ export function startDiscordBot() {
             try {
                 const callouts = JSON.parse(fs.readFileSync(calloutsPath, 'utf8'));
                 for (const entry of callouts) {
-                    const match = entry.triggers.some((trigger: string) => {
-                        // Use regex with word boundaries for exact match, case-insensitive
-                        // Escape trigger for regex safety just in case
-                        const escapedTrigger = trigger.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-                        const regex = new RegExp(`\\b${escapedTrigger}\\b`, 'i');
-                        return regex.test(content);
+                    const allTriggers: string[] = entry.triggers;
+                    const inclusionTriggers = allTriggers.filter(t => !t.startsWith('!'));
+                    const exclusionTriggers = allTriggers.filter(t => t.startsWith('!')).map(t => t.slice(1));
+
+                    // 1. Check for Case-Insensitive Inclusion
+                    const hasInclusion = inclusionTriggers.some((trigger: string) => {
+                        const escaped = trigger.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+                        return new RegExp(`\\b${escaped}\\b`, 'i').test(content);
                     });
-                    if (match) {
-                        const response = entry.responses[Math.floor(Math.random() * entry.responses.length)];
-                        await message.reply(response);
-                        return; // Only trigger one callout per message
+
+                    if (hasInclusion) {
+                        // 2. Check for Case-Sensitive Exclusion (against RAW message)
+                        const isExcluded = exclusionTriggers.some((trigger: string) => {
+                            const escaped = trigger.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+                            return new RegExp(`\\b${escaped}\\b`).test(message.content);
+                        });
+
+                        if (!isExcluded) {
+                            const response = entry.responses[Math.floor(Math.random() * entry.responses.length)];
+                            await message.reply(response);
+                            return; // Only trigger one callout per message
+                        }
                     }
                 }
             } catch (e) {

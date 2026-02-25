@@ -218,7 +218,7 @@
     "responses": ["Go for it!", "No Fear!", "Talk is cheap!", "Second is first loser!"]
   },
   {
-    "triggers": ["game of thrones", "got", "winter is coming"],
+    "triggers": ["game of thrones", "got", "winter is coming", "!got", "!Got"],
     "responses": ["Winter is coming!", "A Lannister always pays his debts.", "Dracarys!", "The North remembers."]
   },
   {
