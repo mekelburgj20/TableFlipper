@@ -1,10 +1,10 @@
 import { Browser, Page } from 'playwright';
-import { loginToIScored, lockGame, showGame, navigateToSettingsPage, navigateToLineupPage, deleteGame, findGames, getAllGames, syncStyleFromIScored, repositionLineup, Game as IscoredGame } from './iscored.js';
+import { loginToIScored, lockGame, showGame, navigateToSettingsPage, navigateToLineupPage, deleteGame, findGames, getAllGames, syncStyleFromIScored, repositionLineup, createGame, Game as IscoredGame } from './iscored.js';
 import { getWinnerAndScoreFromPage, getStandingsFromPage } from './api.js';
 import { updateWinnerHistory, getLastWinner } from './history.js';
 import { sendDiscordNotification } from './discord.js';
-import { getDiscordIdByIscoredName } from './userMapping.js';
-import { getActiveGames, getActiveGame, getNextQueuedGames, getNextQueuedGame, updateGameStatus, setPicker, createGameEntry, GameRow, hasScores, saveScores, getGameByIscoredId, syncCompletedGame, syncQueuedGame, upsertTable, getTable, getLineupOrder, reconcileGames } from './database.js';
+import { dbGetDiscordIdByIscoredName } from './database.js';
+import { getActiveGames, getActiveGame, getNextQueuedGames, getNextQueuedGame, updateGameStatus, setPicker, createGameEntry, GameRow, hasScores, saveScores, getGameByIscoredId, syncCompletedGame, syncQueuedGame, upsertTable, getTable, getLineupOrder, reconcileGames, getPrePick, clearPrePick, checkTableEligibility, updateQueuedGame } from './database.js';
 import { logInfo, logError, logWarn } from './logger.js';
 
 const ALL_GAME_TYPES = ['DG', 'WG-VPXS', 'WG-VR', 'MG'];
@@ -295,7 +295,7 @@ export async function runMaintenanceForGameType(gameType: string) {
                 logInfo(`✅ Marked game as COMPLETED in DB: ${activeGame.name}`);
 
                 // 4. Update winner history and check for dynasty
-                const winnerDiscordId = getDiscordIdByIscoredName(winner) ?? null;
+                const winnerDiscordId = await dbGetDiscordIdByIscoredName(winner);
                 
                 // Dynasty Rule: Check against the winner of the PREVIOUS cycle
                 const isRepeatWinner = !!(lastCycleWinner && winner && lastCycleWinner.toLowerCase() === winner.toLowerCase());
@@ -303,15 +303,43 @@ export async function runMaintenanceForGameType(gameType: string) {
                 await updateWinnerHistory(gameType, { gameName: activeGame.name, winner, score, winnerId: winnerDiscordId });
 
                 // 5. Handle picker assignment and create next game shell
-                await createGameEntry({
+                const nextSlot = await createGameEntry({
                     type: gameType,
                 });
 
                 if (winnerDiscordId && !isRepeatWinner) {
-                    logInfo(`Setting picker for ${winner}.`);
-                    await setPicker(gameType, winnerDiscordId);
+                    // Check for Pre-Pick
+                    const prePick = await getPrePick(winnerDiscordId, gameType);
+                    let prePickApplied = false;
+
+                    if (prePick) {
+                        logInfo(`✨ Pre-pick found for ${winner}: ${prePick.table_name}. Checking eligibility...`);
+                        const isEligible = await checkTableEligibility(prePick.table_name, gameType);
+                        
+                        if (isEligible) {
+                            try {
+                                const { id: iscoredGameId } = await createGame(page, prePick.table_name, gameType);
+                                await updateQueuedGame(nextSlot.id, prePick.table_name, iscoredGameId, 'QUEUED');
+                                await clearPrePick(winnerDiscordId, gameType);
+                                logInfo(`✅ Successfully applied pre-pick for ${winner}.`);
+                                prePickApplied = true;
+                            } catch (e) {
+                                logError(`❌ Failed to apply pre-pick for ${winner}:`, e);
+                            }
+                        } else {
+                            logWarn(`⚠️ Pre-picked table '${prePick.table_name}' has already been played in the last 120 days. Skipping pre-pick.`);
+                        }
+                    }
+
+                    if (!prePickApplied) {
+                        logInfo(`Setting picker for ${winner}.`);
+                        await setPicker(gameType, winnerDiscordId, null, activeGame.id, 'WINNER');
+                    }
                 } else if (winnerDiscordId && isRepeatWinner) {
                     logInfo(`👑 ${winner} is a repeat winner from the previous cycle. Dynasty rule is active. Not setting picker.`);
+                } else if (!winnerDiscordId) {
+                    logWarn(`⚠️ Winner ${winner} is not mapped to a Discord user. Mod alert needed.`);
+                    // TODO: Trigger Mod Alert
                 }
                 
                 // 6. Send Discord notification

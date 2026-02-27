@@ -3,8 +3,8 @@ import { Browser } from 'playwright';
 import fs from 'fs';
 import * as path from 'path';
 import { loginToIScored, createGame, submitScoreToIscored } from './iscored.js';
-import { getIscoredNameByDiscordId, getDiscordIdByIscoredName } from './userMapping.js';
-import { getPicker, setPicker, updateQueuedGame, getNextQueuedGame, searchTables, getTable, getRecentGameNames, getRandomCompatibleTable, injectSpecialGame, getActiveGames, searchGamesByStatus, getGameByNameAndStatus, getAllActiveGames, getGameByPicker } from './database.js';
+import { dbGetDiscordIdByIscoredName, dbGetIscoredNameByDiscordId, dbAddUserMapping, setPrePick, getPrePick, checkTableEligibility } from './database.js';
+import { getPicker, setPicker, updateQueuedGame, getNextQueuedGame, searchTables, getTable, getRecentGameNames, getRandomCompatibleTable, injectSpecialGame, getActiveGames, searchGamesByStatus, getGameByNameAndStatus, getAllActiveGames, getGameByPicker, clearPrePick } from './database.js';
 import { getLastWinner, getHistory, getTableStats, getRecentWinners } from './history.js';
 import { getTablesFromSheet } from './googleSheet.js';
 import { getStandingsFromApi } from './api.js';
@@ -26,26 +26,22 @@ function getGameTypeFromChannel(channelName: string | null): string | null {
     return null;
 }
 
-export function startDiscordBot() {
+export function startDiscordBot(): Client {
     logInfo('🤖 Starting Discord bot...');
     logInfo(`Debug: MOD_ROLE_ID from env: ${process.env.MOD_ROLE_ID}`);
-
-    // Global unhandled promise rejection handler for debugging
-    process.on('unhandledRejection', (reason, promise) => {
-        logError('--- Unhandled Rejection (Global) ---', reason);
-    });
 
     const token = process.env.DISCORD_BOT_TOKEN;
     if (!token || token === 'your_discord_bot_token') {
         logError('❌ DISCORD_BOT_TOKEN not found in environment variables. Bot will not start.');
-        return;
+        throw new Error('Missing token');
     }
 
     const client = new Client({
         intents: [
             GatewayIntentBits.Guilds,
             GatewayIntentBits.GuildMessages,
-            GatewayIntentBits.MessageContent, // Required to read message content
+            GatewayIntentBits.MessageContent,
+            // GatewayIntentBits.GuildMembers, // Removed to avoid crash if not enabled in portal
         ],
     });
 
@@ -236,20 +232,20 @@ export function startDiscordBot() {
                 return;
             }
 
-            await interaction.deferReply();
+            await interaction.deferReply({ ephemeral: true });
 
-            // 1. Find the next queued game for this type assigned to this user
+            // 1. Determine if this is an immediate pick or a pre-pick
             const nextGame = await getGameByPicker(gameType, interaction.user.id);
+            const isAuthorizedPicker = !!nextGame;
 
-            if (!nextGame) {
-                logInfo(`❌ /pick-table authorization failed for user ${interaction.user.id}. No assigned slot found for ${gameType}.`);
-                await interaction.editReply(`You are not authorized to pick a table for the ${gameType} tournament right now.`);
-                return;
-            }
-
-            // 2. Handle Surprise Me Logic
+            // 2. Handle Surprise Me Logic (only for immediate picks)
             if (surpriseMe) {
-                const daysLookback = 21;
+                if (!isAuthorizedPicker) {
+                    await interaction.editReply('The **surprise-me** option is only available when you are the active designated picker.');
+                    return;
+                }
+
+                const daysLookback = 21; // Should we update this to yearly too?
                 const recentGames = await getRecentGameNames(gameType, daysLookback);
                 
                 let platformFilter: 'atgames' | 'vr' | 'vpxs' = 'atgames'; 
@@ -301,8 +297,8 @@ export function startDiscordBot() {
                 }
             }
 
-            // 3. Validate Table Selection (Skip if Surprise Me was used, as it came from DB)
-            if (!surpriseMe && tableName) {
+            // 3. Validate Table Selection & Yearly Eligibility
+            if (tableName) {
                 // Check if table exists and is valid for the mode
                 const tableData = await getTable(tableName);
                 let isVerified = false;
@@ -311,97 +307,76 @@ export function startDiscordBot() {
                     if (gameType === 'DG' && tableData.is_atgames) isVerified = true;
                     else if (gameType === 'WG-VR' && tableData.is_wg_vr) isVerified = true;
                     else if (gameType === 'WG-VPXS' && tableData.is_wg_vpxs) isVerified = true;
-                    else if (gameType === 'MG') isVerified = true; // No restriction for MG
-                } else {
-                    // Table not in DB at all.
-                    // For MG, we accept unknown tables. For others, it's unverified.
-                    if (gameType === 'MG') isVerified = true;
+                    else if (gameType === 'MG') isVerified = true; 
+                } else if (gameType === 'MG') {
+                    isVerified = true;
                 }
 
                 if (!isVerified) {
-                    const confirmBtn = new ButtonBuilder()
-                        .setCustomId('confirm_warning')
-                        .setLabel('Yes, proceed anyway')
-                        .setStyle(ButtonStyle.Danger); // Red button for warning
-                    
-                    const cancelBtn = new ButtonBuilder()
-                        .setCustomId('cancel_warning')
-                        .setLabel('Cancel')
-                        .setStyle(ButtonStyle.Secondary);
+                    await interaction.editReply(`The table "**${tableName}**" is not verified for the **${gameType}** tournament in our database. Please select a compatible table.`);
+                    return;
+                }
 
-                    const row = new ActionRowBuilder<ButtonBuilder>().addComponents(confirmBtn, cancelBtn);
-
-                    const response = await interaction.editReply({
-                        content: `**Warning:** The table "**${tableName}**" is not verified for the **${gameType}** tournament in our database.\n\nAre you sure you want to proceed?`,
-                        components: [row]
-                    });
-
-                    try {
-                        const confirmation = await response.awaitMessageComponent({ 
-                            filter: i => i.user.id === interaction.user.id, 
-                            time: 60000 
-                        });
-
-                        if (confirmation.customId === 'cancel_warning') {
-                            await confirmation.update({ content: 'Selection cancelled.', components: [] });
-                            return;
-                        }
-
-                        // Update the message to remove buttons and show confirmation
-                        await confirmation.update({ content: `Proceeding with **${tableName}**...`, components: [] });
-                        // Flow continues to creation below...
-
-                    } catch (e) {
-                        await interaction.editReply({ content: 'Confirmation timed out. Selection cancelled.', components: [] });
-                        return;
-                    }
+                // CHECK ELIGIBILITY (120 DAYS)
+                const isEligible = await checkTableEligibility(tableName, gameType);
+                if (!isEligible) {
+                    await interaction.editReply(`The table "**${tableName}**" has already been played in the **${gameType}** tournament in the last 120 days. Please choose another table.`);
+                    return;
                 }
             }
 
-            // 4. Create the game in iScored
-            const newGameName = tableName!; // Use clean table name (Tags handle the type)
-            let browser: Browser | null = null;
-            try {
-                logInfo(`🚀 Handling /pick-table for ${gameType} with table: ${tableName}`);
-                
-                // Fetch styleId if available
-                const tableData = await getTable(tableName!);
-                const styleId = tableData?.style_id;
+            // 4. Execution
+            if (isAuthorizedPicker) {
+                // Immediate iScored Creation
+                const newGameName = tableName!;
+                let browser: Browser | null = null;
+                try {
+                    logInfo(`🚀 Handling immediate /pick-table for ${gameType} with table: ${tableName}`);
+                    
+                    const tableData = await getTable(tableName!);
+                    const styleId = tableData?.style_id;
 
-                const { browser: newBrowser, page } = await loginToIScored();
-                browser = newBrowser;
-                
-                // This function now creates the game and returns an object with ID and scheduled time
-                // We pass the grind-type as the second argument to be added as a Tag
-                const { id: iscoredGameId, scheduledTime } = await createGame(page, newGameName, gameType, styleId); 
-                
-                // 5. Update the game entry in our database
-                const newStatus = gameType === 'DG' ? 'QUEUED' : 'ACTIVE';
-                await updateQueuedGame(nextGame.id, tableName!, iscoredGameId, newStatus);
+                    const { browser: newBrowser, page } = await loginToIScored();
+                    browser = newBrowser;
+                    
+                    const { id: iscoredGameId, scheduledTime } = await createGame(page, newGameName, gameType, styleId); 
+                    
+                    const newStatus = gameType === 'DG' ? 'QUEUED' : 'ACTIVE';
+                    await updateQueuedGame(nextGame.id, tableName!, iscoredGameId, newStatus);
 
-                // Format the activation message
-                let timeMessage = '';
-                if (gameType === 'DG') {
-                    const formattedTime = scheduledTime.toLocaleDateString('en-US', {
-                        year: 'numeric', month: 'numeric', day: 'numeric', timeZone: 'America/Chicago'
-                    }) + ' at ' + scheduledTime.toLocaleTimeString('en-US', {
-                        hour: 'numeric', minute: '2-digit', hour12: true, timeZone: 'America/Chicago'
-                    }).toLowerCase() + ' Central';
-                    timeMessage = `It will be the table for the tournament beginning **${formattedTime}**.`;
-                } else {
-                    timeMessage = `It has been activated and is **ready for play right now!**`;
+                    let timeMessage = '';
+                    if (gameType === 'DG') {
+                        const formattedTime = scheduledTime.toLocaleDateString('en-US', {
+                            year: 'numeric', month: 'numeric', day: 'numeric', timeZone: 'America/Chicago'
+                        }) + ' at ' + scheduledTime.toLocaleTimeString('en-US', {
+                            hour: 'numeric', minute: '2-digit', hour12: true, timeZone: 'America/Chicago'
+                        }).toLowerCase() + ' Central';
+                        timeMessage = `It will be the table for the tournament beginning **${formattedTime}**.`;
+                    } else {
+                        timeMessage = `It has been activated and is **ready for play right now!**`;
+                    }
+
+                    await interaction.editReply({ content: `Thank you, ${interaction.user.toString()}! The table **${tableName} ${gameType}** has been selected and created. ${timeMessage}`, components: [] });
+
+                } catch (error) {
+                    logError(`Error in /pick-table:`, error);
+                    await interaction.editReply(`An error occurred while trying to create the game '${tableName}'.`);
+                } finally {
+                    if (browser) await browser.close();
                 }
-
-                const confirmationMessage = `Thank you, ${interaction.user.toString()}! The table **${tableName} ${gameType}** has been selected and created. ${timeMessage}`;
-                
-                await interaction.editReply({ content: confirmationMessage, components: [] });
-
-            } catch (error) {
-                logError(`Error in /pick-table:`, error);
-                await interaction.editReply(`An error occurred while trying to create the game '${newGameName}'.`);
-            } finally {
-                if (browser) {
-                    await browser.close();
+            } else {
+                // Pre-Pick Mode
+                try {
+                    await setPrePick(interaction.user.id, gameType, tableName!);
+                    await interaction.editReply({ 
+                        content: `**Pre-pick Saved!**\nIf you win the **${gameType}** tournament, your selected table (**${tableName}**) will be queued up automatically.`,
+                        components: [],
+                        // ephemeral is set at deferReply usually, but editReply doesn't support it directly.
+                        // I need to ensure the INITIAL reply/defer was ephemeral.
+                    });
+                } catch (error) {
+                    logError(`Error saving pre-pick:`, error);
+                    await interaction.editReply('An error occurred while saving your pre-pick.');
                 }
             }
         } 
@@ -836,7 +811,7 @@ export function startDiscordBot() {
 
             if (!isMod) {
                 const lastWinner = await getLastWinner(gameType);
-                const nominatorIscoredName = getIscoredNameByDiscordId(nominatorUser.id);
+                const nominatorIscoredName = await dbGetIscoredNameByDiscordId(nominatorUser.id);
 
                 if (!lastWinner || !nominatorIscoredName || lastWinner.toLowerCase() !== nominatorIscoredName.toLowerCase()) {
                     await interaction.editReply(`You are not the last winner for the ${gameType} tournament, so you cannot nominate a picker.`);
@@ -871,6 +846,28 @@ export function startDiscordBot() {
 
         }
         
+        else if (commandName === 'map-user') {
+            await interaction.deferReply({ ephemeral: true });
+            
+            const modRoleId = process.env.MOD_ROLE_ID;
+            const memberRoles = interaction.member?.roles as any;
+            if (!modRoleId || !memberRoles || !memberRoles.cache.has(modRoleId)) {
+                await interaction.editReply('You do not have permission to use this command.');
+                return;
+            }
+
+            const iscoredUsername = interaction.options.getString('iscored-username', true);
+            const discordUser = interaction.options.getUser('discord-user', true);
+
+            try {
+                await dbAddUserMapping(iscoredUsername, discordUser.id);
+                await interaction.editReply(`Successfully mapped iScored user **${iscoredUsername}** to Discord user **${discordUser.tag}**.`);
+            } catch (error) {
+                logError('Error in /map-user:', error);
+                await interaction.editReply('An error occurred while creating the mapping.');
+            }
+        }
+
         else if (commandName === 'submit-score') { 
             let gameType = interaction.options.getString('grind-type');
 
@@ -888,7 +885,6 @@ export function startDiscordBot() {
 
             try {
                 // --- Table Name Cleanup ---
-                // Support cleaning up any leftover separators if needed
                 if (tableName) {
                     if (tableName.includes(' » ')) tableName = tableName.split(' » ').pop()!;
                     if (tableName.includes(' ➔ ')) tableName = tableName.split(' ➔ ').pop()!;
@@ -900,7 +896,7 @@ export function startDiscordBot() {
                     return;
                 }
 
-                const existingDiscordId = getIscoredNameByDiscordId(iScoredUsername);
+                const existingDiscordId = await dbGetDiscordIdByIscoredName(iScoredUsername);
                 if (existingDiscordId && existingDiscordId !== interaction.user.id) {
                     await interaction.editReply(`The iScored username '${iScoredUsername}' is already linked to another Discord user.`);
                     return;
@@ -976,5 +972,12 @@ export function startDiscordBot() {
     });
 
 
-    client.login(token);
-}
+        client.login(token);
+    
+        process.on('unhandledRejection', (reason, promise) => {
+            logError('--- Unhandled Rejection (Global) ---', reason);
+        });
+    
+        return client;
+    }
+    

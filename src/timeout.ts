@@ -1,87 +1,230 @@
-import { getPicker, updateQueuedGame, getRecentGameNames, getRandomCompatibleTable } from './database.js';
-import { createGame } from './iscored.js';
-import { loginToIScored } from './iscored.js';
+import { Guild, TextChannel } from 'discord.js';
+import { 
+    getPicker, 
+    updateQueuedGame, 
+    getRecentGameNames, 
+    getRandomCompatibleTable,
+    getRandomCompatibleTableEligible,
+    updateGameStatus,
+    GameRow,
+    TableRow,
+    dbGetDiscordIdByIscoredName,
+    getPrePick,
+    clearPrePick,
+    checkTableEligibility,
+    getTable,
+    getGameById,
+    incrementReminderCount,
+    dbUpdatePicker
+} from './database.js';
+import { createGame, loginToIScored } from './iscored.js';
 import { sendDiscordNotification } from './discord.js';
+import { getStandingsFromApi } from './api.js';
+import { logInfo, logError, logWarn } from './logger.js';
+import { notifyUnmappedWinner } from './identity.js';
+import * as path from 'path';
 
-const PICKER_TIMEOUT_HOURS = 18;
-
-// Monthly Grind (MG) is excluded from timeouts as per requirements.
 const TIMEOUT_GAME_TYPES = ['DG', 'WG-VPXS', 'WG-VR'];
 
-export async function checkPickerTimeouts() {
-    console.log('⏳ Checking for picker timeouts...');
+export async function checkPickerTimeouts(guild: Guild | null) {
+    if (!guild) {
+        logWarn('⚠️ No guild provided to checkPickerTimeouts, skipping.');
+        return;
+    }
+
+    logInfo('⏳ Checking for picker timeouts and reminders...');
 
     for (const gameType of TIMEOUT_GAME_TYPES) {
+        // Updated getPicker in database.ts should now return the first slot with a picker
         const game = await getPicker(gameType);
 
         if (game && game.picker_designated_at && game.picker_discord_id) {
-            const designatedAt = new Date(game.picker_designated_at);
-            const timeout = new Date(designatedAt.getTime() + PICKER_TIMEOUT_HOURS * 60 * 60 * 1000);
+            await handleTieredTimeout(guild, game);
+        }
+    }
+}
 
-            if (new Date() > timeout) {
-                console.log(`⏰ Picker for ${gameType} has timed out!`);
+async function handleTieredTimeout(guild: Guild, game: GameRow) {
+    const now = new Date();
+    const designatedAt = new Date(game.picker_designated_at!);
+    const elapsedMins = (now.getTime() - designatedAt.getTime()) / (1000 * 60);
+    
+    // Type-safe picker type
+    const pickerType = game.picker_type || 'WINNER';
 
-                let browser = null;
-                try {
-                    // 1. Pick a random valid table
-                    // DG: 21 days lookback, AtGames
-                    // WG: 3 turns (approx 21 days) lookback, Respective Platform
-                    
-                    const daysLookback = 21;
-                    const recentGames = await getRecentGameNames(gameType, daysLookback);
-                    
-                    let platformFilter: 'atgames' | 'vr' | 'vpxs' = 'atgames'; // Default to DG logic
-                    if (gameType === 'WG-VR') platformFilter = 'vr';
-                    if (gameType === 'WG-VPXS') platformFilter = 'vpxs';
-
-                    const randomTableRow = await getRandomCompatibleTable(platformFilter, recentGames);
-
-                    if (!randomTableRow) {
-                        console.error(`❌ Could not find a valid random table for ${gameType} (Platform: ${platformFilter}, Excluded: ${recentGames.length} recent games).`);
-                        // Fallback? Or just fail safely? 
-                        // If we fail, we shouldn't update the game status so it retries or alerts?
-                        // For now, let's log error and continue loop.
-                        continue;
-                    }
-
-                    const randomTable = randomTableRow.name;
-                    const newGameName = randomTable; // Clean name (Tags handle ID)
-                    console.log(`🤖 Randomly selected table: ${newGameName}`);
-
-                    // 2. Create the game in iScored
-                    const { browser: newBrowser, page } = await loginToIScored();
-                    browser = newBrowser;
-                    const { id: iscoredGameId } = await createGame(page, newGameName, gameType);
-
-                    // 3. Update the game in the database (keeping base name in DB, createGame adds suffix for iScored)
-                    // We set status to ACTIVE because Weekly and Monthly are activated immediately on pick.
-                    // For DG, it technically sits in QUEUED, but the maintenance loop normally moves it to ACTIVE.
-                    // Actually, createGame for DG handles its own scheduling.
-                    // However, we want these timeout picks to show up as ACTIVE if they are meant to be live.
-                    const newStatus = gameType === 'DG' ? 'QUEUED' : 'ACTIVE';
-                    await updateQueuedGame(game.id, newGameName, iscoredGameId, newStatus);
-
-                    // 4. Announce it
-                    const fullGameName = `${newGameName} ${gameType}`;
-                    await sendDiscordNotification({
-                        winner: 'N/A',
-                        winnerId: null,
-                        score: 'N/A',
-                        activeGame: 'None',
-                        nextGame: fullGameName,
-                        gameType: gameType,
-                        isRepeatWinner: false,
-                        customMessage: `The picker for **${gameType}** timed out.\nI have randomly selected **${fullGameName}** as the next game.`
-                    });
-
-                } catch (error) {
-                    console.error(`❌ Error handling picker timeout for ${gameType}:`, error);
-                } finally {
-                    if (browser) {
-                        await browser.close();
-                    }
-                }
+    if (pickerType === 'WINNER') {
+        // WINNER TIMEOUT: 1 Hour (60 mins)
+        if (elapsedMins >= 60) {
+            logInfo(`⏰ Winner for ${game.type} has timed out after 1 hour. Pivoting to Runner-Up...`);
+            await pivotToRunnerUp(guild, game);
+        } else {
+            // Reminders every 15 minutes
+            const nextReminderInterval = (game.reminder_count! + 1) * 15;
+            if (elapsedMins >= nextReminderInterval) {
+                await sendPickerReminder(guild, game, 60 - Math.floor(elapsedMins));
+            }
+        }
+    } else if (pickerType === 'RUNNER_UP') {
+        // RUNNER_UP TIMEOUT: 30 Minutes
+        if (elapsedMins >= 30) {
+            logInfo(`⏰ Runner-Up for ${game.type} has timed out after 30 minutes. Falling back to auto-selection...`);
+            await fallbackToAutoSelection(game);
+        } else {
+            // Reminders every 10 minutes
+            const nextReminderInterval = (game.reminder_count! + 1) * 10;
+            if (elapsedMins >= nextReminderInterval) {
+                await sendPickerReminder(guild, game, 30 - Math.floor(elapsedMins));
             }
         }
     }
 }
+
+async function sendPickerReminder(guild: Guild, game: GameRow, minsRemaining: number) {
+    try {
+        const channelId = process.env.DG_CHANNEL_ID || process.env.DISCORD_ANNOUNCEMENT_CHANNEL_ID;
+        if (!channelId) return;
+
+        const channel = await guild.channels.fetch(channelId) as TextChannel;
+        if (!channel) return;
+
+        const mention = `<@${game.picker_discord_id}>`;
+        const pickerRole = game.picker_type === 'RUNNER_UP' ? 'Runner-Up' : 'Winner';
+        
+        await channel.send(`${mention}, as the **${pickerRole}**, you have **${minsRemaining} minutes** remaining to pick the next table for **${game.type}**! Use \`/pick-table\` now or the pick will pass to the ${game.picker_type === 'WINNER' ? 'runner-up' : 'bot'}.`);
+        
+        // Update reminder count in DB
+        const { open } = await import('sqlite');
+        const sqlite3 = await import('sqlite3');
+        const db = await open({ filename: path.join(process.cwd(), 'data', 'tableflipper.db'), driver: sqlite3.default.Database });
+        // Wait, I should add a helper to database.ts for this
+        await incrementReminderCount(game.id);
+        
+    } catch (e) {
+        logError('❌ Failed to send picker reminder:', e);
+    }
+}
+
+async function pivotToRunnerUp(guild: Guild, game: GameRow) {
+    if (!game.won_game_id) {
+        logError(`❌ Cannot pivot to runner-up for ${game.type}: won_game_id is missing.`);
+        await fallbackToAutoSelection(game);
+        return;
+    }
+
+    try {
+        // 1. Get the game name from DB to fetch standings
+        const wonGame = await getGameById(game.won_game_id);
+
+        if (!wonGame) {
+             await fallbackToAutoSelection(game);
+             return;
+        }
+
+        // 2. Fetch standings
+        const standings = await getStandingsFromApi(wonGame.name);
+        if (standings.length < 2) {
+            logWarn(`⚠️ No runner-up found in standings for ${wonGame.name}. Auto-selecting.`);
+            await fallbackToAutoSelection(game);
+            return;
+        }
+
+        const runnerUpIscoredName = standings[1].name;
+        const runnerUpDiscordId = await dbGetDiscordIdByIscoredName(runnerUpIscoredName);
+
+        if (runnerUpDiscordId) {
+            // Check for Pre-Pick
+            const prePick = await getPrePick(runnerUpDiscordId, game.type);
+            if (prePick) {
+                const isEligible = await checkTableEligibility(prePick.table_name, game.type);
+                if (isEligible) {
+                    logInfo(`✨ Applying pre-pick for Runner-Up ${runnerUpIscoredName}: ${prePick.table_name}`);
+                    let browser = null;
+                    try {
+                        const { browser: b, page } = await loginToIScored();
+                        browser = b;
+                        const tableData = await getTable(prePick.table_name);
+                        const { id: iscoredGameId } = await createGame(page, prePick.table_name, game.type, tableData?.style_id);
+                        const newStatus = game.type === 'DG' ? 'QUEUED' : 'ACTIVE';
+                        await updateQueuedGame(game.id, prePick.table_name, iscoredGameId, newStatus);
+                        await clearPrePick(runnerUpDiscordId, game.type);
+                        
+                        await sendDiscordNotification({
+                            winner: runnerUpIscoredName,
+                            winnerId: runnerUpDiscordId,
+                            score: standings[1].score,
+                            activeGame: 'None',
+                            nextGame: `${prePick.table_name} ${game.type}`,
+                            gameType: game.type,
+                            isRepeatWinner: false,
+                            customMessage: `The winner timed out. Runner-up **${runnerUpIscoredName}** had a pre-pick! **${prePick.table_name}** is the next game.`
+                        });
+                        return;
+                    } catch (e) {
+                        logError('Error applying runner-up pre-pick:', e);
+                    } finally {
+                        if (browser) await browser.close();
+                    }
+                }
+            }
+
+            // No pre-pick or it failed: Set as active picker
+            await dbUpdatePicker(game.id, runnerUpDiscordId, 'RUNNER_UP');
+            
+            const channelId = process.env.DG_CHANNEL_ID || process.env.DISCORD_ANNOUNCEMENT_CHANNEL_ID;
+            if (channelId) {
+                const channel = await guild.channels.fetch(channelId) as TextChannel;
+                await channel?.send(`The winner has timed out. Picking rights for **${game.type}** have passed to the runner-up: <@${runnerUpDiscordId}>! You have **30 minutes** to pick.`);
+            }
+        } else {
+            logWarn(`⚠️ Runner-up ${runnerUpIscoredName} is not mapped to Discord. Auto-selecting.`);
+            await notifyUnmappedWinner(guild, runnerUpIscoredName, game.type);
+            await fallbackToAutoSelection(game);
+        }
+
+    } catch (e) {
+        logError('❌ Error in pivotToRunnerUp:', e);
+        await fallbackToAutoSelection(game);
+    }
+}
+
+async function fallbackToAutoSelection(game: GameRow) {
+    logInfo(`🤖 Triggering auto-selection for ${game.type}...`);
+    let browser = null;
+    try {
+        let platformFilter: 'atgames' | 'vr' | 'vpxs' = 'atgames'; 
+        if (game.type === 'WG-VR') platformFilter = 'vr';
+        if (game.type === 'WG-VPXS') platformFilter = 'vpxs';
+
+        const randomTableRow = await getRandomCompatibleTableEligible(platformFilter, game.type);
+
+        if (!randomTableRow) {
+            logError(`❌ No valid random table found for ${game.type}.`);
+            return;
+        }
+
+        const newGameName = randomTableRow.name;
+        const { browser: b, page } = await loginToIScored();
+        browser = b;
+        const { id: iscoredGameId } = await createGame(page, newGameName, game.type, randomTableRow.style_id);
+
+        const newStatus = game.type === 'DG' ? 'QUEUED' : 'ACTIVE';
+        await updateQueuedGame(game.id, newGameName, iscoredGameId, newStatus);
+
+        await sendDiscordNotification({
+            winner: 'N/A',
+            winnerId: null,
+            score: 'N/A',
+            activeGame: 'None',
+            nextGame: `${newGameName} ${game.type}`,
+            gameType: game.type,
+            isRepeatWinner: false,
+            customMessage: `The picker(s) for **${game.type}** timed out.\nI have randomly selected **${newGameName}** as the next game.`
+        });
+
+    } catch (error) {
+        logError(`❌ Error in fallbackToAutoSelection for ${game.type}:`, error);
+    } finally {
+        if (browser) await browser.close();
+    }
+}
+

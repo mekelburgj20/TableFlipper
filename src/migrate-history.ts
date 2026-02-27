@@ -2,9 +2,8 @@ import sqlite3 from 'sqlite3';
 import { open } from 'sqlite';
 import * as path from 'path';
 import { promises as fs } from 'fs';
-import { getDiscordIdByIscoredName } from './userMapping.js';
+import { dbGetDiscordIdByIscoredName, initializeDatabase } from './database.js';
 import { loadUserMapping } from './userMapping.js';
-import { initializeDatabase } from './database.js'; // Import initializeDatabase
 
 const DB_DIR = path.join(process.cwd(), 'data');
 const DB_PATH = path.join(DB_DIR, 'tableflipper.db');
@@ -50,7 +49,7 @@ async function migrateHistory() {
                 const results = historyData[gameType];
                 if (Array.isArray(results)) { // Add this check
                     for (const result of results) {
-                        const discordId = getDiscordIdByIscoredName(result.winner);
+                        const discordId = await dbGetDiscordIdByIscoredName(result.winner);
                         await db.run(
                             `INSERT INTO winners (game_iscored_id, discord_user_id, iscored_username, score, game_name, game_type, created_at)
                              VALUES (?, ?, ?, ?, ?, ?, ?)`,

@@ -24,6 +24,10 @@ export interface GameRow {
     status: 'QUEUED' | 'ACTIVE' | 'COMPLETED' | 'HIDDEN';
     picker_discord_id?: string | null;
     nominated_by_discord_id?: string | null;
+    picker_type?: 'WINNER' | 'RUNNER_UP' | null;
+    won_game_id?: string | null;
+    reminder_count?: number;
+    last_reminded_at?: string | null;
     picker_designated_at?: string | null;
     scheduled_to_be_active_at?: string | null;
     created_at: string;
@@ -59,10 +63,29 @@ export async function initializeDatabase() {
                 status TEXT NOT NULL CHECK(status IN ('QUEUED', 'ACTIVE', 'COMPLETED', 'HIDDEN')),
                 picker_discord_id TEXT,
                 nominated_by_discord_id TEXT,
+                picker_type TEXT CHECK(picker_type IN ('WINNER', 'RUNNER_UP')),
+                won_game_id TEXT,
+                reminder_count INTEGER DEFAULT 0,
+                last_reminded_at DATETIME,
                 picker_designated_at DATETIME,
                 scheduled_to_be_active_at DATETIME,
                 created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
                 completed_at DATETIME
+            );
+        `);
+        await db.exec(`
+            CREATE TABLE IF NOT EXISTS user_mappings (
+                iscored_username TEXT PRIMARY KEY,
+                discord_user_id TEXT NOT NULL
+            );
+        `);
+        await db.exec(`
+            CREATE TABLE IF NOT EXISTS pre_picks (
+                discord_user_id TEXT NOT NULL,
+                grind_type TEXT NOT NULL,
+                table_name TEXT NOT NULL,
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                PRIMARY KEY (discord_user_id, grind_type)
             );
         `);
         await db.exec(`
@@ -481,10 +504,34 @@ export async function getAllActiveGames(): Promise<GameRow[]> {
     }
 }
 
-export async function getGameByIscoredId(iscoredId: string): Promise<GameRow | null> {
+export async function getGameById(id: string): Promise<GameRow | null> {
     const db = await openDb();
     try {
-        return await db.get<GameRow>("SELECT * FROM games WHERE iscored_game_id = ?", iscoredId) ?? null;
+        return await db.get<GameRow>("SELECT * FROM games WHERE id = ?", id) ?? null;
+    } finally {
+        await db.close();
+    }
+}
+
+export async function incrementReminderCount(gameId: string): Promise<void> {
+    const db = await openDb();
+    try {
+        await db.run(
+            "UPDATE games SET reminder_count = reminder_count + 1, last_reminded_at = ? WHERE id = ?", 
+            new Date().toISOString(), gameId
+        );
+    } finally {
+        await db.close();
+    }
+}
+
+export async function dbUpdatePicker(gameId: string, discordId: string, type: 'WINNER' | 'RUNNER_UP'): Promise<void> {
+    const db = await openDb();
+    try {
+        await db.run(
+            "UPDATE games SET picker_discord_id = ?, picker_type = ?, picker_designated_at = ?, reminder_count = 0 WHERE id = ?",
+            discordId, type, new Date().toISOString(), gameId
+        );
     } finally {
         await db.close();
     }
@@ -531,18 +578,207 @@ export async function updateQueuedGame(gameId: string, newName: string, iscoredG
     }
 }
 
+// --- User Mapping Functions ---
+
+export interface UserMappingRow {
+    iscored_username: string;
+    discord_user_id: string;
+}
+
+export async function dbAddUserMapping(iscoredUsername: string, discordUserId: string): Promise<void> {
+    const db = await openDb();
+    try {
+        await db.run(
+            `INSERT INTO user_mappings (iscored_username, discord_user_id) 
+             VALUES (?, ?) 
+             ON CONFLICT(iscored_username) DO UPDATE SET discord_user_id = excluded.discord_user_id`,
+            iscoredUsername, discordUserId
+        );
+    } finally {
+        await db.close();
+    }
+}
+
+export async function dbGetDiscordIdByIscoredName(iscoredUsername: string): Promise<string | null> {
+    const db = await openDb();
+    try {
+        const row = await db.get<UserMappingRow>(
+            "SELECT discord_user_id FROM user_mappings WHERE LOWER(iscored_username) = LOWER(?)",
+            iscoredUsername
+        );
+        return row?.discord_user_id ?? null;
+    } finally {
+        await db.close();
+    }
+}
+
+export async function filterUnmappedUsers(usernames: string[]): Promise<string[]> {
+    const db = await openDb();
+    try {
+        if (usernames.length === 0) return [];
+        
+        const placeholders = usernames.map(() => 'LOWER(?)').join(',');
+        const rows = await db.all<{ iscored_username: string }[]>(
+            `SELECT iscored_username FROM user_mappings WHERE LOWER(iscored_username) IN (${placeholders})`,
+            ...usernames
+        );
+        
+        const mappedNames = new Set(rows.map(r => r.iscored_username.toLowerCase()));
+        return usernames.filter(u => !mappedNames.has(u.toLowerCase()));
+    } finally {
+        await db.close();
+    }
+}
+
+export async function dbGetIscoredNameByDiscordId(discordUserId: string): Promise<string | null> {
+    const db = await openDb();
+    try {
+        const row = await db.get<UserMappingRow>(
+            "SELECT iscored_username FROM user_mappings WHERE discord_user_id = ? LIMIT 1",
+            discordUserId
+        );
+        return row?.iscored_username ?? null;
+    } finally {
+        await db.close();
+    }
+}
+
+// --- Pre-pick Functions ---
+
+export interface PrePickRow {
+    discord_user_id: string;
+    grind_type: string;
+    table_name: string;
+    created_at: string;
+}
+
+export async function setPrePick(discordUserId: string, grindType: string, tableName: string): Promise<void> {
+    const db = await openDb();
+    try {
+        await db.run(
+            `INSERT INTO pre_picks (discord_user_id, grind_type, table_name) 
+             VALUES (?, ?, ?) 
+             ON CONFLICT(discord_user_id, grind_type) DO UPDATE SET table_name = excluded.table_name, created_at = CURRENT_TIMESTAMP`,
+            discordUserId, grindType, tableName
+        );
+    } finally {
+        await db.close();
+    }
+}
+
+export async function getPrePick(discordUserId: string, grindType: string): Promise<PrePickRow | null> {
+    const db = await openDb();
+    try {
+        return await db.get<PrePickRow>(
+            "SELECT * FROM pre_picks WHERE discord_user_id = ? AND grind_type = ?",
+            discordUserId, grindType
+        ) ?? null;
+    } finally {
+        await db.close();
+    }
+}
+
+export async function clearPrePick(discordUserId: string, grindType: string): Promise<void> {
+    const db = await openDb();
+    try {
+        await db.run("DELETE FROM pre_picks WHERE discord_user_id = ? AND grind_type = ?", discordUserId, grindType);
+    } finally {
+        await db.close();
+    }
+}
+
+// --- Eligibility Logic ---
+
+/**
+ * Checks if a table has been played in the last 120 days for a specific grind type.
+ * A table is considered "played" if it exists in the 'games' table with ACTIVE or COMPLETED status
+ * and was created within the last 120 days.
+ */
+export async function checkTableEligibility(tableName: string, grindType: string): Promise<boolean> {
+    const db = await openDb();
+    try {
+        const lookbackDays = 120;
+        const lookbackDate = new Date();
+        lookbackDate.setDate(lookbackDate.getDate() - lookbackDays);
+        const lookbackString = lookbackDate.toISOString().replace('T', ' ').split('.')[0];
+        
+        const row = await db.get<{ count: number }>(
+            `SELECT COUNT(*) as count FROM games 
+             WHERE type = ? 
+             AND (name = ? OR name LIKE ? || ' %') 
+             AND status IN ('ACTIVE', 'COMPLETED') 
+             AND created_at >= ?`,
+            grindType, tableName, tableName, lookbackString
+        );
+        
+        return (row?.count ?? 0) === 0;
+    } finally {
+        await db.close();
+    }
+}
+
+/**
+ * Enhanced version of getRandomCompatibleTable that respects the 120-day Eligibility rule.
+ */
+export async function getRandomCompatibleTableEligible(filterPlatform: 'atgames' | 'vr' | 'vpxs', grindType: string): Promise<TableRow | null> {
+    const db = await openDb();
+    try {
+        const lookbackDays = 120;
+        const lookbackDate = new Date();
+        lookbackDate.setDate(lookbackDate.getDate() - lookbackDays);
+        const lookbackString = lookbackDate.toISOString().replace('T', ' ').split('.')[0];
+
+        // Subquery to find names played in the last 120 days
+        let sql = `
+            SELECT * FROM tables 
+            WHERE name NOT IN (
+                SELECT DISTINCT 
+                    CASE 
+                        WHEN name LIKE '% DG' THEN SUBSTR(name, 1, LENGTH(name) - 3)
+                        WHEN name LIKE '% WG-VPXS' THEN SUBSTR(name, 1, LENGTH(name) - 8)
+                        WHEN name LIKE '% WG-VR' THEN SUBSTR(name, 1, LENGTH(name) - 6)
+                        WHEN name LIKE '% MG' THEN SUBSTR(name, 1, LENGTH(name) - 3)
+                        ELSE name 
+                    END as clean_name
+                FROM games 
+                WHERE type = ? 
+                AND status IN ('ACTIVE', 'COMPLETED') 
+                AND created_at >= ?
+            )
+        `;
+
+        if (filterPlatform === 'atgames') sql += " AND is_atgames = 1";
+        else if (filterPlatform === 'vr') sql += " AND is_wg_vr = 1";
+        else if (filterPlatform === 'vpxs') sql += " AND is_wg_vpxs = 1";
+
+        sql += " ORDER BY RANDOM() LIMIT 1";
+
+        return await db.get<TableRow>(sql, grindType, lookbackString) ?? null;
+    } finally {
+        await db.close();
+    }
+}
+
 // --- Picker Logic Functions ---
 
-export async function setPicker(gameType: string, pickerId: string | null, nominatorId?: string | null): Promise<void> {
+export async function setPicker(gameType: string, pickerId: string | null, nominatorId?: string | null, wonGameId?: string | null, pickerType: 'WINNER' | 'RUNNER_UP' = 'WINNER'): Promise<void> {
     const db = await openDb();
     try {
         const nextQueuedGame = await db.get<GameRow>("SELECT * FROM games WHERE type = ? AND status = 'QUEUED' AND picker_discord_id IS NULL ORDER BY scheduled_to_be_active_at ASC LIMIT 1", gameType);
         if (nextQueuedGame) {
             await db.run(
-                `UPDATE games SET picker_discord_id = ?, nominated_by_discord_id = ?, picker_designated_at = ? WHERE id = ?`,
-                pickerId, nominatorId, new Date().toISOString(), nextQueuedGame.id
+                `UPDATE games SET 
+                    picker_discord_id = ?, 
+                    nominated_by_discord_id = ?, 
+                    picker_type = ?,
+                    won_game_id = ?,
+                    picker_designated_at = ?,
+                    reminder_count = 0,
+                    last_reminded_at = NULL 
+                 WHERE id = ?`,
+                pickerId, nominatorId, pickerType, wonGameId, new Date().toISOString(), nextQueuedGame.id
             );
-            logInfo(`👑 Picker for next ${gameType} game (${nextQueuedGame.name}) set to ${pickerId}.`);
+            logInfo(`👑 Picker for next ${gameType} game (${nextQueuedGame.name}) set to ${pickerId} (${pickerType}).`);
         } else {
             logWarn(`⚠️ Tried to set picker for ${gameType}, but no available game slot is queued.`);
         }
@@ -677,6 +913,15 @@ export async function getAllVisibleGames(): Promise<GameRow[]> {
     const db = await openDb();
     try {
         return await db.all<GameRow[]>("SELECT * FROM games WHERE status IN ('ACTIVE', 'QUEUED', 'COMPLETED')");
+    } finally {
+        await db.close();
+    }
+}
+
+export async function getGameByIscoredId(iscoredId: string): Promise<GameRow | null> {
+    const db = await openDb();
+    try {
+        return await db.get<GameRow>("SELECT * FROM games WHERE iscored_game_id = ?", iscoredId) ?? null;
     } finally {
         await db.close();
     }

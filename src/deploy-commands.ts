@@ -243,6 +243,24 @@ const commands = [
         ],
     },
     {
+        name: 'map-user',
+        description: 'Manually map an iScored username to a Discord ID.',
+        options: [
+            {
+                name: 'iscored-username',
+                type: 3, // STRING
+                description: 'The username exactly as it appears on iScored.',
+                required: true,
+            },
+            {
+                name: 'discord-user',
+                type: 6, // USER
+                description: 'The Discord user to map to.',
+                required: true,
+            }
+        ]
+    },
+    {
         name: 'list-active',
         description: 'Shows the currently active table for a tournament.',
         options: [

@@ -2,21 +2,14 @@
 (None)
 
 # Future Considerations
-3. **AI-Powered Score Verification:** Integrate OCR to automatically verify scores from submitted photos. (Recommendation: Install `tesseract.js`)
-4. **Persistent Live Leaderboards:** Maintain a pinned, auto-updating standings message in each tournament channel.
-5. **Player Profiles & Achievements:** Track all-time wins, "Dynasty" triggers, and unique tables per player with a `/profile` command.
-6. **Proactive Picker DMs:** Send friendly DM reminders to winners before their picking window expires.
-7. **iScored Health Dashboard:** Add a moderator command to monitor site sync status and browser automation health.
-8. **Style Previewer:** Show a preview of the learned table style during the `/pick-table` flow.
-9. **Global "Hall of Fame":** Track arcade-wide records (e.g., all-time high score across all grinds).
-10. **Tournament Seasons:** Implement quarterly leaderboards to give players fresh starts.
-11. **Table "Heat Map":** Suggest tables that haven't been in rotation for a long time.
-12. **Monthly "Themes":** Allow moderators to restrict `/pick-table` choices based on monthly themes (e.g., "90s Bally").
-13. **Multi-Arcade Support:** Refactor config to support managing multiple iScored gamerooms from one instance.
-14. **Last Played:** When picking a game for the next grind, once a title is chosen, the bot should show when the last time the game was played was and ask for confirmation to proceed. This should also be a slash command 'last-played' with parameter 'table-name:' and do a match on the text string entered (in case the exact name of the game played is not found).
+15. **Pre-pick Queue Notifications:** DM users when their pre-pick is successfully applied or if it fails validation during rotation.
 
 # Completed History
-1. [COMPLETED] **Admin Nomination Override:** Moderators can now nominate pickers, bypassing the winner-only restriction.
+1. [COMPLETED] **Pre-pick Queue & Runner-Up Fallback:** Implemented tiered timeouts (1h/30m), interval reminders, and automated pre-pick application.
+2. [COMPLETED] **Identity Discovery Engine:** Proactive iScored-to-Discord mapping via guild member search and `/map-user` command.
+3. [COMPLETED] **Refactored /pick-table:** Unified command for immediate picks and queuing future preferences.
+4. [COMPLETED] **Calendar Year Rule:** Enforced strict yearly table eligibility for all grinds.
+5. [COMPLETED] **Admin Nomination Override:** Moderators can now nominate pickers, bypassing the winner-only restriction.
 2. [COMPLETED] **Channel-Specific Context:** Commands now automatically infer tournament types based on the Discord channel.
 3. [COMPLETED] **Easter Eggs:** The bot now responds to regular messages containing the word "squeal".
 4. [COMPLETED] **Multi-Slot Weekly Grinds:** Support for multiple active games per tournament type.

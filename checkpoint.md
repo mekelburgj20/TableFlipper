@@ -1,58 +1,59 @@
 <!-- AI HANDOVER PROMPT -->
 **Project Status:** 
-"TableFlipper" is a fully functional Discord bot for managing pinball tournaments. The codebase features robust iScored automation, intelligent state reconciliation, and a highly flexible command structure.
+"TableFlipper" has been upgraded with a sophisticated preference-based picking system and a tiered fallback mechanism. The user identity system has transitioned to a database-backed model with automated discovery.
 
 **Recent Work:**
-1.  **Dual-Slot Weekly Grinds:** Refactored maintenance and sync logic to support multiple active tables for a single tournament type (e.g., dual WG-VPXS).
-2.  **Forensic Style Sniffing:** Implemented automated extraction of Community Style IDs from active games to ensure perfect visual persistence across rotations.
-3.  **Non-Tournament Support:** Integrated type 'OTHER' for any unlocked game on iScored, making them available for score submission.
-4.  **Full State Reconciliation:** Updated sync logic to identify and hide 'ghost' games, including those in the hidden queue.
-5.  **Scoreboard Wipe:** Added a CLI utility for clearing the board.
+1.  **Refactored `/pick-table`:** Unified the command to handle both immediate picks and "Pre-pick" queuing. Users can now set preferences at any time.
+2.  **Tiered Timeout & Fallback:** Implemented a 1-hour winner window and 30-minute runner-up window. Added interval reminders (15m/10m) and automated runner-up pivoting.
+3.  **Identity Discovery Engine:** Added proactive iScored-to-Discord mapping that scrapes standings 1 hour before rotation and auto-maps users via guild member search.
+4.  **Calendar Year Eligibility:** Enforced a strict rule that tables cannot be repeated within the same calendar year for a given grind type.
+5.  **Database Migration:** Successfully moved all user mappings into the SQLite database for better performance and reliability.
 
 **Current Context:**
-*   The bot now handles multiple winners and pickers per cycle.
-*   Style learning is board-wide and triggers during every state sync.
-*   Autocomplete is optimized for clean labels and type-specific filtering.
+*   Picking rights are now handled via `picker_type` (WINNER/RUNNER_UP) and `won_game_id` in the DB.
+*   Proactive announcements (10 PM) encourage engagement by highlighting leaders and reminding users to set their picks.
+*   The bot handles unmapped winners by alerting moderators to use the new `/map-user` command.
 
 **Next Actions:**
-1.  **Admin Override:** Implement moderator nomination overrides.
-2.  **OCR Verification:** Research lightweight OCR for automatic score validation.
-3.  **Proactive Picker DMs:** Send friendly DM reminders to winners.
+1.  **Pre-pick DM Notifications:** Notify users when their pre-pick is successfully applied or if it fails the yearly eligibility check during rotation.
+2.  **OCR Verification:** Integrate lightweight OCR for automatic score validation.
+3.  **Live Standings:** Maintain pinned, auto-updating leaderboard messages in tournament channels.
 
 **Files to Watch:**
-*   `src/discordBot.ts` (Command handlers & Autocomplete)
-*   `src/database.ts` (Reconciliation & multi-slot logic)
-*   `src/sync-state.ts` (Board-wide synchronization)
-*   `src/iscored.ts` (Style sniffing & header removal)
+*   `src/timeout.ts` (Tiered timeouts & Reminders)
+*   `src/identity.ts` (Mapping logic & Lead announcements)
+*   `src/database.ts` (Pre-pick storage & Yearly eligibility)
+*   `src/discordBot.ts` (Unified /pick-table flow)
 <!-- END PROMPT -->
 
-# Checkpoint for TableFlipper Project (Update 7)
+# Checkpoint for TableFlipper Project (Update 8)
 
-**Date:** February 23, 2026
+**Date:** February 27, 2026
 
-## Project Summary: Multi-Slot Support & Style Forensic Sniffing
+## Project Summary: Pre-picks, Tiered Timeouts, and Identity Discovery
 
-This update significantly expands the bot's architectural flexibility and visual reliability. It introduces the ability to manage multiple active tournaments of the same type and implements a high-fidelity style learning system that survives game deletions and resets.
+This update introduces a "Set and Forget" picking system and ensures tournament continuity through a robust runner-up fallback system. The bot is now proactive, seeking out player identities and encouraging competition through scheduled announcements.
 
 ### Key Changes Implemented:
 
-#### 1. Dual-Slot Weekly Grinds
-*   **Multi-Active Support**: Refactored the core engine to allow multiple active games for a single grind type (e.g., two concurrent `WG-VPXS` tables).
-*   **Sequential Picking**: If a user wins multiple slots in a cycle, the system correctly tracks their double-pick rights and allows them to perform `/pick-table` twice.
-*   **Aggressive Rollover**: Maintenance now loops through all active games, determines separate winners, and activates the corresponding number of queued games.
+#### 1. Unified Selection Flow (Pre-picks)
+*   **Persistent Preferences**: Users can now run `/pick-table` at any time to "queue" their preference for a grind.
+*   **Instant Activation**: If a winner has a valid pre-pick, the bot activates it immediately upon rotation, eliminating the manual picking delay.
+*   **Yearly Eligibility**: Implemented a strict check to ensure tables aren't repeated within the same calendar year, providing a fresh "season" feel every January.
 
-#### 2. Forensic Style Sniffing & Application
-*   **Fingerprint Extraction**: The bot now scans the `background-image` CSS of every active game to extract the underlying Community Style ID (`style_id`).
-*   **Visual Fidelity**: By storing both the `style_id` and raw CSS overrides, the bot can perfectly recreate an admin's manual styling choices when a game returns to rotation.
-*   **Header Removal Toggle**: Added a global option to automatically strip game logos (header images) after creation, as preferred by the community.
+#### 2. Tiered Fallback Mechanism
+*   **Winner -> Runner-Up Pivot**: If a winner fails to pick within 60 minutes, the bot automatically fetches the standings and pivots picking rights to the 2nd place player.
+*   **Aggressive Reminders**: Implemented interval reminders (every 15m for winners, every 10m for runner-ups) to keep the picking window top-of-mind.
+*   **Auto-Selection Fallback**: If all human pickers fail, the bot selects a random compatible table that hasn't been played this year.
 
-#### 3. Non-Tournament Game Awareness
-*   **Universal Submissions**: The bot now tracks every unlocked game on the board as type `OTHER`. 
-*   **Type 'OTHER' Integration**: Users can now use `/submit-score` for any game on the arcade, even if it's not part of a tournament grind.
+#### 3. Identity discovery & Mapping
+*   **Proactive Mapping**: Added a scheduled job that scrapes active games 1 hour before rotation to find and map new iScored users before they potentially win.
+*   **Guild Member Search**: The bot now searches the Discord server for usernames and nicknames that match iScored profiles to auto-link accounts.
+*   **Moderator Tools**: Added `/map-user` to allow admins to resolve identity conflicts manually.
 
-#### 4. Absolute State Reconciliation
-*   **Ghost Purging**: Fixed an edge case where deleted queued games remained active in the database. Reconciliation now checks the entire iScored board against the local DB and marks any missing entries as `HIDDEN`.
-*   **Scoreboard Wipe**: A new CLI command `npm run scoreboard-wipe` allows for instant clearing of all games on the iScored board.
+#### 4. Scheduled Engagement
+*   **Lead Announcements**: Daily at 10 PM, the bot highlights the top two players for the Daily Grind and reminds everyone to set their table selections.
+*   **Identity Syncs**: Strategic identity scrapes scheduled before DG, WG, and MG rotations.
 
 ## Final Status
-The bot has evolved from a simple tournament manager into a comprehensive arcade automation engine. It is now robust enough to handle custom events, manual board edits, and complex multi-winner scenarios with zero loss of data or visual style.
+TableFlipper is now a "proactive" bot that minimizes manual intervention. By managing user identities and table preferences in advance, the bot ensures that tournament rotations are smooth, timely, and visually consistent.

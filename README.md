@@ -15,9 +15,11 @@ TableFlipper is a Node.js Discord bot designed to automate and manage pinball to
     *   **Delayed Cleanup:** Daily and Weekly tables remain visible (locked) until Wednesday night at 11 PM Central, allowing players to view the week's history.
     *   **Manual Trigger:** Maintenance routines and cleanup sweeps can be manually triggered via moderator-restricted Discord slash commands.
 *   **Dynamic Winner Picking Flow:**
-    *   **Winner Picking Rights:** Tournament winners are granted the exclusive right to pick the next table (for play two days in advance).
-    *   **Dynasty Rule Enforcement:** Prevents consecutive wins from giving picking rights to the same player. Repeat winners must `/nominate-picker` another user.
-    *   **Picker Timeout:** If a designated picker or nominee fails to select a table within 18 hours, the bot automatically selects a random compatible table.
+    *   **Pre-pick Queue:** Users can now set their table preferences in advance using `/pick-table`. If they win, their selection is applied **instantly** without waiting for the manual picking window.
+    *   **Runner-Up Fallback:** If a winner fails to pick a table within 1 hour, picking rights automatically transfer to the runner-up (2nd place). If the runner-up also fails (30 min window), the bot selects a random compatible table.
+    *   **Yearly Eligibility Rule:** Prevents repetitive rotations by enforcing a strict "Calendar Year" rule; a table cannot be selected for a grind if it has already been played in that grind type during the current year.
+    *   **Proactive Identity Mapping:** The bot automatically scrapes active standings 1 hour before rotation and attempts to "auto-map" iScored users to Discord by searching the server for matching names/nicknames.
+    *   **Winner Picking Rights:** Tournament winners are granted the exclusive right to pick the next table.
 *   **Robust iScored Automation:**
     *   **Tag-Based Management:** Uses iScored Tags (e.g., `DG`, `WG-VPXS`) as the primary key for tournament identification, allowing for clean game names without mandatory suffixes.
     *   **Style Sniffing & Learning:** Automatically "sniffs" the Community Style ID from active games and saves them to the local database. Re-applies these styles (plus custom CSS tweaks) during future rotations.
@@ -29,6 +31,7 @@ TableFlipper is a Node.js Discord bot designed to automate and manage pinball to
         *   ⚠️ **Note**: Discord caches autocomplete results aggressively. If you switch the `grind-type` and the list doesn't update, you must **restart the slash command** (hit Esc and type it again) to see the correct tables.
     *   **`/pick-table`**: Allows the designated winner to choose the next table. Weekly and Monthly picks activate immediately; Daily picks have a 24-hour buffer.
     *   **`/nominate-picker`**: Allows a repeat winner to nominate another player to pick the table.
+    *   **`/map-user`**: (Moderator only) Manually maps an iScored username to a Discord account to ensure picking rights and history tracking work correctly.
     *   **`/list-active`**: Shows the currently active table for any or all tournament types.
     *   **`/list-winners`**: Lists past winners (chronological) or a leaderboard (win counts) for tournaments. Ephemeral results.
     *   **`/list-scores`**: High-speed lookup of current standings. View all active grinds at once, or filter by `grind-type` or `table-name`.
@@ -90,6 +93,7 @@ npm run deploy-commands
 
 *   `npm run sync-tables`: Updates the `tables` database from the Google Sheet catalog.
 *   `npm run sync-state`: Scrapes iScored to align the database with the live site (Active/Queued/Completed/Other games).
+*   `npm run migrate-user-mapping`: Migrates existing user mappings from `userMapping.json` into the SQLite database.
 *   `npm run scoreboard-wipe`: (CLI only) Deletes EVERY game currently on the iScored lineup. Use with extreme caution.
 *   `npm run build`: Compiles TypeScript to the `dist/` folder.
 

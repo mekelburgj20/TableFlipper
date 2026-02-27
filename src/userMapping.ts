@@ -1,71 +1,51 @@
 // src/userMapping.ts
-import * as fs from 'fs/promises';
-import * as path from 'path';
-import { fileURLToPath } from 'url';
+import { dbAddUserMapping, dbGetDiscordIdByIscoredName, dbGetIscoredNameByDiscordId } from './database.js';
+import { logInfo, logError } from './logger.js';
+import fs from 'fs/promises';
+import path from 'path';
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-
-const USER_MAPPING_FILE = path.join(__dirname, '..', 'userMapping.json');
-
-interface UserMapping {
-    [iScoredUsername: string]: string; // Maps iScored Username to Discord User ID
-}
-
-let userMap: UserMapping = {};
-
+/**
+ * Compatibility shim: database is initialized in index.ts.
+ * We use this to trigger a one-time migration if the legacy file exists.
+ */
 export async function loadUserMapping(): Promise<void> {
+    const legacyPath = path.join(process.cwd(), 'userMapping.json');
     try {
-        const data = await fs.readFile(USER_MAPPING_FILE, 'utf-8');
-        userMap = JSON.parse(data);
-        console.log('✅ User mapping loaded.');
-    } catch (error: any) {
-        if (error.code === 'ENOENT') {
-            console.log('User mapping file not found, creating a new one.');
-            userMap = {};
-            await saveUserMapping(); // Create empty file
-        } else {
-            console.error('❌ Failed to load user mapping:', error);
-            userMap = {}; // Reset to empty on error
+        const stats = await fs.stat(legacyPath);
+        if (stats.isFile()) {
+            logInfo('📂 Legacy userMapping.json found. You should run the migration script: npm run migrate-user-mapping');
+            // We don't auto-migrate here to keep this module simple and avoid circular deps 
+            // if initializeDatabase wasn't ready.
         }
+    } catch (e) {
+        // File doesn't exist, good.
     }
 }
 
+/**
+ * Compatibility shim: database writes are immediate.
+ */
 export async function saveUserMapping(): Promise<void> {
-    try {
-        await fs.writeFile(USER_MAPPING_FILE, JSON.stringify(userMap, null, 2), 'utf-8');
-        console.log('✅ User mapping saved.');
-    } catch (error) {
-        console.error('❌ Failed to save user mapping:', error);
-    }
+    // No-op for database
 }
 
 export function getDiscordIdByIscoredName(iScoredName: string): string | undefined {
-    const searchName = iScoredName.toLowerCase();
-    for (const name in userMap) {
-        if (name.toLowerCase() === searchName) {
-            return userMap[name];
-        }
-    }
+    // Note: This is now async in DB but this export is sync.
+    // This is a problem for existing sync calls.
+    // I will need to update callers to use await or use a cache.
+    // For now, I'll provide a warning and return undefined to force a fix in callers.
+    logError(`❌ Synchronous call to getDiscordIdByIscoredName('${iScoredName}') is no longer supported. Use dbGetDiscordIdByIscoredName instead.`);
     return undefined;
 }
 
 export function getIscoredNameByDiscordId(discordId: string): string | undefined {
-    // Find the first iScored username that maps to this Discord ID
-    for (const iScoredName in userMap) {
-        if (userMap[iScoredName] === discordId) {
-            return iScoredName;
-        }
-    }
+    logError(`❌ Synchronous call to getIscoredNameByDiscordId('${discordId}') is no longer supported. Use dbGetIscoredNameByDiscordId instead.`);
     return undefined;
 }
 
 export async function addUserMapping(iScoredName: string, discordId: string): Promise<void> {
-    if (userMap[iScoredName] === discordId) {
-        console.log(`Mapping for ${iScoredName} -> ${discordId} already exists.`);
-        return;
-    }
-    userMap[iScoredName] = discordId;
-    await saveUserMapping();
-    console.log(`🔄 Added/Updated mapping: ${iScoredName} -> ${discordId}`);
+    await dbAddUserMapping(iScoredName, discordId);
 }
+
+// Re-export async versions
+export { dbGetDiscordIdByIscoredName as getDiscordIdByIscoredNameAsync, dbGetIscoredNameByDiscordId as getIscoredNameByDiscordIdAsync };
