@@ -4,42 +4,63 @@
 
 TableFlipper is a Node.js Discord bot designed to automate and manage pinball tournaments hosted on the iScored.info platform. It supports Daily, Weekly, and Monthly tournament formats, automating score submission, game rotation, winner announcements, and providing rich user interaction through slash commands. The bot leverages Playwright for robust browser automation and interaction with iScored.info.
 
-## 2. Features
+## 2. Core Capabilities
 
-*   **Automated Tournament Management:**
-    *   **Multi-Format Support:** Manages Daily Grind (`DG`), Weekly Grinds (`WG-VPXS`, `WG-VR`), and Monthly Grind (`MG`) tournaments.
-    *   **Dual-Slot Weekly Grind:** Supports multiple active games for the same tournament type (e.g., two `WG-VPXS` tables running simultaneously).
-    *   **Non-Tournament Support:** Automatically identifies and tracks non-tournament games (type `OTHER`), allowing score submission for any unlocked game on the board.
-    *   **Channel-Specific Announcements:** Supports dedicated Discord webhooks for each tournament type, allowing winners and status updates to be routed to specific channels (e.g., `#daily-grind`, `#monthly-grind`) with a general fallback.
-    *   **Scheduled Maintenance:** Automatically and reliably locks completed games, accurately determines winners, unlocks new games, and sends Discord announcements based on predefined schedules (Daily at 12 AM Central, Weekly on Wednesdays, Monthly on the 1st).
-    *   **Delayed Cleanup:** Daily and Weekly tables remain visible (locked) until Wednesday night at 11 PM Central, allowing players to view the week's history.
-    *   **Manual Trigger:** Maintenance routines and cleanup sweeps can be manually triggered via moderator-restricted Discord slash commands.
-*   **Dynamic Winner Picking Flow:**
-    *   **Pre-pick Queue:** Users can now set their table preferences in advance using `/pick-table`. If they win, their selection is applied **instantly** without waiting for the manual picking window.
-    *   **Runner-Up Fallback:** If a winner fails to pick a table within 1 hour, picking rights automatically transfer to the runner-up (2nd place). If the runner-up also fails (30 min window), the bot selects a random compatible table.
-    *   **Yearly Eligibility Rule:** Prevents repetitive rotations by enforcing a strict "Calendar Year" rule; a table cannot be selected for a grind if it has already been played in that grind type during the current year.
-    *   **Proactive Identity Mapping:** The bot automatically scrapes active standings 1 hour before rotation and attempts to "auto-map" iScored users to Discord by searching the server for matching names/nicknames.
-    *   **Winner Picking Rights:** Tournament winners are granted the exclusive right to pick the next table.
-*   **Robust iScored Automation:**
-    *   **Tag-Based Management:** Uses iScored Tags (e.g., `DG`, `WG-VPXS`) as the primary key for tournament identification, allowing for clean game names without mandatory suffixes.
-    *   **Style Sniffing & Learning:** Automatically "sniffs" the Community Style ID from active games and saves them to the local database. Re-applies these styles (plus custom CSS tweaks) during future rotations.
-    *   **Automated Header Removal:** Optional global configuration to automatically remove game logos (header images) after creation for a cleaner, community-preferred look.
-    *   **Reliable Interaction:** Uses direct browser execution and modal handling to navigate complex Single Page Application transitions, bypassing "busy" overlays and UI lag.
-    *   **Full State Reconciliation:** The sync routine automatically identifies and hides "ghost" games (including queued entries) that are no longer present on the live iScored lineup.
-*   **Comprehensive Discord Slash Commands:**
-    *   **`/submit-score`**: Submit your score and a photo for validation. Choose to submit by tournament type (`grind-type`) or specific table name (`table-name`). Confirmations are interactive.
-        *   ⚠️ **Note**: Discord caches autocomplete results aggressively. If you switch the `grind-type` and the list doesn't update, you must **restart the slash command** (hit Esc and type it again) to see the correct tables.
-    *   **`/pick-table`**: Allows the designated winner to choose the next table. Weekly and Monthly picks activate immediately; Daily picks have a 24-hour buffer.
-    *   **`/nominate-picker`**: Allows a repeat winner to nominate another player to pick the table.
-    *   **`/map-user`**: (Moderator only) Manually maps an iScored username to a Discord account to ensure picking rights and history tracking work correctly.
-    *   **`/list-active`**: Shows the currently active table for any or all tournament types.
-    *   **`/list-winners`**: Lists past winners (chronological) or a leaderboard (win counts) for tournaments. Ephemeral results.
-    *   **`/list-scores`**: High-speed lookup of current standings. View all active grinds at once, or filter by `grind-type` or `table-name`.
-    *   **`/view-stats`**: Displays play count and high score records for a specific table.
-    *   **`/run-cleanup`**: (Moderator only) Manually sweeps away old locked or stray visible games.
-    *   **`/run-maintenance-[dg/weekly/monthly]`**: (Moderator only) Manually triggers rotation for specific tournament types.
-    *   **`/sync-state`**: (Moderator only) Manually synchronizes the bot's database with the live iScored lineup and performs reconciliation.
-    *   **`/pause-pick`**: (Moderator only) Overwrites the next scheduled tournament slot with a special game choice.
+### 🏆 Tournament & Lineup Automation
+*   **Multi-Grind Support**: Full automation for Daily Grinds (DG), Weekly Grinds (VPXS & VR), and Monthly Grinds (MG).
+*   **Multi-Slot Flexibility**: Supports multiple active games per tournament type (e.g., dual Weekly Grinds).
+*   **Dynamic iScored Management**: Automatically locks finished games, determines winners, and activates new tables.
+*   **Forensic Style Learning**: "Sniffs" Community Style IDs and CSS overrides from active games to ensure perfect visual persistence across rotations.
+*   **Physical Lineup Repositioning**: Automatically reorders games on the iScored board (e.g., pushing the active DG to the far left).
+*   **State Reconciliation**: Automatically identifies and hides "ghost" games or manual edits to keep the database and iScored in sync.
+*   **Automatic Header Stripping**: Option to automatically remove game logos/headers for a cleaner community-preferred aesthetic.
+
+### 🎲 Smart Table Selection & Rotation
+*   **Pre-pick Queue**: Users can set table preferences in advance via `/pick-table`. Selections are applied instantly upon winning.
+*   **Tiered Runner-Up Fallback**: If a winner fails to pick within 1 hour, picking rights pivot to the runner-up (30 min window).
+*   **120-Day Eligibility Rule**: Prevents repetitive rotations by blocking tables played in the last 120 days.
+*   **Surprise Me**: Automated random selection based on platform compatibility and play history.
+*   **Admin Nomination**: Moderators can manually designate pickers, bypassing the standard winner-only flow.
+
+### 📊 Scoring & Competition
+*   **Unified Score Submission**: Submit scores and photo validation directly from Discord to iScored.
+*   **Real-time Standings**: Instant lookup of current tournament leaders via `/list-scores`.
+*   **Historical Tracking**: View past winners, win counts, and all-time leaderboard rankings.
+*   **Table Statistics**: Detailed stats per table, including play counts and all-time high scores.
+*   **Non-Tournament Tracking**: Automatically detects and supports scoring for any unlocked "Other" games on the board.
+
+### 👤 Identity & User Management
+*   **Database-Backed Mapping**: Reliable storage linking iScored usernames to Discord accounts.
+*   **Proactive Identity Mapping**: Automatically scrapes standings and searches the Discord server to auto-map users before they win.
+*   **Manual Mapping**: `/map-user` command for moderators to resolve identity or naming conflicts.
+
+### 🛠️ Administrative & Moderation
+*   **Full System Backup**: One-command preservation of database, scores, photos, and live iScored state.
+*   **Wipe & Restore**: Ability to completely reset the iScored board or restore a previous state from backup.
+*   **Manual Overrides**: Commands to force-trigger maintenance, cleanup, or inject special games into the schedule.
+*   **Detailed Logging**: Comprehensive diagnostic logs for browser automation and system events.
+
+### ⏰ Scheduled Notifications & Engagement
+*   **Lead Announcements**: Daily 10 PM alerts highlighting leaders and encouraging participation.
+*   **Interval Reminders**: Automated Discord nudges for pickers at 15-minute and 10-minute intervals.
+*   **Maintenance Windows**: Reliable execution of rotations (Daily 12 AM, Weekly 11 PM Wed, Monthly 1st).
+*   **Cleanliness Syncs**: Hourly background style learning and scheduled mid-week game cleanup.
+
+### 💬 Comprehensive Discord Slash Commands
+*   **`/submit-score`**: Submit your score and a photo for validation. Choose to submit by tournament type (`grind-type`) or specific table name (`table-name`).
+*   **`/pick-table`**: Unified command for designating winners or queuing future preferences. Includes "Surprise Me" random selection.
+*   **`/nominate-picker`**: Allows a repeat winner to nominate another player to pick the next table.
+*   **`/map-user`**: (Moderator only) Manually maps an iScored username to a Discord account to ensure picking rights and history tracking.
+*   **`/list-active`**: Shows the currently active table for any or all tournament types.
+*   **`/list-winners`**: Lists past winners or a win-count leaderboard.
+*   **`/list-scores`**: High-speed lookup of current standings for any active grind.
+*   **`/view-stats`**: Displays play count and high score records for a specific table.
+*   **`/run-cleanup`**: (Moderator only) Manually sweeps away old locked or stray visible games.
+*   **`/run-maintenance-[dg/weekly/monthly]`**: (Moderator only) Manually triggers rotation for specific tournament types.
+*   **`/sync-state`**: (Moderator only) Manually synchronizes the bot's database with the live iScored lineup.
+*   **`/pause-pick`**: (Moderator only) Overwrites the next scheduled tournament slot with a special game choice.
+*   **`/create-backup`**: (Moderator only) Triggers a full system state backup.
+
 *   **Data Management:**
     *   **Automatic Initialization:** The SQLite database (`data/tableflipper.db`) is automatically created and initialized with the correct schema the first time the bot starts.
     *   **Local Persistence:** All tournament history and user mappings are stored locally.
