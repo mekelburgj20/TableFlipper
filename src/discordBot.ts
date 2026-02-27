@@ -4,7 +4,7 @@ import fs from 'fs';
 import * as path from 'path';
 import { loginToIScored, createGame, submitScoreToIscored } from './iscored.js';
 import { getIscoredNameByDiscordId, getDiscordIdByIscoredName } from './userMapping.js';
-import { getPicker, setPicker, updateQueuedGame, getNextQueuedGame, searchTables, getTable, getRecentGameNames, getRandomCompatibleTable, injectSpecialGame, getActiveGames, searchGamesByStatus, getGameByNameAndStatus, getAllActiveGames } from './database.js';
+import { getPicker, setPicker, updateQueuedGame, getNextQueuedGame, searchTables, getTable, getRecentGameNames, getRandomCompatibleTable, injectSpecialGame, getActiveGames, searchGamesByStatus, getGameByNameAndStatus, getAllActiveGames, getGameByPicker } from './database.js';
 import { getLastWinner, getHistory, getTableStats, getRecentWinners } from './history.js';
 import { getTablesFromSheet } from './googleSheet.js';
 import { getStandingsFromApi } from './api.js';
@@ -238,12 +238,11 @@ export function startDiscordBot() {
 
             await interaction.deferReply();
 
-            // 1. Find the next queued game for this type and check if the user is the picker
-            const nextGame = await getNextQueuedGame(gameType);
+            // 1. Find the next queued game for this type assigned to this user
+            const nextGame = await getGameByPicker(gameType, interaction.user.id);
 
-            if (!nextGame || !nextGame.picker_discord_id || nextGame.picker_discord_id !== interaction.user.id) {
-                logInfo(`❌ /pick-table authorization failed for user ${interaction.user.id}.`);
-                logInfo(`   - Next game picker slot: ${nextGame?.picker_discord_id}`);
+            if (!nextGame) {
+                logInfo(`❌ /pick-table authorization failed for user ${interaction.user.id}. No assigned slot found for ${gameType}.`);
                 await interaction.editReply(`You are not authorized to pick a table for the ${gameType} tournament right now.`);
                 return;
             }
@@ -377,7 +376,8 @@ export function startDiscordBot() {
                 const { id: iscoredGameId, scheduledTime } = await createGame(page, newGameName, gameType, styleId); 
                 
                 // 5. Update the game entry in our database
-                await updateQueuedGame(nextGame.id, tableName!, iscoredGameId);
+                const newStatus = gameType === 'DG' ? 'QUEUED' : 'ACTIVE';
+                await updateQueuedGame(nextGame.id, tableName!, iscoredGameId, newStatus);
 
                 // Format the activation message
                 let timeMessage = '';
@@ -712,13 +712,7 @@ export function startDiscordBot() {
         }
         
         else if (commandName === 'list-scores') {
-            let gameType = interaction.options.getString('grind-type');
-
-            // Channel-specific context inference
-            if (!gameType && interaction.channel && 'name' in interaction.channel) {
-                gameType = getGameTypeFromChannel(interaction.channel.name);
-            }
-
+            const gameType = interaction.options.getString('grind-type');
             const tableName = interaction.options.getString('table-name');
             await interaction.deferReply({ ephemeral: true });
 
@@ -726,7 +720,9 @@ export function startDiscordBot() {
                 let targetGames: { name: string, type?: string }[] = [];
 
                 if (tableName) {
-                    targetGames = [{ name: tableName }];
+                    // Try to find the game to get its type tag
+                    const game = await getGameByNameAndStatus(tableName, ['ACTIVE', 'COMPLETED']);
+                    targetGames = [{ name: tableName, type: game?.type }];
                 } else if (gameType) {
                     const activeGames = await getActiveGames(gameType);
                     if (activeGames.length > 0) {
@@ -750,7 +746,8 @@ export function startDiscordBot() {
                 for (const game of targetGames) {
                     const standings = await getStandingsFromApi(game.name);
                     
-                    const title = game.type ? `Standings: ${game.type} (${game.name})` : `Standings: ${game.name}`;
+                    const typeTag = game.type ? `[${game.type}] ` : '';
+                    const title = `Standings: ${typeTag}${game.name}`;
                     const embed = new EmbedBuilder()
                         .setTitle(title)
                         .setColor(0x00AE86)
@@ -875,7 +872,13 @@ export function startDiscordBot() {
         }
         
         else if (commandName === 'submit-score') { 
-            const gameType = interaction.options.getString('grind-type');
+            let gameType = interaction.options.getString('grind-type');
+
+            // Channel-specific context inference
+            if (!gameType && interaction.channel && 'name' in interaction.channel) {
+                gameType = getGameTypeFromChannel(interaction.channel.name);
+            }
+
             let tableName = interaction.options.getString('table-name');
             const score = interaction.options.getInteger('score', true);
             const photoAttachment = interaction.options.getAttachment('photo', true);

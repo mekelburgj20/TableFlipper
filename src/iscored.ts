@@ -866,9 +866,19 @@ export async function createGame(page: Page, gameName: string, grindType: string
             await lockGame(page, newlyCreatedGame);
             logInfo(`✅ Game '${fullGameName}' created, hidden and locked (DG buffer active).`);
             
-            const centralDateString = new Date().toLocaleDateString('en-US', { timeZone: 'America/Chicago' });
-            const centralDate = new Date(centralDateString);
-            showDateTime = new Date(centralDate.getFullYear(), centralDate.getMonth(), centralDate.getDate() + 1, 0, 0, 0);
+            const now = new Date();
+            const chicagoStr = now.toLocaleString('en-US', { timeZone: 'America/Chicago', hour12: false });
+            const [datePart] = chicagoStr.split(', ');
+            const [m, d, y] = datePart.split('/').map(Number);
+            
+            // Create date for Tomorrow at Midnight Central
+            const target = new Date(y, m - 1, d + 1, 0, 0, 0);
+            const actualChicago = target.toLocaleString('en-US', { timeZone: 'America/Chicago', hour12: false });
+            const [actualDate, actualTime] = actualChicago.split(', ');
+            const [h] = actualTime.split(':').map(Number);
+            
+            target.setHours(target.getHours() - h);
+            showDateTime = target;
             
             await scheduleGameShow(newlyCreatedGame.name, showDateTime);
         } else {

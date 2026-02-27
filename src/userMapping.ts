@@ -41,7 +41,13 @@ export async function saveUserMapping(): Promise<void> {
 }
 
 export function getDiscordIdByIscoredName(iScoredName: string): string | undefined {
-    return userMap[iScoredName];
+    const searchName = iScoredName.toLowerCase();
+    for (const name in userMap) {
+        if (name.toLowerCase() === searchName) {
+            return userMap[name];
+        }
+    }
+    return undefined;
 }
 
 export function getIscoredNameByDiscordId(discordId: string): string | undefined {

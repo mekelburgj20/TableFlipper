@@ -54,7 +54,12 @@ export async function checkPickerTimeouts() {
                     const { id: iscoredGameId } = await createGame(page, newGameName, gameType);
 
                     // 3. Update the game in the database (keeping base name in DB, createGame adds suffix for iScored)
-                    await updateQueuedGame(game.id, newGameName, iscoredGameId);
+                    // We set status to ACTIVE because Weekly and Monthly are activated immediately on pick.
+                    // For DG, it technically sits in QUEUED, but the maintenance loop normally moves it to ACTIVE.
+                    // Actually, createGame for DG handles its own scheduling.
+                    // However, we want these timeout picks to show up as ACTIVE if they are meant to be live.
+                    const newStatus = gameType === 'DG' ? 'QUEUED' : 'ACTIVE';
+                    await updateQueuedGame(game.id, newGameName, iscoredGameId, newStatus);
 
                     // 4. Announce it
                     const fullGameName = `${newGameName} ${gameType}`;

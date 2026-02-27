@@ -3,6 +3,7 @@ import { open, Database } from 'sqlite';
 import * as path from 'path';
 import { promises as fs } from 'fs';
 import { v4 as uuidv4 } from 'uuid';
+import { logInfo, logWarn } from './logger.js';
 
 // Define the path for the database file
 const DB_DIR = path.join(process.cwd(), 'data');
@@ -411,9 +412,25 @@ export async function createGameEntry(game: Omit<GameRow, 'id' | 'created_at' | 
         } else if (game.type === 'DG') {
             // DG has a 1-day buffer (it's picked 2 days in advance, so it sits in QUEUED for a day)
             // We set the start time to exactly 12:00 AM Central, 2 days from now.
-            const centralDateString = new Date().toLocaleDateString('en-US', { timeZone: 'America/Chicago' });
-            const centralDate = new Date(centralDateString);
-            scheduledTime = new Date(centralDate.getFullYear(), centralDate.getMonth(), centralDate.getDate() + 2, 0, 0, 0);
+            const now = new Date();
+            
+            // 1. Get the current date in Chicago
+            const chicagoStr = now.toLocaleString('en-US', { timeZone: 'America/Chicago', hour12: false });
+            const [datePart] = chicagoStr.split(', ');
+            const [m, d, y] = datePart.split('/').map(Number);
+            
+            // 2. Create a date object for Midnight in the future (this starts in server-local time)
+            const target = new Date(y, m - 1, d + 2, 0, 0, 0);
+            
+            // 3. Adjust for the difference between server-local and Chicago time
+            const actualChicago = target.toLocaleString('en-US', { timeZone: 'America/Chicago', hour12: false });
+            const [actualDate, actualTime] = actualChicago.split(', ');
+            const [h] = actualTime.split(':').map(Number);
+            
+            // If 'h' is 2, it means our server-local midnight is 2:00 AM Central. 
+            // We subtract those 2 hours to snap to exactly 12:00 AM Central.
+            target.setHours(target.getHours() - h);
+            scheduledTime = target;
         } else {
             // Weekly and Monthly grinds are active immediately upon being picked
             scheduledTime = new Date();
@@ -500,14 +517,15 @@ export async function updateGameStatus(id: string, status: GameRow['status']): P
     }
 }
 
-export async function updateQueuedGame(gameId: string, newName: string, iscoredGameId: string): Promise<void> {
+export async function updateQueuedGame(gameId: string, newName: string, iscoredGameId: string, newStatus?: GameRow['status']): Promise<void> {
     const db = await openDb();
     try {
+        const statusSql = newStatus ? `, status = '${newStatus}'` : '';
         await db.run(
-            `UPDATE games SET name = ?, iscored_game_id = ?, picker_discord_id = NULL, nominated_by_discord_id = NULL WHERE id = ?`,
+            `UPDATE games SET name = ?, iscored_game_id = ?, picker_discord_id = NULL, nominated_by_discord_id = NULL ${statusSql} WHERE id = ?`,
             newName, iscoredGameId, gameId
         );
-        console.log(`✅ Updated queued game ${gameId} with new name: ${newName}`);
+        logInfo(`✅ Updated queued game ${gameId} with new name: ${newName}${newStatus ? ` and status: ${newStatus}` : ''}`);
     } finally {
         await db.close();
     }
@@ -524,9 +542,9 @@ export async function setPicker(gameType: string, pickerId: string | null, nomin
                 `UPDATE games SET picker_discord_id = ?, nominated_by_discord_id = ?, picker_designated_at = ? WHERE id = ?`,
                 pickerId, nominatorId, new Date().toISOString(), nextQueuedGame.id
             );
-            console.log(`👑 Picker for next ${gameType} game (${nextQueuedGame.name}) set to ${pickerId}.`);
+            logInfo(`👑 Picker for next ${gameType} game (${nextQueuedGame.name}) set to ${pickerId}.`);
         } else {
-            console.warn(`⚠️ Tried to set picker for ${gameType}, but no available game slot is queued.`);
+            logWarn(`⚠️ Tried to set picker for ${gameType}, but no available game slot is queued.`);
         }
     } finally {
         await db.close();
@@ -537,6 +555,15 @@ export async function getPicker(gameType: string): Promise<GameRow | null> {
     const db = await openDb();
     try {
         return await db.get<GameRow>(`SELECT * FROM games WHERE type = ? AND status = 'QUEUED' AND picker_discord_id IS NOT NULL ORDER BY scheduled_to_be_active_at ASC LIMIT 1`, gameType) ?? null;
+    } finally {
+        await db.close();
+    }
+}
+
+export async function getGameByPicker(gameType: string, pickerId: string): Promise<GameRow | null> {
+    const db = await openDb();
+    try {
+        return await db.get<GameRow>(`SELECT * FROM games WHERE type = ? AND status = 'QUEUED' AND picker_discord_id = ? ORDER BY scheduled_to_be_active_at ASC LIMIT 1`, gameType, pickerId) ?? null;
     } finally {
         await db.close();
     }
