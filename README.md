@@ -6,7 +6,7 @@ TableFlipper is a Node.js Discord bot designed to automate and manage pinball to
 
 ## 2. Core Capabilities
 
-### 🏆 Tournament & Lineup Automation
+### Tournament & Lineup Automation
 *   **Multi-Grind Support**: Full automation for Daily Grinds (DG), Weekly Grinds (VPXS & VR), and Monthly Grinds (MG).
 *   **Multi-Slot Flexibility**: Supports multiple active games per tournament type (e.g., dual Weekly Grinds).
 *   **Dynamic iScored Management**: Automatically locks finished games, determines winners, and activates new tables.
@@ -15,38 +15,38 @@ TableFlipper is a Node.js Discord bot designed to automate and manage pinball to
 *   **State Reconciliation**: Automatically identifies and hides "ghost" games or manual edits to keep the database and iScored in sync.
 *   **Automatic Header Stripping**: Option to automatically remove game logos/headers for a cleaner community-preferred aesthetic.
 
-### 🎲 Smart Table Selection & Rotation
+### Smart Table Selection & Rotation
 *   **Pre-pick Queue**: Users can set table preferences in advance via `/pick-table`. Selections are applied instantly upon winning.
 *   **Tiered Runner-Up Fallback**: If a winner fails to pick within 1 hour, picking rights pivot to the runner-up (30 min window).
 *   **120-Day Eligibility Rule**: Prevents repetitive rotations by blocking tables played in the last 120 days.
 *   **Surprise Me**: Automated random selection based on platform compatibility and play history.
 *   **Admin Nomination**: Moderators can manually designate pickers, bypassing the standard winner-only flow.
 
-### 📊 Scoring & Competition
+### Scoring & Competition
 *   **Unified Score Submission**: Submit scores and photo validation directly from Discord to iScored.
 *   **Real-time Standings**: Instant lookup of current tournament leaders via `/list-scores`.
 *   **Historical Tracking**: View past winners, win counts, and all-time leaderboard rankings.
 *   **Table Statistics**: Detailed stats per table, including play counts and all-time high scores.
 *   **Non-Tournament Tracking**: Automatically detects and supports scoring for any unlocked "Other" games on the board.
 
-### 👤 Identity & User Management
+### Identity & User Management
 *   **Database-Backed Mapping**: Reliable storage linking iScored usernames to Discord accounts.
 *   **Proactive Identity Mapping**: Automatically scrapes standings and searches the Discord server to auto-map users before they win.
 *   **Manual Mapping**: `/map-user` command for moderators to resolve identity or naming conflicts.
 
-### 🛠️ Administrative & Moderation
+### Administrative & Moderation
 *   **Full System Backup**: One-command preservation of database, scores, photos, and live iScored state.
 *   **Wipe & Restore**: Ability to completely reset the iScored board or restore a previous state from backup.
 *   **Manual Overrides**: Commands to force-trigger maintenance, cleanup, or inject special games into the schedule.
 *   **Detailed Logging**: Comprehensive diagnostic logs for browser automation and system events.
 
-### ⏰ Scheduled Notifications & Engagement
+### Scheduled Notifications & Engagement
 *   **Lead Announcements**: Daily 10 PM alerts highlighting leaders and encouraging participation.
 *   **Interval Reminders**: Automated Discord nudges for pickers at 15-minute and 10-minute intervals.
 *   **Maintenance Windows**: Reliable execution of rotations (Daily 12 AM, Weekly 11 PM Wed, Monthly 1st).
 *   **Cleanliness Syncs**: Hourly background style learning and scheduled mid-week game cleanup.
 
-### 💬 Comprehensive Discord Slash Commands
+### Comprehensive Discord Slash Commands
 *   **`/submit-score`**: Submit your score and a photo for validation. Choose to submit by tournament type (`grind-type`) or specific table name (`table-name`).
 *   **`/pick-table`**: Unified command for designating winners or queuing future preferences. Includes "Surprise Me" random selection.
 *   **`/nominate-picker`**: Allows a repeat winner to nominate another player to pick the next table.
@@ -127,7 +127,7 @@ Backups are triggered via a Discord slash command (Moderator only):
 *   `/create-backup`: Creates a timestamped folder in the `backups/` directory (e.g., `backups/2026-02-19_14-30-00`). This process first synchronizes the tournament state, then scrapes the entire iScored lineup.
 
 ### Restoring a Backup
-**⚠️ Warning:** Restoring is a destructive action. It will **wipe the ENTIRE iScored lineup** (deleting all games) and overwrite the local database. It should only be performed when the server is stopped or maintenance mode is active.
+**Warning:** Restoring is a destructive action. It will **wipe the ENTIRE iScored lineup** (deleting all games) and overwrite the local database. It should only be performed when the server is stopped or maintenance mode is active.
 
 To restore a backup, use the CLI command from the server terminal:
 ```bash
