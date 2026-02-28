@@ -6,7 +6,7 @@ import { initializeDatabase } from './database.js';
 import cron from 'node-cron';
 import { checkPickerTimeouts } from './timeout.js';
 import { reconcileUserMappings, announceLeadsAndRemind } from './identity.js';
-import { logInfo, logError } from './logger.js';
+import { logInfo, logError, logDebug } from './logger.js';
 
 async function main() {
     logInfo('🤖 TableFlipper Bot starting...');
@@ -147,7 +147,7 @@ async function main() {
 
         // Picker timeout check & reminders (Every 5 minutes)
         cron.schedule('*/5 * * * *', async () => {
-            logInfo('⏰ Kicking off 5-minute picker timeout and reminder check...');
+            logDebug('⏰ Kicking off 5-minute picker timeout and reminder check...');
             try {
                 const guild = await getGuild();
                 await checkPickerTimeouts(guild);

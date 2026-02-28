@@ -20,7 +20,7 @@ import {
 import { createGame, loginToIScored } from './iscored.js';
 import { sendDiscordNotification } from './discord.js';
 import { getStandingsFromApi } from './api.js';
-import { logInfo, logError, logWarn } from './logger.js';
+import { logInfo, logError, logWarn, logDebug } from './logger.js';
 import { notifyUnmappedWinner } from './identity.js';
 import * as path from 'path';
 
@@ -32,7 +32,7 @@ export async function checkPickerTimeouts(guild: Guild | null) {
         return;
     }
 
-    logInfo('⏳ Checking for picker timeouts and reminders...');
+    logDebug('⏳ Checking for picker timeouts and reminders...');
 
     for (const gameType of TIMEOUT_GAME_TYPES) {
         // Updated getPicker in database.ts should now return the first slot with a picker

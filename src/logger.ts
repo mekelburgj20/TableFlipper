@@ -3,24 +3,43 @@ import path from 'path';
 
 const LOG_FILE = path.join(process.cwd(), 'data', 'bot.log');
 
-export function log(message: string, level: 'INFO' | 'ERROR' | 'WARN' = 'INFO') {
-    const timestamp = new Date().toISOString();
-    const logEntry = `[${timestamp}] [${level}] ${message}
-`;
-    
-    // Log to console
-    if (level === 'ERROR') {
-        console.error(logEntry.trim());
-    } else {
-        console.log(logEntry.trim());
-    }
+const LOG_LEVELS = {
+    'DEBUG': 0,
+    'INFO': 1,
+    'WARN': 2,
+    'ERROR': 3
+};
 
-    // Log to file
+type LogLevel = keyof typeof LOG_LEVELS;
+
+const CURRENT_LOG_LEVEL = (process.env.LOG_LEVEL?.toUpperCase() as LogLevel) || 'INFO';
+
+export function log(message: string, level: LogLevel = 'INFO') {
+    const currentLevelValue = LOG_LEVELS[CURRENT_LOG_LEVEL] ?? 1;
+    const incomingLevelValue = LOG_LEVELS[level] ?? 1;
+
+    const timestamp = new Date().toISOString();
+    const logEntry = `[${timestamp}] [${level}] ${message}\n`;
+    
+    // Always write to file
     try {
         fs.appendFileSync(LOG_FILE, logEntry);
     } catch (e) {
         console.error('Failed to write to log file:', e);
     }
+
+    // Only log to console if level is sufficient
+    if (incomingLevelValue >= currentLevelValue) {
+        if (level === 'ERROR') {
+            console.error(logEntry.trim());
+        } else {
+            console.log(logEntry.trim());
+        }
+    }
+}
+
+export function logDebug(message: string) {
+    log(message, 'DEBUG');
 }
 
 export function logInfo(message: string) {
