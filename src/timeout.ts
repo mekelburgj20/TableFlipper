@@ -38,7 +38,7 @@ export async function checkPickerTimeouts(guild: Guild | null) {
         // Updated getPicker in database.ts should now return the first slot with a picker
         const game = await getPicker(gameType);
 
-        if (game && game.picker_designated_at && game.picker_discord_id) {
+        if (game && game.picker_designated_at) {
             await handleTieredTimeout(guild, game);
         }
     }
@@ -87,16 +87,23 @@ async function sendPickerReminder(guild: Guild, game: GameRow, minsRemaining: nu
         const channel = await guild.channels.fetch(channelId) as TextChannel;
         if (!channel) return;
 
-        const mention = `<@${game.picker_discord_id}>`;
-        const pickerRole = game.picker_type === 'RUNNER_UP' ? 'Runner-Up' : 'Winner';
+        if (game.picker_discord_id) {
+            const mention = `<@${game.picker_discord_id}>`;
+            const pickerRole = game.picker_type === 'RUNNER_UP' ? 'Runner-Up' : 'Winner';
+            
+            await channel.send(`${mention}, as the **${pickerRole}**, you have **${minsRemaining} minutes** remaining to pick the next table for **${game.type}**! Use \`/pick-table\` now or the pick will pass to the ${game.picker_type === 'WINNER' ? 'runner-up' : 'bot'}.`);
+        } else if (game.picker_type === 'WINNER') {
+            // Unmapped winner: Try to find their name from the won game standings
+            if (game.won_game_id) {
+                const wonGame = await getGameById(game.won_game_id);
+                if (wonGame) {
+                    const standings = await getStandingsFromApi(wonGame.name);
+                    const winnerName = standings[0]?.name || 'Unknown';
+                    await notifyUnmappedWinner(guild, winnerName, game.type);
+                }
+            }
+        }
         
-        await channel.send(`${mention}, as the **${pickerRole}**, you have **${minsRemaining} minutes** remaining to pick the next table for **${game.type}**! Use \`/pick-table\` now or the pick will pass to the ${game.picker_type === 'WINNER' ? 'runner-up' : 'bot'}.`);
-        
-        // Update reminder count in DB
-        const { open } = await import('sqlite');
-        const sqlite3 = await import('sqlite3');
-        const db = await open({ filename: path.join(process.cwd(), 'data', 'tableflipper.db'), driver: sqlite3.default.Database });
-        // Wait, I should add a helper to database.ts for this
         await incrementReminderCount(game.id);
         
     } catch (e) {

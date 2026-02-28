@@ -338,8 +338,11 @@ export async function runMaintenanceForGameType(gameType: string) {
                 } else if (winnerDiscordId && isRepeatWinner) {
                     logInfo(`👑 ${winner} is a repeat winner from the previous cycle. Dynasty rule is active. Not setting picker.`);
                 } else if (!winnerDiscordId) {
-                    logWarn(`⚠️ Winner ${winner} is not mapped to a Discord user. Mod alert needed.`);
-                    // TODO: Trigger Mod Alert
+                    logWarn(`⚠️ Winner ${winner} is not mapped to a Discord user. Triggering unmapped winner flow.`);
+                    // We still call setPicker with null Discord ID so the timeout loop knows to pivot to runner-up later
+                    await setPicker(gameType, null, null, activeGame.id, 'WINNER');
+                    // TODO: Mod Alert is handled by notifyUnmappedWinner if we can pass guild here, 
+                    // but for now the timeout loop will handle it when it tries to send reminders.
                 }
                 
                 // 6. Send Discord notification

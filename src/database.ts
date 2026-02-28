@@ -73,6 +73,23 @@ export async function initializeDatabase() {
                 completed_at DATETIME
             );
         `);
+
+        // Ensure new columns exist for existing databases
+        const tableInfo = await db.all("PRAGMA table_info(games)");
+        const columnNames = tableInfo.map(c => c.name);
+        
+        if (!columnNames.includes('picker_type')) {
+            await db.exec("ALTER TABLE games ADD COLUMN picker_type TEXT CHECK(picker_type IN ('WINNER', 'RUNNER_UP'))");
+        }
+        if (!columnNames.includes('won_game_id')) {
+            await db.exec("ALTER TABLE games ADD COLUMN won_game_id TEXT");
+        }
+        if (!columnNames.includes('reminder_count')) {
+            await db.exec("ALTER TABLE games ADD COLUMN reminder_count INTEGER DEFAULT 0");
+        }
+        if (!columnNames.includes('last_reminded_at')) {
+            await db.exec("ALTER TABLE games ADD COLUMN last_reminded_at DATETIME");
+        }
         await db.exec(`
             CREATE TABLE IF NOT EXISTS user_mappings (
                 iscored_username TEXT PRIMARY KEY,
@@ -790,7 +807,7 @@ export async function setPicker(gameType: string, pickerId: string | null, nomin
 export async function getPicker(gameType: string): Promise<GameRow | null> {
     const db = await openDb();
     try {
-        return await db.get<GameRow>(`SELECT * FROM games WHERE type = ? AND status = 'QUEUED' AND picker_discord_id IS NOT NULL ORDER BY scheduled_to_be_active_at ASC LIMIT 1`, gameType) ?? null;
+        return await db.get<GameRow>(`SELECT * FROM games WHERE type = ? AND status = 'QUEUED' AND picker_designated_at IS NOT NULL ORDER BY scheduled_to_be_active_at ASC LIMIT 1`, gameType) ?? null;
     } finally {
         await db.close();
     }
