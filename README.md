@@ -151,7 +151,15 @@ The bot maintains detailed logs in `data/bot.log`. Check this file for troublesh
 
 ## 8. Release Notes
 
-### v1.2.0 (Current)
+### v1.3.0 (Current)
+*   **Pre-pick Queue**: Users can now use `/pick-table` at any time to queue up their next table preference. If they win, the table is activated instantly.
+*   **Tiered Runner-Up Fallback**: Implemented a robust 1-hour winner window and 30-minute runner-up window for table picking, including automated pivot logic and interval reminders.
+*   **Identity Discovery Engine**: Added proactive scraping of iScored standings and Discord member searching to automatically map users and resolve picking rights before rotation.
+*   **120-Day Eligibility Rule**: Replaced the calendar-year rule with a rolling 120-day lookback to ensure a fresh table rotation.
+*   **Database-Backed Mappings**: Migrated user identity mappings from JSON to a dedicated SQLite table for improved reliability.
+*   **Privacy & Tone Overhaul**: All picking confirmations are now ephemeral (private), and the bot has been updated to a clean, emoji-free professional tone.
+
+### v1.2.0
 *   **Dual-Slot Weekly Grinds:** Refactored maintenance and sync logic to support multiple active tables for a single tournament type. Includes logic for multiple winners and double-pick rights.
 *   **Forensic Style Sniffing:** Implemented advanced style learning that extracts the Community Style ID from background image URLs, ensuring 100% visual fidelity during rotations.
 *   **Non-Tournament Game Support:** Any unlocked game on iScored is now tracked as type `OTHER` and available for score submission via `/submit-score`.
