@@ -1,59 +1,54 @@
 <!-- AI HANDOVER PROMPT -->
 **Project Status:** 
-"TableFlipper" has been upgraded with a sophisticated preference-based picking system and a tiered fallback mechanism. The user identity system has transitioned to a database-backed model with automated discovery.
+"TableFlipper" v1.3.0 is a robust, production-ready arcade management bot. Recent updates have focused on system stability, identity automation, and a professional user experience.
 
 **Recent Work:**
-1.  **Refactored `/pick-table`:** Unified the command to handle both immediate picks and "Pre-pick" queuing. Users can now set preferences at any time.
-2.  **Tiered Timeout & Fallback:** Implemented a 1-hour winner window and 30-minute runner-up window. Added interval reminders (15m/10m) and automated runner-up pivoting.
-3.  **Identity Discovery Engine:** Added proactive iScored-to-Discord mapping that scrapes standings 1 hour before rotation and auto-maps users via guild member search.
-4.  **Calendar Year Eligibility:** Enforced a strict rule that tables cannot be repeated within the same calendar year for a given grind type.
-5.  **Database Migration:** Successfully moved all user mappings into the SQLite database for better performance and reliability.
+1.  **Refactored `/pick-table`**: Unified flow for immediate and pre-picks. Confirmation messages are now private (ephemeral).
+2.  **Tiered Timeout Loop**: 1-hour winner window and 30-minute runner-up window with automated reminders and pivoting.
+3.  **120-Day Eligibility**: Rolling lookback prevents table repetition within a 4-month window.
+4.  **Identity Engine**: Proactive iScored-to-Discord mapping and `/map-user` command.
+5.  **Reliability Hotfixes**: Resolved issues with DB schema migrations and unmapped winner stalls.
+6.  **Console Optimization**: Implemented `LOG_LEVEL` filtering to reduce cron-related noise.
 
 **Current Context:**
-*   Picking rights are now handled via `picker_type` (WINNER/RUNNER_UP) and `won_game_id` in the DB.
-*   Proactive announcements (10 PM) encourage engagement by highlighting leaders and reminding users to set their picks.
-*   The bot handles unmapped winners by alerting moderators to use the new `/map-user` command.
+*   Tournament rotations are now highly automated; manual intervention is only needed for unmapped winners or complex disputes.
+*   The bot uses a clean, emoji-free tone for all professional communications.
+*   Identity mapping is stored in SQLite for persistence and performance.
 
 **Next Actions:**
-1.  **Pre-pick DM Notifications:** Notify users when their pre-pick is successfully applied or if it fails the yearly eligibility check during rotation.
-2.  **OCR Verification:** Integrate lightweight OCR for automatic score validation.
-3.  **Live Standings:** Maintain pinned, auto-updating leaderboard messages in tournament channels.
+1.  **Pre-pick DM Notifications:** Alert users when their queued picks are successfully applied or fail validation.
+2.  **OCR Score Verification**: Automated validation of score photos.
+3.  **Live Standings Board**: Pinned Discord messages that update in real-time.
 
 **Files to Watch:**
-*   `src/timeout.ts` (Tiered timeouts & Reminders)
-*   `src/identity.ts` (Mapping logic & Lead announcements)
-*   `src/database.ts` (Pre-pick storage & Yearly eligibility)
-*   `src/discordBot.ts` (Unified /pick-table flow)
+*   `src/timeout.ts` (Tiered logic & Reminders)
+*   `src/database.ts` (Migration logic & Eligibility checks)
+*   `src/identity.ts` (Mapping & Lead alerts)
+*   `src/logger.ts` (Verbosity control)
 <!-- END PROMPT -->
 
-# Checkpoint for TableFlipper Project (Update 8)
+# Checkpoint for TableFlipper Project (Update 9)
 
-**Date:** February 27, 2026
+**Date:** February 28, 2026
 
-## Project Summary: Pre-picks, Tiered Timeouts, and Identity Discovery
+## Project Summary: Reliability, Privacy, and Tone Polish
 
-This update introduces a "Set and Forget" picking system and ensures tournament continuity through a robust runner-up fallback system. The bot is now proactive, seeking out player identities and encouraging competition through scheduled announcements.
+This update moves the project to **v1.3.0**, centering on bulletproofing the automated picking loop and refining the bot's communication style. The system now gracefully handles unmapped users and protects user privacy during the table selection process.
 
 ### Key Changes Implemented:
 
-#### 1. Unified Selection Flow (Pre-picks)
-*   **Persistent Preferences**: Users can now run `/pick-table` at any time to "queue" their preference for a grind.
-*   **Instant Activation**: If a winner has a valid pre-pick, the bot activates it immediately upon rotation, eliminating the manual picking delay.
-*   **Yearly Eligibility**: Implemented a strict check to ensure tables aren't repeated within the same calendar year, providing a fresh "season" feel every January.
+#### 1. Bulletproof Selection Loop
+*   **Unmapped Winner Recovery**: Updated the timeout engine to monitor winners who haven't linked their Discord accounts. The bot now notifies moderators and continues the 1-hour countdown to the runner-up, ensuring the board never stalls.
+*   **120-Day Rolling Lookback**: Switched from a seasonal "Calendar Year" rule to a rolling 120-day window. This provides a more dynamic and consistent variety across all four tournament types.
+*   **Migration Resilience**: Enhanced the database initialization logic to perform safety checks (`ALTER TABLE`) on existing databases, ensuring all new tracking columns are added without requiring a full reset.
 
-#### 2. Tiered Fallback Mechanism
-*   **Winner -> Runner-Up Pivot**: If a winner fails to pick within 60 minutes, the bot automatically fetches the standings and pivots picking rights to the 2nd place player.
-*   **Aggressive Reminders**: Implemented interval reminders (every 15m for winners, every 10m for runner-ups) to keep the picking window top-of-mind.
-*   **Auto-Selection Fallback**: If all human pickers fail, the bot selects a random compatible table that hasn't been played this year.
+#### 2. Professional Tone & Privacy
+*   **Emoji-Free Communication**: Removed all trophies, checkmarks, and icons from Discord messages and system logs to create a clean, professional text-only interface.
+*   **Ephemeral Confirmation**: Refactored `/pick-table` so that the bot's response is only visible to the person running the command, preventing channel clutter and keeping user preferences private.
 
-#### 3. Identity discovery & Mapping
-*   **Proactive Mapping**: Added a scheduled job that scrapes active games 1 hour before rotation to find and map new iScored users before they potentially win.
-*   **Guild Member Search**: The bot now searches the Discord server for usernames and nicknames that match iScored profiles to auto-link accounts.
-*   **Moderator Tools**: Added `/map-user` to allow admins to resolve identity conflicts manually.
-
-#### 4. Scheduled Engagement
-*   **Lead Announcements**: Daily at 10 PM, the bot highlights the top two players for the Daily Grind and reminds everyone to set their table selections.
-*   **Identity Syncs**: Strategic identity scrapes scheduled before DG, WG, and MG rotations.
+#### 3. Console & Identity Management
+*   **Log Verbosity Control**: Added a `LOG_LEVEL` environment variable. Frequent heartbeats (like the 5-minute timeout checks) are now set to `DEBUG` level, keeping the console clear of spam while retaining full detail in the `bot.log` file.
+*   **Identity Auto-Discovery**: The proactive mapping engine now automatically searches the Discord server for usernames and nicknames that match iScored profiles, reducing the need for manual mapping.
 
 ## Final Status
-TableFlipper is now a "proactive" bot that minimizes manual intervention. By managing user identities and table preferences in advance, the bot ensures that tournament rotations are smooth, timely, and visually consistent.
+TableFlipper v1.3.0 is a mature automation engine. With the new tiered fallback mechanism and identity discovery engine, tournament rotations are now resilient enough to handle unresponsive winners and unmapped players without manual admin oversight.

@@ -7,9 +7,12 @@
 # Completed History
 1. [COMPLETED] **Pre-pick Queue & Runner-Up Fallback:** Implemented tiered timeouts (1h/30m), interval reminders, and automated pre-pick application.
 2. [COMPLETED] **Identity Discovery Engine:** Proactive iScored-to-Discord mapping via guild member search and `/map-user` command.
-3. [COMPLETED] **Refactored /pick-table:** Unified command for immediate picks and queuing future preferences.
-4. [COMPLETED] **Calendar Year Rule:** Enforced strict yearly table eligibility for all grinds.
-5. [COMPLETED] **Admin Nomination Override:** Moderators can now nominate pickers, bypassing the winner-only restriction.
+3. [COMPLETED] **Refactored /pick-table:** Unified command for immediate picks and queuing future preferences. confirmation messages are now ephemeral.
+4. [COMPLETED] **120-Day Eligibility Rule:** Enforced a rolling 120-day lookback for all table selections to ensure variety.
+5. [COMPLETED] **Stability & Tone Polish:** Removed all emojis from Discord messages and logs. Added `LOG_LEVEL` filtering to reduce console spam.
+6. [COMPLETED] **Hotfix: Unmapped Winner Stalling:** Updated timeout loop to handle winners without Discord IDs, notifying moderators and pivoting to runner-ups correctly.
+7. [COMPLETED] **Hotfix: DB Migration Reliability:** Fixed a bug where new schema columns were not correctly added to existing databases during initialization.
+8. [COMPLETED] **Admin Nomination Override:** Moderators can now nominate pickers, bypassing the winner-only restriction.
 2. [COMPLETED] **Channel-Specific Context:** Commands now automatically infer tournament types based on the Discord channel.
 3. [COMPLETED] **Easter Eggs:** The bot now responds to regular messages containing the word "squeal".
 4. [COMPLETED] **Multi-Slot Weekly Grinds:** Support for multiple active games per tournament type.

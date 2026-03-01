@@ -18,7 +18,7 @@ TableFlipper is a Node.js Discord bot designed to automate and manage pinball to
 ### Smart Table Selection & Rotation
 *   **Pre-pick Queue**: Users can set table preferences in advance via `/pick-table`. Selections are applied instantly upon winning.
 *   **Tiered Runner-Up Fallback**: If a winner fails to pick within 1 hour, picking rights pivot to the runner-up (30 min window).
-*   **120-Day Eligibility Rule**: Prevents repetitive rotations by blocking tables played in the last 120 days.
+*   **120-Day Eligibility Rule**: Prevents repetitive rotations by automatically blocking tables played in the last 120 days for a specific grind type.
 *   **Surprise Me**: Automated random selection based on platform compatibility and play history.
 *   **Admin Nomination**: Moderators can manually designate pickers, bypassing the standard winner-only flow.
 
@@ -38,7 +38,7 @@ TableFlipper is a Node.js Discord bot designed to automate and manage pinball to
 *   **Full System Backup**: One-command preservation of database, scores, photos, and live iScored state.
 *   **Wipe & Restore**: Ability to completely reset the iScored board or restore a previous state from backup.
 *   **Manual Overrides**: Commands to force-trigger maintenance, cleanup, or inject special games into the schedule.
-*   **Detailed Logging**: Comprehensive diagnostic logs for browser automation and system events.
+*   **Detailed Logging**: Comprehensive diagnostic logs for browser automation and system events. Includes adjustable console verbosity via `LOG_LEVEL` configuration.
 
 ### Scheduled Notifications & Engagement
 *   **Lead Announcements**: Daily 10 PM alerts highlighting leaders and encouraging participation.
@@ -155,7 +155,7 @@ The bot maintains detailed logs in `data/bot.log`. Check this file for troublesh
 *   **Pre-pick Queue**: Users can now use `/pick-table` at any time to queue up their next table preference. If they win, the table is activated instantly.
 *   **Tiered Runner-Up Fallback**: Implemented a robust 1-hour winner window and 30-minute runner-up window for table picking, including automated pivot logic and interval reminders.
 *   **Identity Discovery Engine**: Added proactive scraping of iScored standings and Discord member searching to automatically map users and resolve picking rights before rotation.
-*   **120-Day Eligibility Rule**: Replaced the calendar-year rule with a rolling 120-day lookback to ensure a fresh table rotation.
+*   **120-Day Eligibility Rule**: Replaced the calendar-year rule with a rolling 120-day lookback to ensure a fresh and varied table rotation.
 *   **Database-Backed Mappings**: Migrated user identity mappings from JSON to a dedicated SQLite table for improved reliability.
 *   **Privacy & Tone Overhaul**: All picking confirmations are now ephemeral (private), and the bot has been updated to a clean, emoji-free professional tone.
 
