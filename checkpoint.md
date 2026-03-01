@@ -50,5 +50,10 @@ This update moves the project to **v1.3.0**, centering on bulletproofing the aut
 *   **Log Verbosity Control**: Added a `LOG_LEVEL` environment variable. Frequent heartbeats (like the 5-minute timeout checks) are now set to `DEBUG` level, keeping the console clear of spam while retaining full detail in the `bot.log` file.
 *   **Identity Auto-Discovery**: The proactive mapping engine now automatically searches the Discord server for usernames and nicknames that match iScored profiles, reducing the need for manual mapping.
 
+#### 4. Critical Hotfixes
+*   **Auto-Pick Loop Fix**: Fixed a critical issue where the timeout fallback mechanism would continuously select new random games due to lingering picker metadata in the database.
+*   **Nominate Picker Refinement**: Improved channel context detection for `/nominate-picker` and removed redundant "Admin Override" warnings for rightful winners.
+*   **Eligibility Protection**: Enhanced the 120-day eligibility logic to ensure the bot never auto-selects a table that is already scheduled or actively queued.
+
 ## Final Status
 TableFlipper v1.3.0 is a mature automation engine. With the new tiered fallback mechanism and identity discovery engine, tournament rotations are now resilient enough to handle unresponsive winners and unmapped players without manual admin oversight.

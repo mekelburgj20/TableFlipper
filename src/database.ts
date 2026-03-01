@@ -586,7 +586,18 @@ export async function updateQueuedGame(gameId: string, newName: string, iscoredG
     try {
         const statusSql = newStatus ? `, status = '${newStatus}'` : '';
         await db.run(
-            `UPDATE games SET name = ?, iscored_game_id = ?, picker_discord_id = NULL, nominated_by_discord_id = NULL ${statusSql} WHERE id = ?`,
+            `UPDATE games SET 
+                name = ?, 
+                iscored_game_id = ?, 
+                picker_discord_id = NULL, 
+                nominated_by_discord_id = NULL,
+                picker_designated_at = NULL,
+                picker_type = NULL,
+                won_game_id = NULL,
+                reminder_count = 0,
+                last_reminded_at = NULL
+                ${statusSql} 
+            WHERE id = ?`,
             newName, iscoredGameId, gameId
         );
         logInfo(`✅ Updated queued game ${gameId} with new name: ${newName}${newStatus ? ` and status: ${newStatus}` : ''}`);
@@ -708,7 +719,7 @@ export async function clearPrePick(discordUserId: string, grindType: string): Pr
 
 /**
  * Checks if a table has been played in the last 120 days for a specific grind type.
- * A table is considered "played" if it exists in the 'games' table with ACTIVE or COMPLETED status
+ * A table is considered "played" if it exists in the 'games' table with ACTIVE, COMPLETED, or QUEUED status
  * and was created within the last 120 days.
  */
 export async function checkTableEligibility(tableName: string, grindType: string): Promise<boolean> {
@@ -723,7 +734,7 @@ export async function checkTableEligibility(tableName: string, grindType: string
             `SELECT COUNT(*) as count FROM games 
              WHERE type = ? 
              AND (name = ? OR name LIKE ? || ' %') 
-             AND status IN ('ACTIVE', 'COMPLETED') 
+             AND status IN ('ACTIVE', 'COMPLETED', 'QUEUED') 
              AND created_at >= ?`,
             grindType, tableName, tableName, lookbackString
         );
@@ -759,7 +770,7 @@ export async function getRandomCompatibleTableEligible(filterPlatform: 'atgames'
                     END as clean_name
                 FROM games 
                 WHERE type = ? 
-                AND status IN ('ACTIVE', 'COMPLETED') 
+                AND status IN ('ACTIVE', 'COMPLETED', 'QUEUED') 
                 AND created_at >= ?
             )
         `;

@@ -158,6 +158,9 @@ The bot maintains detailed logs in `data/bot.log`. Check this file for troublesh
 *   **120-Day Eligibility Rule**: Replaced the calendar-year rule with a rolling 120-day lookback to ensure a fresh and varied table rotation.
 *   **Database-Backed Mappings**: Migrated user identity mappings from JSON to a dedicated SQLite table for improved reliability.
 *   **Privacy & Tone Overhaul**: All picking confirmations are now ephemeral (private), and the bot has been updated to a clean, emoji-free professional tone.
+*   **Hotfix: Timeout Loop Bug**: Resolved an infinite loop causing continuous random auto-picks when users timed out by properly clearing picker metadata.
+*   **Hotfix: Nominate Picker**: Improved channel detection and corrected Admin Override permissions to recognize rightful winners without false warnings.
+*   **Hotfix: Auto-pick Eligibility**: Refined 120-day lookback to explicitly exclude currently 'QUEUED' tables, preventing it from selecting a game that's already scheduled.
 
 ### v1.2.0
 *   **Dual-Slot Weekly Grinds:** Refactored maintenance and sync logic to support multiple active tables for a single tournament type. Includes logic for multiple winners and double-pick rights.

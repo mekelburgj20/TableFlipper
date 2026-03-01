@@ -19,10 +19,10 @@ import { logInfo, logError, logWarn } from './logger.js';
 function getGameTypeFromChannel(channelName: string | null): string | null {
     if (!channelName) return null;
     const name = channelName.toLowerCase();
-    if (name.includes('daily') || name.includes('-dg')) return 'DG';
-    if (name.includes('weekly-vpxs') || name.includes('-vpxs')) return 'WG-VPXS';
-    if (name.includes('weekly-vr') || name.includes('-vr')) return 'WG-VR';
-    if (name.includes('monthly') || name.includes('-mg')) return 'MG';
+    if (name.includes('daily') || name.includes('-dg') || name.includes('dg-')) return 'DG';
+    if (name.includes('weekly-vpxs') || name.includes('-vpxs') || name.includes('wg-vpxs')) return 'WG-VPXS';
+    if (name.includes('weekly-vr') || name.includes('-vr') || name.includes('wg-vr')) return 'WG-VR';
+    if (name.includes('monthly') || name.includes('-mg') || name.includes('mg-')) return 'MG';
     return null;
 }
 
@@ -809,11 +809,16 @@ export function startDiscordBot(): Client {
             const memberRoles = interaction.member?.roles as any;
             const isMod = modRoleId && modRoleId !== 'your_mod_role_id' && memberRoles && memberRoles.cache.has(modRoleId);
 
-            if (!isMod) {
-                const lastWinner = await getLastWinner(gameType);
-                const nominatorIscoredName = await dbGetIscoredNameByDiscordId(nominatorUser.id);
+            const lastWinner = await getLastWinner(gameType);
+            const nominatorIscoredName = await dbGetIscoredNameByDiscordId(nominatorUser.id);
+            const isLastWinner = lastWinner && nominatorIscoredName && lastWinner.toLowerCase() === nominatorIscoredName.toLowerCase();
 
-                if (!lastWinner || !nominatorIscoredName || lastWinner.toLowerCase() !== nominatorIscoredName.toLowerCase()) {
+            let isAdminOverride = false;
+
+            if (!isLastWinner) {
+                if (isMod) {
+                    isAdminOverride = true;
+                } else {
                     await interaction.editReply(`You are not the last winner for the ${gameType} tournament, so you cannot nominate a picker.`);
                     return;
                 }
@@ -830,15 +835,15 @@ export function startDiscordBot(): Client {
             await setPicker(gameType, nominatedUser.id, nominatorUser.id);
 
             // 4. Send confirmation
-            const nominationMsg = isMod ? 
-                `**Admin Override:** ${nominatorUser.toString()} has designated ${nominatedUser.toString()} as the picker for the next ${gameType} tournament.` :
+            const nominationMsg = isAdminOverride ? 
+                `**Admin Override:** You have designated ${nominatedUser.toString()} as the picker for the next ${gameType} tournament.` :
                 `You have successfully nominated ${nominatedUser.toString()} to pick the next table for the ${gameType} tournament.`;
             
             await interaction.editReply(nominationMsg);
             
             // Also send a public message to the channel
             if (interaction.channel && 'send' in interaction.channel) {
-                const publicMsg = isMod ?
+                const publicMsg = isAdminOverride ?
                     `**Admin Override:** ${nominatorUser.toString()} has designated ${nominatedUser.toString()} to pick the next table for the ${gameType} tournament!` :
                     `${nominatorUser.toString()} has nominated ${nominatedUser.toString()} to pick the next table for the ${gameType} tournament!`;
                 await interaction.channel.send(publicMsg);

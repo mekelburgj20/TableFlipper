@@ -13,7 +13,11 @@
 6. [COMPLETED] **Hotfix: Unmapped Winner Stalling:** Updated timeout loop to handle winners without Discord IDs, notifying moderators and pivoting to runner-ups correctly.
 7. [COMPLETED] **Hotfix: DB Migration Reliability:** Fixed a bug where new schema columns were not correctly added to existing databases during initialization.
 8. [COMPLETED] **Admin Nomination Override:** Moderators can now nominate pickers, bypassing the winner-only restriction.
-2. [COMPLETED] **Channel-Specific Context:** Commands now automatically infer tournament types based on the Discord channel.
+9. [COMPLETED] **Hotfix: Timeout Loop Bug:** Fixed an infinite loop during auto-selection fallback by properly clearing picker metadata.
+10. [COMPLETED] **Hotfix: Nominate Picker Refinement:** Improved channel detection and removed redundant admin override messaging for valid winners.
+11. [COMPLETED] **Hotfix: Queued Game Eligibility:** Prevented the auto-picker from selecting games that are already queued up.
+12. [COMPLETED] **Hotfix: Env Variables:** Synced .env.example with missing channel ID and logging configuration fields.
+13. [COMPLETED] **Channel-Specific Context:** Commands now automatically infer tournament types based on the Discord channel.
 3. [COMPLETED] **Easter Eggs:** The bot now responds to regular messages containing the word "squeal".
 4. [COMPLETED] **Multi-Slot Weekly Grinds:** Support for multiple active games per tournament type.
 ... (existing history continued)
